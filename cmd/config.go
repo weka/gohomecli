@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/cli"
@@ -20,16 +19,10 @@ var configCmd = &cobra.Command{
 }
 
 var configAPIKeyCmd = &cobra.Command{
-	Use:   "api-key",
+	Use:   "api-key <key>",
 	Short: "Set API key",
 	Long:  "Set API key",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("requires exactly 1 argument (API key)")
-		}
-		return nil
-		// return fmt.Errorf("invalid color specified: %s", args[0])
-	},
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		config := cli.ReadCLIConfig()
 		config.APIKey = args[0]
@@ -38,16 +31,10 @@ var configAPIKeyCmd = &cobra.Command{
 }
 
 var configCloudURLCmd = &cobra.Command{
-	Use:   "cloud-url",
+	Use:   "cloud-url <url>",
 	Short: "Set cloud URL",
 	Long:  "Set cloud URL",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("requires exactly 1 argument (API key)")
-		}
-		return nil
-		// return fmt.Errorf("invalid color specified: %s", args[0])
-	},
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		config := cli.ReadCLIConfig()
 		config.CloudURL = args[0]

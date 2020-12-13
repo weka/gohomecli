@@ -8,7 +8,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/weka/gohomecli/cli/logging"
 )
+
+var logger = logging.GetLogger("API")
 
 // Client is an API client for a given service URL
 type Client struct {
@@ -85,6 +89,11 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.apiKey))
 
+	logger.Debug().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Send()
+
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
@@ -93,18 +102,29 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	defer res.Body.Close()
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
+		logger.Error().
+			Str("method", req.Method).
+			Str("url", req.URL.String()).
+			Int("status", res.StatusCode).
+			Send()
 		var errRes errorResponse
 		if err = json.NewDecoder(res.Body).Decode(&errRes); err == nil {
+			logger.Error().Err(err).Msg("Unable to parse JSON")
 			return errors.New(errRes.Message)
 		}
-
 		return fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
 	}
+	logger.Debug().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("status", res.StatusCode).
+		Send()
 
 	fullResponse := successResponse{
 		Data: v,
 	}
 	if err = json.NewDecoder(res.Body).Decode(&fullResponse); err != nil {
+		logger.Error().Err(err).Msg("Unable to parse JSON")
 		return err
 	}
 
@@ -113,6 +133,8 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 
 // GetCluster returns a single cluster
 func (c *Client) GetCluster(ctx context.Context, id string) (*Cluster, error) {
+	logger.Info().Str("id", id).Msg("Fetching cluster")
+
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/clusters/%s", c.BaseURL, id), nil)
 	if err != nil {
 		return nil, err

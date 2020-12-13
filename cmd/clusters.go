@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -24,21 +23,16 @@ var clusterCmd = &cobra.Command{
 }
 
 var clusterGetCmd = &cobra.Command{
-	Use:   "get",
+	Use:   "get <cluster-id>",
 	Short: "Show a single cluster",
 	Long:  "Show a single cluster",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("requires exactly 1 argument (cluster ID)")
-		}
-		return nil
-	},
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := cli.GetClient()
 		ctx := context.Background()
 		cluster, err := client.GetCluster(ctx, args[0])
 		if err != nil {
-			fmt.Printf("Error: %s", err)
+			fmt.Printf("Error: %s\n", err)
 			os.Exit(2)
 		}
 		table := tablewriter.NewWriter(os.Stdout)
@@ -52,7 +46,7 @@ var clusterGetCmd = &cobra.Command{
 }
 
 var clusterListCmd = &cobra.Command{
-	Use:   "get",
+	Use:   "list",
 	Short: "List all clusters",
 	Long:  "List all clusters",
 	Run: func(cmd *cobra.Command, args []string) {
