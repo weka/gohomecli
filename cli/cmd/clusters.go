@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"home.weka.io/cli"
 )
@@ -40,7 +41,13 @@ var clusterGetCmd = &cobra.Command{
 			fmt.Printf("Error: %s", err)
 			os.Exit(2)
 		}
-		fmt.Printf("%v\n", cluster)
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(false)
+		table.SetHeader([]string{"Attribute", "Value"})
+		table.Append([]string{"ID", cluster.Attributes.ID})
+		table.Append([]string{"Name", cluster.Attributes.Name})
+		table.Append([]string{"Version", cluster.Attributes.Version})
+		table.Render()
 	},
 }
 
