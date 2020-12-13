@@ -16,7 +16,7 @@ limitations under the License.
 
 package main
 
-import "github.com/weka/gohomecli/cli/cmd"
+import "github.com/weka/gohomecli/cmd"
 
 func main() {
 	cmd.Execute()
