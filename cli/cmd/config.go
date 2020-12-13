@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/spf13/cobra"
 
-	"home.weka.io/cli"
+	"github.com/weka/gohomecli/cli"
 )
 
 func init() {

@@ -1,4 +1,4 @@
-module home.weka.io
+module github.com/weka/gohomecli
 
 go 1.15
 

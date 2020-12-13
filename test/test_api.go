@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"home.weka.io/cli"
+	"github.com/weka/gohomecli/cli"
 )
 
 const hostname = "api.fries.home.weka.io"
