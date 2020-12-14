@@ -7,7 +7,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
+	"github.com/weka/gohomecli/cli/client"
 )
 
 func init() {
@@ -28,9 +28,14 @@ var clusterGetCmd = &cobra.Command{
 	Long:  "Show a single cluster",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client := cli.GetClient()
+		client := client.GetClient()
 		ctx := context.Background()
 		cluster, err := client.GetCluster(ctx, args[0])
+		if err != nil {
+			fmt.Printf("Error: %s\n", err)
+			os.Exit(2)
+		}
+		customer, err := client.GetCustomer(ctx, cluster.Attributes.CustomerID)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err)
 			os.Exit(2)
@@ -38,6 +43,7 @@ var clusterGetCmd = &cobra.Command{
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(false)
 		table.SetHeader([]string{"Attribute", "Value"})
+		table.Append([]string{"Customer", customer.Attributes.Name})
 		table.Append([]string{"ID", cluster.Attributes.ID})
 		table.Append([]string{"Name", cluster.Attributes.Name})
 		table.Append([]string{"Version", cluster.Attributes.Version})

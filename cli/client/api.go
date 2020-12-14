@@ -1,4 +1,4 @@
-package cli
+package client
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/weka/gohomecli/cli"
 	"github.com/weka/gohomecli/cli/logging"
 )
 
@@ -36,7 +37,7 @@ func NewClient(url string, apiKey string) *Client {
 // GetClient returns a new Client instance, instantiated
 // with values from the CLI configuration file
 func GetClient() *Client {
-	config := ReadCLIConfig()
+	config := cli.ReadCLIConfig()
 	return NewClient(config.CloudURL, config.APIKey)
 }
 
@@ -48,40 +49,6 @@ type errorResponse struct {
 type successResponse struct {
 	Code int         `json:"code"`
 	Data interface{} `json:"data"`
-}
-
-// Cluster API data
-type Cluster struct {
-	Type       string `json:"type"`
-	Attributes struct {
-		ID               string      `json:"id"`
-		Name             string      `json:"name"`
-		CreatedAt        string      `json:"created_at"`
-		CustomerID       string      `json:"customer_id"`
-		EventStore       int         `json:"event_store"`
-		LastEvent        string      `json:"last_event"`
-		LastSeen         string      `json:"last_seen"`
-		LicenseDeletedAt int         `json:"license_deleted_at"`
-		LicenseSyncTime  string      `json:"license_sync_time"`
-		Muted            bool        `json:"muted"`
-		MuteTime         int         `json:"mute_time"`
-		PublicKey        string      `json:"public_key"`
-		SkipLicenseCheck bool        `json:"skip_license_check"`
-		SoftwareRelease  string      `json:"software_release"`
-		StatsStore       interface{} `json:"stats_store"`
-		UpdatedAt        string      `json:"updated_at"`
-		Version          string      `json:"version"`
-	} `json:"attributes"`
-	Relationships interface{} `json:"relationships"`
-	// Relationships struct {
-	// 	Customer struct {
-	// 		Data struct {
-	// 			Type string `json:"type"`
-	// 			ID   string `json:"id"`
-	// 		} `json:"data"`
-	// 	} `json:"customer"`
-	// } `json:"relationships"`
-	ID string `json:"id"`
 }
 
 func (c *Client) sendRequest(req *http.Request, v interface{}) error {
@@ -131,21 +98,20 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	return nil
 }
 
-// GetCluster returns a single cluster
-func (c *Client) GetCluster(ctx context.Context, id string) (*Cluster, error) {
-	logger.Info().Str("id", id).Msg("Fetching cluster")
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/clusters/%s", c.BaseURL, id), nil)
+// getAPIEntity is a general implementation for getting a single object from an
+// API resource
+func (c *Client) getAPIEntity(ctx context.Context, resource string, id string,
+	result interface{}) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s", c.BaseURL, resource, id), nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req = req.WithContext(ctx)
 
-	res := Cluster{}
-	if err := c.sendRequest(req, &res); err != nil {
-		return nil, err
+	if err := c.sendRequest(req, result); err != nil {
+		return err
 	}
 
-	return &res, nil
+	return nil
 }

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/weka/gohomecli/cli"
+	"github.com/weka/gohomecli/cli/client"
 )
 
 const hostname = "api.fries.home.weka.io"
 const token = "Onjb8DYnP9DDVSargu11TrvEvpQEwS"
 
 func main() {
-	client := cli.NewClient(hostname, token)
+	client := client.NewClient(hostname, token)
 	fmt.Printf("%v", client)
 }
