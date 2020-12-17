@@ -2,4 +2,5 @@ pkg
 bin
 
 **/.DS_Store
+.idea
 
