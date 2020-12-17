@@ -35,18 +35,19 @@ var clusterGetCmd = &cobra.Command{
 			fmt.Printf("Error: %s\n", err)
 			os.Exit(2)
 		}
-		customer, err := client.GetCustomer(ctx, cluster.Attributes.CustomerID)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			os.Exit(2)
+		var customerName string
+		if customer, err := client.GetClusterCustomer(ctx, cluster); err == nil {
+			customerName = customer.Name
+		} else {
+			customerName = "N/A"
 		}
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(false)
 		table.SetHeader([]string{"Attribute", "Value"})
-		table.Append([]string{"Customer", customer.Attributes.Name})
-		table.Append([]string{"ID", cluster.Attributes.ID})
-		table.Append([]string{"Name", cluster.Attributes.Name})
-		table.Append([]string{"Version", cluster.Attributes.Version})
+		table.Append([]string{"Customer", customerName})
+		table.Append([]string{"ID", cluster.ID})
+		table.Append([]string{"Name", cluster.Name})
+		table.Append([]string{"Version", cluster.Version})
 		table.Render()
 	},
 }

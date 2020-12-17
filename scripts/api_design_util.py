@@ -14,6 +14,7 @@ CONFIG_FILE = os.path.expanduser('~/.config/home-cli/config.toml')
 def main():
     parser = ArgumentParser()
     parser.add_argument('url')
+    parser.add_argument('--original', action='store_true', help='Do not clear strings')
     args = parser.parse_args()
     return run(args)
 
@@ -22,12 +23,15 @@ def run(args):
     with open(CONFIG_FILE) as f:
         for line in f.readlines():
             if 'api_key = ' in line:
-                api_key = line.strip().split(' = ', 1)[1]
+                api_key = line.strip().split(' = ', 1)[1].strip().strip('"')
                 break
         else:
             raise RuntimeError('API key not found in %s' % CONFIG_FILE)
     wh = WekaHome('api.fries.home.weka.io', api_key)
-    print(json.dumps(clear_strings(wh.get('api/v3/%s' % args.url)), indent=4))
+    result = wh.get('api/v3/%s' % args.url)
+    if not args.original:
+        result = clear_strings(result)
+    print(json.dumps(result, indent=4))
 
 
 def clear_strings(obj):

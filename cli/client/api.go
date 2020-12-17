@@ -51,17 +51,24 @@ type successResponse struct {
 	Data interface{} `json:"data"`
 }
 
-func (c *Client) sendRequest(req *http.Request, v interface{}) error {
+type entityResponse struct {
+	ID            string `json:"id"`
+	Type          string `json:"type"`
+	Attributes    interface{}
+	Relationships json.RawMessage `json:"relationships"`
+}
+
+func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.apiKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.apiKey))
 
 	logger.Debug().
 		Str("method", req.Method).
 		Str("url", req.URL.String()).
 		Send()
 
-	res, err := c.HTTPClient.Do(req)
+	res, err := client.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -100,16 +107,19 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 
 // getAPIEntity is a general implementation for getting a single object from an
 // API resource
-func (c *Client) getAPIEntity(ctx context.Context, resource string, id string,
+func (client *Client) getAPIEntity(ctx context.Context, resource string, id string,
 	result interface{}) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s", c.BaseURL, resource, id), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s", client.BaseURL, resource, id), nil)
 	if err != nil {
 		return err
 	}
 
+	entity := entityResponse{
+		Attributes: result,
+	}
 	req = req.WithContext(ctx)
 
-	if err := c.sendRequest(req, result); err != nil {
+	if err := client.sendRequest(req, &entity); err != nil {
 		return err
 	}
 
