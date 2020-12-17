@@ -41,7 +41,6 @@ var customerGetCmd = &cobra.Command{
 		table.Append([]string{"ID", customer.ID})
 		table.Append([]string{"Name", customer.Name})
 		table.Append([]string{"Monitored", BoolToYesNo(customer.Monitored)})
-		table.Append([]string{"Updated At", customer.UpdatedAt})
 		table.Render()
 	},
 }
