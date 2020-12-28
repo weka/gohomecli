@@ -37,8 +37,7 @@ func NewClient(url string, apiKey string) *Client {
 // GetClient returns a new Client instance, instantiated
 // with values from the CLI configuration file
 func GetClient() *Client {
-	config := cli.ReadCLIConfig()
-	return NewClient(config.CloudURL, config.APIKey)
+	return NewClient(cli.CurrentSiteConfig.CloudURL, cli.CurrentSiteConfig.APIKey)
 }
 
 type errorResponse struct {
@@ -66,7 +65,7 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 	logger.Debug().
 		Str("method", req.Method).
 		Str("url", req.URL.String()).
-		Send()
+		Msg("Request")
 
 	res, err := client.HTTPClient.Do(req)
 	if err != nil {
@@ -80,7 +79,7 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 			Str("method", req.Method).
 			Str("url", req.URL.String()).
 			Int("status", res.StatusCode).
-			Send()
+			Msg("Response")
 		var errRes errorResponse
 		if err = json.NewDecoder(res.Body).Decode(&errRes); err == nil {
 			logger.Error().Err(err).Msg("Unable to parse JSON")
@@ -92,7 +91,7 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 		Str("method", req.Method).
 		Str("url", req.URL.String()).
 		Int("status", res.StatusCode).
-		Send()
+		Msg("Response")
 
 	fullResponse := successResponse{
 		Data: v,
