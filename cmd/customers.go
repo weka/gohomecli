@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"github.com/weka/gohomecli/cli"
-	"os"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/cli"
 	"github.com/weka/gohomecli/cli/client"
 )
 
@@ -30,25 +27,16 @@ var customerGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
-		ctx := context.Background()
-		customer, err := client.GetCustomer(ctx, args[0])
+		customer, err := client.GetCustomer(args[0])
 		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			os.Exit(2)
+			cli.UserError(err.Error())
 		}
 		cli.NewTableRenderer([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"ID", customer.ID})
 			table.Append([]string{"Name", customer.Name})
-			table.Append([]string{"Monitored", BoolToYesNo(customer.Monitored)})
+			table.Append([]string{"Monitored", cli.BoolToYesNo(customer.Monitored)})
 		}).Render()
 	},
-}
-
-func BoolToYesNo(b bool) string {
-	if b {
-		return "Yes"
-	}
-	return "No"
 }
 
 var customerListCmd = &cobra.Command{

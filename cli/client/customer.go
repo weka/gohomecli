@@ -1,7 +1,7 @@
 package client
 
 import (
-	"context"
+	"fmt"
 	"time"
 )
 
@@ -16,12 +16,12 @@ type Customer struct {
 }
 
 // GetCustomer returns a single customer
-func (client *Client) GetCustomer(ctx context.Context, id string) (*Customer, error) {
+func (client *Client) GetCustomer(id string) (*Customer, error) {
 	logger.Info().Str("id", id).Msg("Fetching customer")
 	customer := &Customer{}
-	err := client.getAPIEntity(ctx, "customers", id, customer)
+	err := client.GetAPIEntity("customers", id, customer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not fetch customer %s: %s", id, err)
 	}
 	return customer, nil
 }

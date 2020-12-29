@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,24 +39,28 @@ func GetClient() *Client {
 	return NewClient(cli.CurrentSiteConfig.CloudURL, cli.CurrentSiteConfig.APIKey)
 }
 
-type errorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type successResponse struct {
-	Code int         `json:"code"`
+type responseEnvelope struct {
 	Data interface{} `json:"data"`
+	Meta struct {
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+	} `json:"meta"`
 }
 
-type entityResponse struct {
+type genericAPIEntity struct {
 	ID            string `json:"id"`
 	Type          string `json:"type"`
 	Attributes    interface{}
 	Relationships json.RawMessage `json:"relationships"`
 }
 
-func (client *Client) sendRequest(req *http.Request, v interface{}) error {
+func (client *Client) SendRequest(method string, url string, result interface{}, raw bool) error {
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", client.BaseURL, url), nil)
+	if err != nil {
+		return err
+	}
+
+	req = req.WithContext(context.Background())
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.apiKey))
@@ -80,11 +83,6 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 			Str("url", req.URL.String()).
 			Int("status", res.StatusCode).
 			Msg("Response")
-		var errRes errorResponse
-		if err = json.NewDecoder(res.Body).Decode(&errRes); err == nil {
-			logger.Error().Err(err).Msg("Unable to parse JSON")
-			return errors.New(errRes.Message)
-		}
 		return fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
 	}
 	logger.Debug().
@@ -93,10 +91,12 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 		Int("status", res.StatusCode).
 		Msg("Response")
 
-	fullResponse := successResponse{
-		Data: v,
+	if !raw {
+		result = &responseEnvelope{
+			Data: result,
+		}
 	}
-	if err = json.NewDecoder(res.Body).Decode(&fullResponse); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(result); err != nil {
 		logger.Error().Err(err).Msg("Unable to parse JSON")
 		return err
 	}
@@ -104,23 +104,21 @@ func (client *Client) sendRequest(req *http.Request, v interface{}) error {
 	return nil
 }
 
-// getAPIEntity is a general implementation for getting a single object from an
-// API resource
-func (client *Client) getAPIEntity(ctx context.Context, resource string, id string,
-	result interface{}) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s", client.BaseURL, resource, id), nil)
-	if err != nil {
-		return err
-	}
+// Get sends a GET request
+func (client *Client) Get(url string, result interface{}) error {
+	return client.SendRequest("GET", url, result, false)
+}
 
-	entity := entityResponse{
+// GetRaw sends a GET request, and does not expect the response to be enveloped
+func (client *Client) GetRaw(url string, result interface{}) error {
+	return client.SendRequest("GET", url, result, true)
+}
+
+// GetAPIEntity is a general implementation for getting a single object from an
+// API resource
+func (client *Client) GetAPIEntity(resource string, id string, result interface{}) error {
+	entity := genericAPIEntity{
 		Attributes: result,
 	}
-	req = req.WithContext(ctx)
-
-	if err := client.sendRequest(req, &entity); err != nil {
-		return err
-	}
-
-	return nil
+	return client.Get(fmt.Sprintf("%s/%s", resource, id), &entity)
 }

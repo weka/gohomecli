@@ -42,6 +42,13 @@ func UserError(msg string, format ...interface{}) {
 	os.Exit(2)
 }
 
+func BoolToYesNo(b bool) string {
+	if b {
+		return "Yes"
+	}
+	return "No"
+}
+
 type TableRenderer struct {
 	Headers  []string
 	Populate func(table *tablewriter.Table)

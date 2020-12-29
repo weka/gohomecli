@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"github.com/weka/gohomecli/cli"
-	"os"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/cli"
 	"github.com/weka/gohomecli/cli/client"
 )
 
@@ -30,14 +27,12 @@ var clusterGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
-		ctx := context.Background()
-		cluster, err := client.GetCluster(ctx, args[0])
+		cluster, err := client.GetCluster(args[0])
 		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			os.Exit(2)
+			cli.UserError(err.Error())
 		}
 		var customerName string
-		if customer, err := client.GetClusterCustomer(ctx, cluster); err == nil {
+		if customer, err := client.GetClusterCustomer(cluster); err == nil {
 			customerName = customer.Name
 		} else {
 			customerName = "N/A"

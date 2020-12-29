@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"time"
 )
@@ -28,23 +27,23 @@ type Cluster struct {
 }
 
 // GetCluster returns a single cluster
-func (client *Client) GetCluster(ctx context.Context, id string) (*Cluster, error) {
+func (client *Client) GetCluster(id string) (*Cluster, error) {
 	logger.Info().Str("id", id).Msg("Fetching cluster")
 	cluster := &Cluster{}
-	err := client.getAPIEntity(ctx, "clusters", id, cluster)
+	err := client.GetAPIEntity("clusters", id, cluster)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not fetch cluster %s: %s", id, err)
 	}
 	return cluster, nil
 }
 
-func (client *Client) GetClusterCustomer(ctx context.Context, cluster *Cluster) (*Customer, error) {
+func (client *Client) GetClusterCustomer(cluster *Cluster) (*Customer, error) {
 	if len(cluster.CustomerID) == 0 {
 		return nil, fmt.Errorf("Cluster %s has no customer", cluster.ID)
 	}
-	customer, err := client.GetCustomer(ctx, cluster.CustomerID)
+	customer, err := client.GetCustomer(cluster.CustomerID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not fetch customer for cluster %s: %s", cluster.ID, err)
 	}
 	return customer, nil
 }
