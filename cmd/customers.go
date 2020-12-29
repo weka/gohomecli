@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/weka/gohomecli/cli"
 	"os"
 
 	"github.com/olekukonko/tablewriter"
@@ -35,13 +36,11 @@ var customerGetCmd = &cobra.Command{
 			fmt.Printf("Error: %s\n", err)
 			os.Exit(2)
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(false)
-		table.SetHeader([]string{"Attribute", "Value"})
-		table.Append([]string{"ID", customer.ID})
-		table.Append([]string{"Name", customer.Name})
-		table.Append([]string{"Monitored", BoolToYesNo(customer.Monitored)})
-		table.Render()
+		cli.NewTableRenderer([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
+			table.Append([]string{"ID", customer.ID})
+			table.Append([]string{"Name", customer.Name})
+			table.Append([]string{"Monitored", BoolToYesNo(customer.Monitored)})
+		}).Render()
 	},
 }
 
