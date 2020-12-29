@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/cli"
@@ -51,6 +50,22 @@ var clusterListCmd = &cobra.Command{
 	Short: "List all clusters",
 	Long:  "List all clusters",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ALL CLUSTERS")
+		client := client.GetClient()
+		next, err := client.QueryClusters()
+		if err != nil {
+			cli.UserError(err.Error())
+		}
+		cli.NewTableRenderer([]string{"ID", "Name", "Version"}, func(table *tablewriter.Table) {
+			for {
+				cluster, err := next()
+				if err != nil {
+					cli.UserError(err.Error())
+				}
+				if cluster == nil {
+					break
+				}
+				table.Append([]string{cluster.ID, cluster.Name, cluster.Version})
+			}
+		}).Render()
 	},
 }
