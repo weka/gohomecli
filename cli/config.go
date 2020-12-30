@@ -15,7 +15,7 @@ var logger = logging.GetLogger("Config")
 const (
 	UnspecifiedSite = "default"
 	DefaultSiteName = "default"
-	DefaultCloudURL = "http://api.home.weka.io/"
+	DefaultCloudURL = "https://api.home.weka.io/"
 )
 
 // ConfigFilePath is the full path of the CLI configuration file (TOML)
