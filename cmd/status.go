@@ -8,7 +8,6 @@ import (
 
 func init() {
 	rootCmd.AddCommand(serverVersionCmd)
-	serverVersionCmd.AddCommand(clusterGetCmd)
 }
 
 var serverVersionCmd = &cobra.Command{
