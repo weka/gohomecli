@@ -87,7 +87,7 @@ var configSiteListCmd = &cobra.Command{
 	Short: "List configured sites",
 	Long:  "List configured sites",
 	Run: func(cmd *cobra.Command, args []string) {
-		cli.NewTableRenderer([]string{"Name", "URL", "Default"}, func(table *tablewriter.Table) {
+		cli.RenderTable([]string{"Name", "URL", "Default"}, func(table *tablewriter.Table) {
 			for name, site := range cli.CurrentConfig.Sites {
 				var defaultSymbol string
 				if name == cli.CurrentConfig.DefaultSite {
@@ -97,7 +97,7 @@ var configSiteListCmd = &cobra.Command{
 				}
 				table.Append([]string{name, site.CloudURL, defaultSymbol})
 			}
-		}).Render()
+		})
 	},
 }
 

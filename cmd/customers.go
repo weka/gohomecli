@@ -31,11 +31,11 @@ var customerGetCmd = &cobra.Command{
 		if err != nil {
 			cli.UserError(err.Error())
 		}
-		cli.NewTableRenderer([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
+		cli.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"ID", customer.ID})
 			table.Append([]string{"Name", customer.Name})
 			table.Append([]string{"Monitored", cli.BoolToYesNo(customer.Monitored)})
-		}).Render()
+		})
 	},
 }
 

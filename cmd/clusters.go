@@ -36,12 +36,12 @@ var clusterGetCmd = &cobra.Command{
 		} else {
 			customerName = "N/A"
 		}
-		cli.NewTableRenderer([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
+		cli.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"Customer", customerName})
 			table.Append([]string{"ID", cluster.ID})
 			table.Append([]string{"Name", cluster.Name})
 			table.Append([]string{"Version", cluster.Version})
-		}).Render()
+		})
 	},
 }
 
@@ -50,22 +50,20 @@ var clusterListCmd = &cobra.Command{
 	Short: "List all clusters",
 	Long:  "List all clusters",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := client.GetClient()
-		next, err := client.QueryClusters()
+		api := client.GetClient()
+		next, err := api.QueryClusters()
 		if err != nil {
 			cli.UserError(err.Error())
 		}
-		cli.NewTableRenderer([]string{"ID", "Name", "Version"}, func(table *tablewriter.Table) {
-			for {
-				cluster, err := next()
-				if err != nil {
-					cli.UserError(err.Error())
-				}
-				if cluster == nil {
-					break
-				}
-				table.Append([]string{cluster.ID, cluster.Name, cluster.Version})
-			}
-		}).Render()
+		header := []string{"ID", "Name", "Version"}
+		var cluster *client.Cluster
+		instantiate := func() interface{} {
+			cluster = &client.Cluster{}
+			return cluster
+		}
+		getRow := func() []string {
+			return []string{cluster.ID, cluster.Name, cluster.Version}
+		}
+		cli.RenderQueryResults(header, instantiate, next, getRow)
 	},
 }

@@ -54,14 +54,30 @@ type TableRenderer struct {
 	Populate func(table *tablewriter.Table)
 }
 
-func NewTableRenderer(headers []string, populate func(table *tablewriter.Table)) *TableRenderer {
-	return &TableRenderer{headers, populate}
-}
-
 func (tr *TableRenderer) Render() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetHeader(tr.Headers)
 	tr.Populate(table)
 	table.Render()
+}
+
+func RenderTable(headers []string, populate func(table *tablewriter.Table)) {
+	table := &TableRenderer{headers, populate}
+	table.Render()
+}
+
+func RenderQueryResults(header []string, instantiate func() interface{}, nextEntity func(interface{}) (bool, error), getRow func() []string) {
+	RenderTable(header, func(table *tablewriter.Table) {
+		for {
+			hasMore, err := nextEntity(instantiate())
+			if err != nil {
+				UserError(err.Error())
+			}
+			if !hasMore {
+				break
+			}
+			table.Append(getRow())
+		}
+	})
 }

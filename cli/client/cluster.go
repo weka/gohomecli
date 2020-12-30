@@ -47,61 +47,7 @@ func (client *Client) GetClusterCustomer(cluster *Cluster) (*Customer, error) {
 	return customer, nil
 }
 
-type ClusterQueryResults struct {
-	Data []struct {
-		Attributes Cluster
-	}
-	Meta struct {
-		Page     int `json:"page"`
-		PageSize int `json:"page_size"`
-	} `json:"meta"`
-}
-
-func (client *Client) QueryClusters() (func() (*Cluster, error), error) {
-	var (
-		results            ClusterQueryResults
-		index              int
-		maxIndex           int
-		page               int  = 0
-		morePagesAvailable bool = true
-	)
-	nextPage := func() error {
-		page++
-		results = ClusterQueryResults{}
-		err := client.GetRaw(
-			fmt.Sprintf("clusters?seen_within_seconds=%d&page=%d", 60*60*24, page),
-			&results)
-		if err != nil {
-			return err
-		}
-		morePagesAvailable = len(results.Data) == results.Meta.PageSize
-		index = -1
-		maxIndex = len(results.Data) - 1
-		//logger.Debug().
-		//	Int("page", page).
-		//	Bool("morePagesAvailable", morePagesAvailable).
-		//	Int("maxIndex", maxIndex).
-		//	Int("len", len(results.Data)).
-		//	Int("PageSize", results.Meta.PageSize).
-		//	Send()
-		return nil
-	}
-	err := nextPage()
-	if err != nil {
-		return nil, err
-	}
-	nextEntity := func() (*Cluster, error) {
-		if page == 0 || index == maxIndex {
-			if !morePagesAvailable {
-				return nil, nil
-			}
-			err = nextPage()
-			if err != nil {
-				return nil, err
-			}
-		}
-		index++
-		return &results.Data[index].Attributes, nil
-	}
-	return nextEntity, nil
+func (client *Client) QueryClusters() (func(interface{}) (bool, error), error) {
+	params := map[string]interface{}{"seen_within_seconds": 60 * 60}
+	return client.QueryEntities("clusters", params)
 }
