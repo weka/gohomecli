@@ -25,3 +25,7 @@ func (client *Client) GetCustomer(id string) (*Customer, error) {
 	}
 	return customer, nil
 }
+
+func (client *Client) QueryCustomers() (func(interface{}) (bool, error), error) {
+	return client.QueryEntities("customers", nil)
+}

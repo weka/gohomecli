@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/cli"
@@ -44,6 +43,20 @@ var customerListCmd = &cobra.Command{
 	Short: "List all customers",
 	Long:  "List all customers",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ALL CLUSTERS")
+		api := client.GetClient()
+		next, err := api.QueryCustomers()
+		if err != nil {
+			cli.UserError(err.Error())
+		}
+		header := []string{"ID", "Name", "Version"}
+		var customer *client.Customer
+		instantiate := func() interface{} {
+			customer = &client.Customer{}
+			return customer
+		}
+		getRow := func() []string {
+			return []string{customer.ID, customer.Name, cli.BoolToYesNo(customer.Monitored)}
+		}
+		cli.RenderQueryResults(header, instantiate, next, getRow)
 	},
 }
