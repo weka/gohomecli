@@ -54,7 +54,7 @@ var aliasAddCmd = &cobra.Command{
 		if err != nil {
 			cli.UserError("Failed to set alias: %s", err)
 		}
-		cli.UserSuccess("Added alias \"%s\" for cluster ID %s", alias, clusterID)
+		cli.UserNote("Added alias \"%s\" for cluster ID %s", alias, clusterID)
 	},
 }
 
@@ -74,6 +74,6 @@ var aliasRemoveCmd = &cobra.Command{
 		if err != nil {
 			cli.UserError("Failed to remove alias: %s", err)
 		}
-		cli.UserSuccess("Removed alias \"%s\" for cluster ID %s", alias, clusterID)
+		cli.UserNote("Removed alias \"%s\" for cluster ID %s", alias, clusterID)
 	},
 }

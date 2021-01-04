@@ -9,12 +9,12 @@ import (
 
 const (
 	ColorBlue   = "\033[1;34m"
-	ColorGreen  = "\033[1;36m"
+	ColorCyan   = "\033[1;36m"
 	ColorYellow = "\033[1;33m"
 	ColorRed    = "\033[1;31m"
 	ColorReset  = "\033[0m"
 
-	ColorSuccess = ColorGreen
+	ColorSuccess = ColorCyan
 	ColorWarning = ColorYellow
 	ColorError   = ColorRed
 )
@@ -23,22 +23,31 @@ func Colorize(color, text string) string {
 	return strings.Join([]string{color, text, ColorReset}, "")
 }
 
-// UserSuccess prints a colorized success message
-func UserSuccess(msg string, format ...interface{}) {
+// UserOutput prints text to stdout. Use this function to output a command's
+// return value.
+func UserOutput(msg string, format ...interface{}) {
+	msg = fmt.Sprintf(msg, format...)
+	fmt.Println(msg)
+}
+
+// UserNote prints a colorized info message to stderr. Use this function to
+// output a neutral or positive message to the user.
+func UserNote(msg string, format ...interface{}) {
 	msg = fmt.Sprintf(msg, format...)
 	fmt.Println(Colorize(ColorSuccess, msg))
 }
 
-// UserWarning prints a colorized warning message
+// UserWarning prints a colorized warning message to stderr
 func UserWarning(msg string, format ...interface{}) {
 	msg = fmt.Sprintf("WARNING: "+msg, format...)
-	fmt.Println(Colorize(ColorWarning, msg))
+	fmt.Fprintln(os.Stderr, Colorize(ColorWarning, msg))
 }
 
-// UserError prints a colorized error message and terminates with a non-zero exit code
+// UserError prints a colorized error message to stderr, and terminates with a
+// non-zero exit code
 func UserError(msg string, format ...interface{}) {
 	msg = fmt.Sprintf("ERROR: "+msg, format...)
-	fmt.Println(Colorize(ColorError, msg))
+	fmt.Fprintln(os.Stderr, Colorize(ColorError, msg))
 	os.Exit(2)
 }
 

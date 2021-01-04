@@ -15,7 +15,7 @@ var versionCmd = &cobra.Command{
 	Short: "Show server version",
 	Long:  "Show server version",
 	Run: func(cmd *cobra.Command, args []string) {
-		cli.UserSuccess(
+		cli.UserOutput(
 			"Client version: %s (built on %s)",
 			cli.VersionInfo.Name,
 			strings.Replace(cli.VersionInfo.BuildTime, "_", " ", -1))

@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/cli"
 	"github.com/weka/gohomecli/cli/logging"
-	"os"
 )
 
 var cfgFile string
@@ -23,8 +21,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		cli.UserError(err.Error())
 	}
 }
 

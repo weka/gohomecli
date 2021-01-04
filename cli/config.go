@@ -32,7 +32,7 @@ var (
 func init() {
 	currentUser, err := user.Current()
 	if err != nil {
-		fmt.Printf("Failed to get user home directory: %s", err)
+		fmt.Fprintf(os.Stderr, "Failed to get user home directory: %s", err)
 		os.Exit(1)
 	}
 	ConfigDir = currentUser.HomeDir + "/.config/home-cli/"

@@ -38,7 +38,7 @@ var configAPIKeyCmd = &cobra.Command{
 			siteConfig.APIKey = apiKey
 			return nil
 		})
-		cli.UserSuccess("Updated API key for site \"%s\"", cli.SiteName) // do not print the key
+		cli.UserNote("Updated API key for site \"%s\"", cli.SiteName) // do not print the key
 	},
 }
 
@@ -53,7 +53,7 @@ var configCloudURLCmd = &cobra.Command{
 			siteConfig.CloudURL = cloudURL
 			return nil
 		})
-		cli.UserSuccess("Updated cloud URL for site \"%s\": %s", cli.SiteName, cloudURL)
+		cli.UserNote("Updated cloud URL for site \"%s\": %s", cli.SiteName, cloudURL)
 	},
 }
 
@@ -72,7 +72,7 @@ var configDefaultSiteCmd = &cobra.Command{
 			config.DefaultSite = siteName
 			return nil
 		})
-		cli.UserSuccess("Set default site configuration: \"%s\"", siteName)
+		cli.UserNote("Set default site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -116,7 +116,7 @@ var configSiteAddCmd = &cobra.Command{
 			config.Sites[siteName] = &cli.SiteConfig{APIKey: apiKey, CloudURL: cloudURL}
 			return nil
 		})
-		cli.UserSuccess("Added site configuration: \"%s\"", siteName)
+		cli.UserNote("Added site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -136,7 +136,7 @@ var configSiteUpdateCmd = &cobra.Command{
 			site.CloudURL = cloudURL
 			return nil
 		})
-		cli.UserSuccess("Updated site configuration: \"%s\"", siteName)
+		cli.UserNote("Updated site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -155,6 +155,6 @@ var configSiteRemoveCmd = &cobra.Command{
 			delete(config.Sites, siteName)
 			return nil
 		})
-		cli.UserSuccess("Removed site configuration: \"%s\"", siteName)
+		cli.UserNote("Removed site configuration: \"%s\"", siteName)
 	},
 }

@@ -20,6 +20,6 @@ var serverVersionCmd = &cobra.Command{
 		if err != nil {
 			cli.UserError(err.Error())
 		}
-		cli.UserSuccess("Server version: %s", status.Version)
+		cli.UserOutput("Server version: %s", status.Version)
 	},
 }
