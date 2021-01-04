@@ -148,57 +148,68 @@ func queryParamsToString(queryParamGroups ...map[string]interface{}) string {
 	return strings.Join(parts, "&")
 }
 
-func (client *Client) QueryEntities(url string, queryParams map[string]interface{}) (func(interface{}) (bool, error), error) {
-	var (
-		results            genericQueryResultsEnvelope
-		index              int
-		maxIndex           int
-		page               = 0
-		morePagesAvailable = true
-		queryMetaParams    = map[string]interface{}{}
-	)
-	queryParamsStr := queryParamsToString(queryParams)
-	nextPage := func() error {
-		page++
-		queryMetaParams["page"] = page
-		results = genericQueryResultsEnvelope{}
-		allQueryParamsStr := queryParamsToString(queryMetaParams)
-		if queryParamsStr != "" {
-			allQueryParamsStr = queryParamsStr + "&" + allQueryParamsStr
-		}
-		urlWithParams := fmt.Sprintf("%s?%s", url, allQueryParamsStr)
-		err := client.GetRaw(urlWithParams, &results)
-		if err != nil {
-			return err
-		}
-		morePagesAvailable = len(results.Data) == results.Meta.PageSize
-		index = -1
-		maxIndex = len(results.Data) - 1
-		//logger.Debug().Int("page", page).Bool("morePagesAvailable", morePagesAvailable).
-		//	Int("pageResults", len(results.Data)).
-		//	Int("PageSize", results.Meta.PageSize).Send()
-		return nil
+type PagedQuery struct {
+	Client          *Client
+	URL             string
+	QueryParams     map[string]interface{}
+	Page            int
+	PageResults     genericQueryResultsEnvelope
+	HasMorePages    bool
+	index           int
+	maxIndex        int
+	queryMetaParams map[string]interface{}
+	queryParamsStr  string
+}
+
+func (client *Client) QueryEntities(url string, queryParams map[string]interface{}) (*PagedQuery, error) {
+	query := PagedQuery{
+		Client:          client,
+		URL:             url,
+		QueryParams:     queryParams,
+		queryParamsStr:  queryParamsToString(queryParams),
+		Page:            0,
+		queryMetaParams: make(map[string]interface{}),
 	}
-	err := nextPage()
+	err := query.fetchNextPage()
 	if err != nil {
 		return nil, err
 	}
-	nextEntityFunc := func(result interface{}) (bool, error) {
-		if index == maxIndex {
-			if !morePagesAvailable {
-				return false, nil
-			}
-			err = nextPage()
-			if err != nil {
-				return false, err
-			}
+	return &query, nil
+}
+
+func (query *PagedQuery) fetchNextPage() error {
+	query.Page++
+	query.queryMetaParams["page"] = query.Page
+	query.PageResults = genericQueryResultsEnvelope{}
+	allQueryParamsStr := queryParamsToString(query.queryMetaParams)
+	if query.queryParamsStr != "" {
+		allQueryParamsStr = query.queryParamsStr + "&" + allQueryParamsStr
+	}
+	urlWithParams := fmt.Sprintf("%s?%s", query.URL, allQueryParamsStr)
+	err := query.Client.GetRaw(urlWithParams, &query.PageResults)
+	if err != nil {
+		return err
+	}
+	query.HasMorePages = len(query.PageResults.Data) == query.PageResults.Meta.PageSize
+	query.index = -1
+	query.maxIndex = len(query.PageResults.Data) - 1
+	return nil
+}
+
+func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
+	if query.index == query.maxIndex {
+		if !query.HasMorePages {
+			return false, nil
 		}
-		index++
-		err := json.Unmarshal(results.Data[index].Attributes, result)
+		err := query.fetchNextPage()
 		if err != nil {
 			return false, err
 		}
-		return true, nil
 	}
-	return nextEntityFunc, nil
+	query.index++
+	err = json.Unmarshal(query.PageResults.Data[query.index].Attributes, result)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

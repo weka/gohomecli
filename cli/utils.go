@@ -67,17 +67,18 @@ func RenderTable(headers []string, populate func(table *tablewriter.Table)) {
 	table.Render()
 }
 
-func RenderQueryResults(header []string, instantiate func() interface{}, nextEntity func(interface{}) (bool, error), getRow func() []string) {
-	RenderTable(header, func(table *tablewriter.Table) {
-		for {
-			hasMore, err := nextEntity(instantiate())
-			if err != nil {
-				UserError(err.Error())
+func RenderTableRows(headers []string, nextRow func() []string) {
+	table := &TableRenderer{
+		Headers: headers,
+		Populate: func(table *tablewriter.Table) {
+			for {
+				rowData := nextRow()
+				if rowData == nil {
+					break
+				}
+				table.Append(rowData)
 			}
-			if !hasMore {
-				break
-			}
-			table.Append(getRow())
-		}
-	})
+		},
+	}
+	table.Render()
 }

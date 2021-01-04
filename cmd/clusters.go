@@ -52,19 +52,21 @@ var clusterListCmd = &cobra.Command{
 	Long:  "List all clusters",
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
-		next, err := api.QueryClusters()
+		query, err := api.QueryClusters()
 		if err != nil {
 			cli.UserError(err.Error())
 		}
-		header := []string{"ID", "Name", "Version"}
-		var cluster *client.Cluster
-		instantiate := func() interface{} {
-			cluster = &client.Cluster{}
-			return cluster
-		}
-		getRow := func() []string {
-			return []string{cluster.ID, cluster.Name, cluster.Version}
-		}
-		cli.RenderQueryResults(header, instantiate, next, getRow)
+		cli.RenderTableRows(
+			[]string{"ID", "Name", "Version"},
+			func() []string {
+				cluster, err := query.NextCluster()
+				if err != nil {
+					cli.UserError("Failed to get next cluster: %s", err)
+				}
+				if cluster == nil {
+					return nil
+				}
+				return []string{cluster.ID, cluster.Name, cluster.Version}
+			})
 	},
 }

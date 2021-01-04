@@ -26,6 +26,22 @@ func (client *Client) GetCustomer(id string) (*Customer, error) {
 	return customer, nil
 }
 
-func (client *Client) QueryCustomers() (func(interface{}) (bool, error), error) {
-	return client.QueryEntities("customers", nil)
+func (client *Client) QueryCustomers() (*PagedQuery, error) {
+	query, err := client.QueryEntities("customers", nil)
+	if err != nil {
+		return nil, err
+	}
+	return query, nil
+}
+
+func (query *PagedQuery) NextCustomer() (*Customer, error) {
+	customer := &Customer{}
+	ok, err := query.NextEntity(customer)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return customer, nil
 }

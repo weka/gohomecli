@@ -44,19 +44,21 @@ var customerListCmd = &cobra.Command{
 	Long:  "List all customers",
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
-		next, err := api.QueryCustomers()
+		query, err := api.QueryCustomers()
 		if err != nil {
 			cli.UserError(err.Error())
 		}
-		header := []string{"ID", "Name", "Version"}
-		var customer *client.Customer
-		instantiate := func() interface{} {
-			customer = &client.Customer{}
-			return customer
-		}
-		getRow := func() []string {
-			return []string{customer.ID, customer.Name, cli.BoolToYesNo(customer.Monitored)}
-		}
-		cli.RenderQueryResults(header, instantiate, next, getRow)
+		cli.RenderTableRows(
+			[]string{"ID", "Name", "Version"},
+			func() []string {
+				customer, err := query.NextCustomer()
+				if err != nil {
+					cli.UserError("Failed to get next customer: %s", err)
+				}
+				if customer == nil {
+					return nil
+				}
+				return []string{customer.ID, customer.Name, cli.BoolToYesNo(customer.Monitored)}
+			})
 	},
 }
