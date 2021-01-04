@@ -18,7 +18,7 @@ func init() {
 	configSiteCmd.AddCommand(configSiteListCmd)
 	configSiteCmd.AddCommand(configSiteAddCmd)
 	configSiteCmd.AddCommand(configSiteUpdateCmd)
-	configSiteCmd.AddCommand(configSiteDeleteCmd)
+	configSiteCmd.AddCommand(configSiteRemoveCmd)
 }
 
 var configCmd = &cobra.Command{
@@ -140,10 +140,10 @@ var configSiteUpdateCmd = &cobra.Command{
 	},
 }
 
-var configSiteDeleteCmd = &cobra.Command{
-	Use:   "delete <site>",
-	Short: "Delete a configured site",
-	Long:  "Delete a configured site",
+var configSiteRemoveCmd = &cobra.Command{
+	Use:   "remove <site>",
+	Short: "Remove a configured site",
+	Long:  "Remove a configured site",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName := args[0]
@@ -155,6 +155,6 @@ var configSiteDeleteCmd = &cobra.Command{
 			delete(config.Sites, siteName)
 			return nil
 		})
-		cli.UserSuccess("Deleted site configuration: \"%s\"", siteName)
+		cli.UserSuccess("Removed site configuration: \"%s\"", siteName)
 	},
 }

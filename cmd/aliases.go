@@ -11,7 +11,7 @@ func init() {
 	aliasCmd.AddCommand(aliasListCmd)
 	aliasCmd.AddCommand(aliasAddCmd)
 	aliasCmd.AddCommand(configSiteUpdateCmd)
-	aliasCmd.AddCommand(aliasDeleteCmd)
+	aliasCmd.AddCommand(aliasRemoveCmd)
 }
 
 var aliasCmd = &cobra.Command{
@@ -58,10 +58,10 @@ var aliasAddCmd = &cobra.Command{
 	},
 }
 
-var aliasDeleteCmd = &cobra.Command{
-	Use:   "delete <alias>",
-	Short: "Delete an alias",
-	Long:  "Delete an alias",
+var aliasRemoveCmd = &cobra.Command{
+	Use:   "remove <alias>",
+	Short: "Remove an alias",
+	Long:  "Remove an alias",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		alias := args[0]
@@ -72,8 +72,8 @@ var aliasDeleteCmd = &cobra.Command{
 		}
 		err := aliases.Remove(alias)
 		if err != nil {
-			cli.UserError("Failed to delete alias: %s", err)
+			cli.UserError("Failed to remove alias: %s", err)
 		}
-		cli.UserSuccess("Deleted alias \"%s\" for cluster ID %s", alias, clusterID)
+		cli.UserSuccess("Removed alias \"%s\" for cluster ID %s", alias, clusterID)
 	},
 }
