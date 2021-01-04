@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -18,13 +19,26 @@ const (
 	DefaultCloudURL = "https://api.home.weka.io/"
 )
 
-// ConfigFilePath is the full path of the CLI configuration file (TOML)
-var ConfigFilePath string
+var (
+	ConfigDir         string
+	ConfigFilePath    string
+	AliasesFilePath   string
+	initialized       = false
+	CurrentConfig     *Config
+	CurrentSiteConfig *SiteConfig
+	SiteName          string
+)
 
-var initialized = false
-var CurrentConfig *Config
-var CurrentSiteConfig *SiteConfig
-var SiteName string
+func init() {
+	currentUser, err := user.Current()
+	if err != nil {
+		fmt.Printf("Failed to get user home directory: %s", err)
+		os.Exit(1)
+	}
+	ConfigDir = currentUser.HomeDir + "/.config/home-cli/"
+	ConfigFilePath = ConfigDir + "config.toml"
+	AliasesFilePath = ConfigDir + "aliases.toml"
+}
 
 // SiteConfig holds configuration values for a specific Weka Home site
 type SiteConfig struct {
@@ -38,14 +52,6 @@ type Config struct {
 	CloudURL    string                 `toml:"cloud_url,omitempty"`
 	DefaultSite string                 `toml:"default_site"`
 	Sites       map[string]*SiteConfig `toml:"sites"`
-}
-
-func init() {
-	currentUser, e := user.Current()
-	if e != nil {
-		logger.Fatal().Err(e).Msg("Failed to get user home directory")
-	}
-	ConfigFilePath = currentUser.HomeDir + "/.config/home-cli/config.toml"
 }
 
 func InitConfig(siteNameFromCommandLine string) {

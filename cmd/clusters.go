@@ -11,6 +11,7 @@ func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
+	clusterCmd.AddCommand(aliasCmd)
 }
 
 var clusterCmd = &cobra.Command{
