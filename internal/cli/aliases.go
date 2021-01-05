@@ -1,10 +1,10 @@
-package cmd
+package cli
 
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-
-	"github.com/weka/gohomecli/cli"
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
@@ -25,8 +25,8 @@ var aliasListCmd = &cobra.Command{
 	Short: "List aliases",
 	Long:  "List aliases",
 	Run: func(cmd *cobra.Command, args []string) {
-		aliases := cli.NewAliases()
-		cli.RenderTable([]string{"Alias", "Cluster ID"}, func(table *tablewriter.Table) {
+		aliases := env.NewAliases()
+		utils.RenderTable([]string{"Alias", "Cluster ID"}, func(table *tablewriter.Table) {
 			aliases.Iter(func(alias string, clusterID string) {
 				table.Append([]string{alias, clusterID})
 			})
@@ -41,20 +41,20 @@ var aliasAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		alias, clusterID := args[0], args[1]
-		aliases := cli.NewAliases()
+		aliases := env.NewAliases()
 		existingClusterID, aliasExists := aliases.Get(alias)
 		if aliasExists {
 			if existingClusterID == clusterID {
-				cli.UserWarning("Alias \"%s\" already exists for cluster ID %s", alias, clusterID)
+				utils.UserWarning("Alias \"%s\" already exists for cluster ID %s", alias, clusterID)
 				return
 			}
-			cli.UserError("Alias \"%s\" already exists for another cluster ID: %s", alias, clusterID)
+			utils.UserError("Alias \"%s\" already exists for another cluster ID: %s", alias, clusterID)
 		}
 		err := aliases.Set(alias, clusterID, true)
 		if err != nil {
-			cli.UserError("Failed to set alias: %s", err)
+			utils.UserError("Failed to set alias: %s", err)
 		}
-		cli.UserNote("Added alias \"%s\" for cluster ID %s", alias, clusterID)
+		utils.UserNote("Added alias \"%s\" for cluster ID %s", alias, clusterID)
 	},
 }
 
@@ -65,15 +65,15 @@ var aliasRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		alias := args[0]
-		aliases := cli.NewAliases()
+		aliases := env.NewAliases()
 		clusterID, aliasExists := aliases.Get(alias)
 		if !aliasExists {
-			cli.UserError("No such alias: \"%s\"", alias)
+			utils.UserError("No such alias: \"%s\"", alias)
 		}
 		err := aliases.Remove(alias)
 		if err != nil {
-			cli.UserError("Failed to remove alias: %s", err)
+			utils.UserError("Failed to remove alias: %s", err)
 		}
-		cli.UserNote("Removed alias \"%s\" for cluster ID %s", alias, clusterID)
+		utils.UserNote("Removed alias \"%s\" for cluster ID %s", alias, clusterID)
 	},
 }

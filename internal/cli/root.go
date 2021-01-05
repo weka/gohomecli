@@ -1,9 +1,9 @@
-package cmd
+package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cli/logging"
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var cfgFile string
@@ -21,7 +21,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		cli.UserError(err.Error())
+		utils.UserError(err.Error())
 	}
 }
 
@@ -35,11 +35,11 @@ func init() {
 
 func initLogging() {
 	if verboseLogging {
-		logging.SetGlobalLoggingLevel(logging.DebugLevel)
+		utils.SetGlobalLoggingLevel(utils.DebugLevel)
 	}
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	cli.InitConfig(siteName)
+	env.InitConfig(siteName)
 }

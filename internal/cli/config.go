@@ -1,11 +1,11 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-
-	"github.com/weka/gohomecli/cli"
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
@@ -34,11 +34,11 @@ var configAPIKeyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey := args[0]
-		cli.UpdateSiteConfig(func(siteConfig *cli.SiteConfig) error {
+		env.UpdateSiteConfig(func(siteConfig *env.SiteConfig) error {
 			siteConfig.APIKey = apiKey
 			return nil
 		})
-		cli.UserNote("Updated API key for site \"%s\"", cli.SiteName) // do not print the key
+		utils.UserNote("Updated API key for site \"%s\"", env.SiteName) // do not print the key
 	},
 }
 
@@ -49,11 +49,11 @@ var configCloudURLCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		cloudURL := args[0]
-		cli.UpdateSiteConfig(func(siteConfig *cli.SiteConfig) error {
+		env.UpdateSiteConfig(func(siteConfig *env.SiteConfig) error {
 			siteConfig.CloudURL = cloudURL
 			return nil
 		})
-		cli.UserNote("Updated cloud URL for site \"%s\": %s", cli.SiteName, cloudURL)
+		utils.UserNote("Updated cloud URL for site \"%s\": %s", env.SiteName, cloudURL)
 	},
 }
 
@@ -64,7 +64,7 @@ var configDefaultSiteCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName := args[0]
-		cli.UpdateConfig(func(config *cli.Config) error {
+		env.UpdateConfig(func(config *env.Config) error {
 			_, exists := config.Sites[siteName]
 			if !exists {
 				return fmt.Errorf("no such site: \"%s\"", siteName)
@@ -72,7 +72,7 @@ var configDefaultSiteCmd = &cobra.Command{
 			config.DefaultSite = siteName
 			return nil
 		})
-		cli.UserNote("Set default site configuration: \"%s\"", siteName)
+		utils.UserNote("Set default site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -87,10 +87,10 @@ var configSiteListCmd = &cobra.Command{
 	Short: "List configured sites",
 	Long:  "List configured sites",
 	Run: func(cmd *cobra.Command, args []string) {
-		cli.RenderTable([]string{"Name", "URL", "Default"}, func(table *tablewriter.Table) {
-			for name, site := range cli.CurrentConfig.Sites {
+		utils.RenderTable([]string{"Name", "URL", "Default"}, func(table *tablewriter.Table) {
+			for name, site := range env.CurrentConfig.Sites {
 				var defaultSymbol string
-				if name == cli.CurrentConfig.DefaultSite {
+				if name == env.CurrentConfig.DefaultSite {
 					defaultSymbol = "*"
 				} else {
 					defaultSymbol = ""
@@ -108,15 +108,15 @@ var configSiteAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName, cloudURL, apiKey := args[0], args[1], args[2]
-		cli.UpdateConfig(func(config *cli.Config) error {
+		env.UpdateConfig(func(config *env.Config) error {
 			_, exists := config.Sites[siteName]
 			if exists {
 				return fmt.Errorf("site already exists: \"%s\"", siteName)
 			}
-			config.Sites[siteName] = &cli.SiteConfig{APIKey: apiKey, CloudURL: cloudURL}
+			config.Sites[siteName] = &env.SiteConfig{APIKey: apiKey, CloudURL: cloudURL}
 			return nil
 		})
-		cli.UserNote("Added site configuration: \"%s\"", siteName)
+		utils.UserNote("Added site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -127,7 +127,7 @@ var configSiteUpdateCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName, cloudURL, apiKey := args[0], args[1], args[2]
-		cli.UpdateConfig(func(config *cli.Config) error {
+		env.UpdateConfig(func(config *env.Config) error {
 			site, exists := config.Sites[siteName]
 			if !exists {
 				return fmt.Errorf("no such site: \"%s\"", siteName)
@@ -136,7 +136,7 @@ var configSiteUpdateCmd = &cobra.Command{
 			site.CloudURL = cloudURL
 			return nil
 		})
-		cli.UserNote("Updated site configuration: \"%s\"", siteName)
+		utils.UserNote("Updated site configuration: \"%s\"", siteName)
 	},
 }
 
@@ -147,7 +147,7 @@ var configSiteRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName := args[0]
-		cli.UpdateConfig(func(config *cli.Config) error {
+		env.UpdateConfig(func(config *env.Config) error {
 			_, exists := config.Sites[siteName]
 			if !exists {
 				return fmt.Errorf("no such site: \"%s\"", siteName)
@@ -155,6 +155,6 @@ var configSiteRemoveCmd = &cobra.Command{
 			delete(config.Sites, siteName)
 			return nil
 		})
-		cli.UserNote("Removed site configuration: \"%s\"", siteName)
+		utils.UserNote("Removed site configuration: \"%s\"", siteName)
 	},
 }

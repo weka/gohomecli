@@ -1,0 +1,10 @@
+#!/bin/bash
+
+HERE=$(dirname $0)
+cd "$HERE" || exit 1
+
+BUILD_TIME="DEV"
+VERSION=$(git describe)
+LD_FLAGS="-X main.BuildVersion=$VERSION -X main.BuildTime=$BUILD_TIME"
+
+go run -ldflags "$LD_FLAGS" cmd/homecli/main.go $@

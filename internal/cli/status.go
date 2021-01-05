@@ -1,9 +1,9 @@
-package cmd
+package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cli/client"
+	"github.com/weka/gohomecli/internal/client"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
@@ -18,8 +18,8 @@ var serverVersionCmd = &cobra.Command{
 		client := client.GetClient()
 		status, err := client.GetServerStatus()
 		if err != nil {
-			cli.UserError(err.Error())
+			utils.UserError(err.Error())
 		}
-		cli.UserOutput("Server version: %s", status.Version)
+		utils.UserOutput("Server version: %s", status.Version)
 	},
 }

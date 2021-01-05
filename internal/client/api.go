@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/weka/gohomecli/internal/env"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cli/logging"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
-var logger = logging.GetLogger("API")
+var logger = utils.GetLogger("API")
 
 type metaData struct {
 	Page     int `json:"page"`
@@ -63,7 +63,7 @@ func NewClient(url string, apiKey string) *Client {
 // GetClient returns a new Client instance, instantiated
 // with values from the CLI configuration file
 func GetClient() *Client {
-	return NewClient(cli.CurrentSiteConfig.CloudURL, cli.CurrentSiteConfig.APIKey)
+	return NewClient(env.CurrentSiteConfig.CloudURL, env.CurrentSiteConfig.APIKey)
 }
 
 func (client *Client) SendRequest(method string, url string, result interface{}, raw bool) error {

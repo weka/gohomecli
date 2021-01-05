@@ -1,8 +1,9 @@
-package cmd
+package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
 	"strings"
 )
 
@@ -15,9 +16,9 @@ var versionCmd = &cobra.Command{
 	Short: "Show server version",
 	Long:  "Show server version",
 	Run: func(cmd *cobra.Command, args []string) {
-		cli.UserOutput(
+		utils.UserOutput(
 			"Client version: %s (built on %s)",
-			cli.VersionInfo.Name,
-			strings.Replace(cli.VersionInfo.BuildTime, "_", " ", -1))
+			env.VersionInfo.Name,
+			strings.Replace(env.VersionInfo.BuildTime, "_", " ", -1))
 	},
 }

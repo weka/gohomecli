@@ -17,8 +17,8 @@ limitations under the License.
 package main
 
 import (
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cmd"
+	"github.com/weka/gohomecli/internal/cli"
+	"github.com/weka/gohomecli/internal/env"
 	"strings"
 )
 
@@ -28,9 +28,9 @@ var (
 )
 
 func main() {
-	cli.VersionInfo = cli.VersionInfoAttributes{
+	env.VersionInfo = env.VersionInfoAttributes{
 		Name:      strings.TrimLeft(BuildVersion, "v"),
 		BuildTime: BuildTime,
 	}
-	cmd.Execute()
+	cli.Execute()
 }

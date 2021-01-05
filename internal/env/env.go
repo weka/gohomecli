@@ -1,4 +1,4 @@
-package cli
+package env
 
 type VersionInfoAttributes struct {
 	Name      string

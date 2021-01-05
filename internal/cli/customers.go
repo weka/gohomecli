@@ -1,10 +1,10 @@
-package cmd
+package cli
 
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cli/client"
+	"github.com/weka/gohomecli/internal/client"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
@@ -28,12 +28,12 @@ var customerGetCmd = &cobra.Command{
 		client := client.GetClient()
 		customer, err := client.GetCustomer(args[0])
 		if err != nil {
-			cli.UserError(err.Error())
+			utils.UserError(err.Error())
 		}
-		cli.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
+		utils.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"ID", customer.ID})
 			table.Append([]string{"Name", customer.Name})
-			table.Append([]string{"Monitored", cli.BoolToYesNo(customer.Monitored)})
+			table.Append([]string{"Monitored", utils.BoolToYesNo(customer.Monitored)})
 		})
 	},
 }
@@ -46,19 +46,19 @@ var customerListCmd = &cobra.Command{
 		api := client.GetClient()
 		query, err := api.QueryCustomers()
 		if err != nil {
-			cli.UserError(err.Error())
+			utils.UserError(err.Error())
 		}
-		cli.RenderTableRows(
+		utils.RenderTableRows(
 			[]string{"ID", "Name", "Version"},
 			func() []string {
 				customer, err := query.NextCustomer()
 				if err != nil {
-					cli.UserError("Failed to get next customer: %s", err)
+					utils.UserError("Failed to get next customer: %s", err)
 				}
 				if customer == nil {
 					return nil
 				}
-				return []string{customer.ID, customer.Name, cli.BoolToYesNo(customer.Monitored)}
+				return []string{customer.ID, customer.Name, utils.BoolToYesNo(customer.Monitored)}
 			})
 	},
 }

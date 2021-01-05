@@ -1,10 +1,10 @@
-package cmd
+package cli
 
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/cli"
-	"github.com/weka/gohomecli/cli/client"
+	"github.com/weka/gohomecli/internal/client"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
@@ -29,7 +29,7 @@ var clusterGetCmd = &cobra.Command{
 		client := client.GetClient()
 		cluster, err := client.GetCluster(args[0])
 		if err != nil {
-			cli.UserError(err.Error())
+			utils.UserError(err.Error())
 		}
 		var customerName string
 		if customer, err := client.GetClusterCustomer(cluster); err == nil {
@@ -37,7 +37,7 @@ var clusterGetCmd = &cobra.Command{
 		} else {
 			customerName = "N/A"
 		}
-		cli.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
+		utils.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"Customer", customerName})
 			table.Append([]string{"ID", cluster.ID})
 			table.Append([]string{"Name", cluster.Name})
@@ -54,14 +54,14 @@ var clusterListCmd = &cobra.Command{
 		api := client.GetClient()
 		query, err := api.QueryClusters()
 		if err != nil {
-			cli.UserError(err.Error())
+			utils.UserError(err.Error())
 		}
-		cli.RenderTableRows(
+		utils.RenderTableRows(
 			[]string{"ID", "Name", "Version"},
 			func() []string {
 				cluster, err := query.NextCluster()
 				if err != nil {
-					cli.UserError("Failed to get next cluster: %s", err)
+					utils.UserError("Failed to get next cluster: %s", err)
 				}
 				if cluster == nil {
 					return nil

@@ -1,4 +1,4 @@
-package cli
+package env
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/weka/gohomecli/cli/logging"
+	"github.com/weka/gohomecli/internal/utils"
 
 	"github.com/pelletier/go-toml"
 )
 
-var logger = logging.GetLogger("Config")
+var logger = utils.GetLogger("Config")
 
 const (
 	UnspecifiedSite = "default"
@@ -80,7 +80,7 @@ func createDefaultConfigFileAndExit() {
 			},
 		},
 	})
-	UserWarning(
+	utils.UserWarning(
 		"config file not found.\n\n"+
 			"Default config file created, please run:\n"+
 			"  %s config api-key <your-api-key>\n\n"+
@@ -140,11 +140,11 @@ func getSiteConfig(config *Config, siteNameFromCommandLine string) (*SiteConfig,
 	} else {
 		// Normal configuration file, with site configurations
 		if len(config.Sites) == 0 {
-			UserError("Config error: no sites are configured")
+			utils.UserError("Config error: no sites are configured")
 		}
 		if siteName == "" {
 			if config.DefaultSite == "" {
-				UserError(
+				utils.UserError(
 					"Config error: --site was not specified, and \"default_site\" is not set in the config file")
 			}
 			siteName = config.DefaultSite
@@ -152,7 +152,7 @@ func getSiteConfig(config *Config, siteNameFromCommandLine string) (*SiteConfig,
 		var exists bool
 		siteConfig, exists = config.Sites[siteName]
 		if !exists {
-			UserError(
+			utils.UserError(
 				"Config error: default site %s has no corresponding [site.%s] configuration in the config file",
 				siteName, siteName)
 		}
@@ -163,10 +163,10 @@ func getSiteConfig(config *Config, siteNameFromCommandLine string) (*SiteConfig,
 
 func validateSiteConfig(siteConfig *SiteConfig, siteName string) {
 	if siteConfig.APIKey == "" {
-		UserWarning("config error: \"api_key\" is unset for site %s", siteName)
+		utils.UserWarning("config error: \"api_key\" is unset for site %s", siteName)
 	}
 	if siteConfig.CloudURL == "" {
-		UserWarning("config error: \"cloud_url\" is unset for site %s", siteName)
+		utils.UserWarning("config error: \"cloud_url\" is unset for site %s", siteName)
 	}
 }
 
@@ -176,7 +176,7 @@ func UpdateConfig(update func(config *Config) error) {
 	config := CurrentConfig
 	err := update(config)
 	if err != nil {
-		UserError("failed to update config: " + err.Error())
+		utils.UserError("failed to update config: " + err.Error())
 	}
 	writeCLIConfig(config)
 }
