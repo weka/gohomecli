@@ -19,6 +19,11 @@ type metaData struct {
 	PageSize int `json:"page_size"`
 }
 
+type genericRawResponse struct {
+	Data json.RawMessage `json:"data"`
+	Meta metaData        `json:"meta"`
+}
+
 type genericResponseEnvelope struct {
 	Data interface{} `json:"data"`
 	Meta metaData    `json:"meta"`

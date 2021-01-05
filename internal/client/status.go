@@ -1,6 +1,8 @@
 package client
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type ServerStatus struct {
 	Active  bool   `json:"active"`
@@ -16,4 +18,13 @@ func (client *Client) GetServerStatus() (*ServerStatus, error) {
 		return nil, fmt.Errorf("could not fetch server status: %s", err)
 	}
 	return status, nil
+}
+
+func (client *Client) GetDBStatus() ([]byte, error) {
+	result := &genericRawResponse{}
+	err := client.GetRaw("db/status", result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Data, nil
 }
