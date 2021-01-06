@@ -60,7 +60,7 @@ func (query *PagedQuery) NextCluster() (*Cluster, error) {
 	cluster := &Cluster{}
 	ok, err := query.NextEntity(cluster)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get next cluster: %s", err)
 	}
 	if !ok {
 		return nil, nil

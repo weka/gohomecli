@@ -61,7 +61,7 @@ var clusterListCmd = &cobra.Command{
 			func() []string {
 				cluster, err := query.NextCluster()
 				if err != nil {
-					utils.UserError("Failed to get next cluster: %s", err)
+					utils.UserError(err.Error())
 				}
 				if cluster == nil {
 					return nil

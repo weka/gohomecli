@@ -53,7 +53,7 @@ var customerListCmd = &cobra.Command{
 			func() []string {
 				customer, err := query.NextCustomer()
 				if err != nil {
-					utils.UserError("Failed to get next customer: %s", err)
+					utils.UserError(err.Error())
 				}
 				if customer == nil {
 					return nil

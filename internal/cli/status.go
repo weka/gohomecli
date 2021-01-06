@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/client"
 	"github.com/weka/gohomecli/internal/utils"
@@ -36,12 +35,6 @@ var dbStatusCmd = &cobra.Command{
 		if err != nil {
 			utils.UserError(err.Error())
 		}
-		formatted, err := prettyjson.Format(status)
-		if err != nil {
-			utils.UserWarning("Failed to colorize JSON: %s", err)
-			utils.UserOutput(string(status))
-		} else {
-			utils.UserOutput(string(formatted))
-		}
+		utils.UserOutputJSON(status)
 	},
 }

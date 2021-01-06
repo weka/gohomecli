@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/olekukonko/tablewriter"
 	"os"
 	"strings"
@@ -19,8 +20,27 @@ const (
 	ColorError   = ColorRed
 )
 
+var IsColorOutputSupported bool
+
 func Colorize(color, text string) string {
+	if !IsColorOutputSupported {
+		return text
+	}
 	return strings.Join([]string{color, text, ColorReset}, "")
+}
+
+func ColorizeJSON(data []byte) []byte {
+	if !IsColorOutputSupported {
+		return data
+	}
+	formatter := prettyjson.NewFormatter()
+	formatter.Indent = 4
+	formatted, err := formatter.Format(data)
+	if err != nil {
+		UserWarning("Failed to colorize JSON: %s", err)
+		return data
+	}
+	return formatted
 }
 
 // UserOutput prints text to stdout. Use this function to output a command's
@@ -28,6 +48,11 @@ func Colorize(color, text string) string {
 func UserOutput(msg string, format ...interface{}) {
 	msg = fmt.Sprintf(msg, format...)
 	fmt.Println(msg)
+}
+
+// UserOutputJSON is like UserOutput, but for JSON
+func UserOutputJSON(data []byte) {
+	UserOutput(string(ColorizeJSON(data)))
 }
 
 // UserNote prints a colorized info message to stderr. Use this function to

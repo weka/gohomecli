@@ -17,7 +17,7 @@ const (
 
 func init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+	output := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}
 	log.Logger = zerolog.New(output).With().Timestamp().Logger()
 	SetGlobalLoggingLevel(WarnLevel)
 }

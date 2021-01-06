@@ -38,7 +38,7 @@ func (query *PagedQuery) NextCustomer() (*Customer, error) {
 	customer := &Customer{}
 	ok, err := query.NextEntity(customer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch next customer: %s", err.Error())
 	}
 	if !ok {
 		return nil, nil
