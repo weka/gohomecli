@@ -9,12 +9,14 @@ import (
 )
 
 const (
+	ColorWhite  = "\033[1;37m"
 	ColorBlue   = "\033[1;34m"
 	ColorCyan   = "\033[1;36m"
 	ColorYellow = "\033[1;33m"
 	ColorRed    = "\033[1;31m"
 	ColorReset  = "\033[0m"
 
+	ColorOutput  = ColorWhite
 	ColorSuccess = ColorCyan
 	ColorWarning = ColorYellow
 	ColorError   = ColorRed
@@ -47,7 +49,7 @@ func ColorizeJSON(data []byte) []byte {
 // return value.
 func UserOutput(msg string, format ...interface{}) {
 	msg = fmt.Sprintf(msg, format...)
-	fmt.Println(msg)
+	fmt.Println(Colorize(ColorOutput, msg))
 }
 
 // UserOutputJSON is like UserOutput, but for JSON
@@ -59,7 +61,7 @@ func UserOutputJSON(data []byte) {
 // output a neutral or positive message to the user.
 func UserNote(msg string, format ...interface{}) {
 	msg = fmt.Sprintf(msg, format...)
-	fmt.Println(Colorize(ColorSuccess, msg))
+	fmt.Fprintln(os.Stderr, Colorize(ColorSuccess, msg))
 }
 
 // UserWarning prints a colorized warning message to stderr
