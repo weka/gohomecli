@@ -172,29 +172,10 @@ func validateSiteConfig(siteConfig *SiteConfig, siteName string) {
 
 // UpdateConfig updates values in the configuration file. To update values specifically
 // for the currently active site, use UpdateSiteConfig instead.
-func UpdateConfig(update func(config *Config) error) {
-	config := CurrentConfig
-	err := update(config)
+func UpdateConfig(update func(config *Config, siteConfig *SiteConfig) error) {
+	err := update(CurrentConfig, CurrentSiteConfig)
 	if err != nil {
 		utils.UserError("failed to update config: " + err.Error())
 	}
-	writeCLIConfig(config)
-}
-
-// UpdateSiteConfig updates configuration values for the currently active site
-func UpdateSiteConfig(update func(siteConfig *SiteConfig) error) {
-	UpdateConfig(func(config *Config) error {
-		siteConfig := CurrentSiteConfig
-		err := update(siteConfig)
-		if err != nil {
-			return err
-		}
-		// If we're not working with sites, update global values here. For more info about
-		// why this is necessary, see how a dummy SiteConfig is created in GetSiteConfig().
-		if SiteName == UnspecifiedSite {
-			config.APIKey = CurrentSiteConfig.APIKey
-			config.CloudURL = CurrentSiteConfig.CloudURL
-		}
-		return nil
-	})
+	writeCLIConfig(CurrentConfig)
 }

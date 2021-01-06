@@ -10,7 +10,6 @@ import (
 func init() {
 	aliasCmd.AddCommand(aliasListCmd)
 	aliasCmd.AddCommand(aliasAddCmd)
-	aliasCmd.AddCommand(configSiteUpdateCmd)
 	aliasCmd.AddCommand(aliasRemoveCmd)
 }
 

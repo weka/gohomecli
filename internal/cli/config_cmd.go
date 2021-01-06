@@ -10,14 +10,16 @@ import (
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.AddCommand(configAPIKeyCmd)
-	configCmd.AddCommand(configCloudURLCmd)
-	configCmd.AddCommand(configDefaultSiteCmd)
 
 	configCmd.AddCommand(configSiteCmd)
+	configCmd.AddCommand(configUpdateCmd)
+	configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.cloudURL, "cloud-url", "",
+		"set cloud URL")
+	configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.apiKey, "api-key", "",
+		"set API key")
+	configCmd.AddCommand(configDefaultSiteCmd)
 	configSiteCmd.AddCommand(configSiteListCmd)
 	configSiteCmd.AddCommand(configSiteAddCmd)
-	configSiteCmd.AddCommand(configSiteUpdateCmd)
 	configSiteCmd.AddCommand(configSiteRemoveCmd)
 }
 
@@ -27,33 +29,32 @@ var configCmd = &cobra.Command{
 	Long:  "Configuration commands",
 }
 
-var configAPIKeyCmd = &cobra.Command{
-	Use:   "api-key <key>",
-	Short: "Set API key for default site",
-	Long:  "Set API key for default site",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey := args[0]
-		env.UpdateSiteConfig(func(siteConfig *env.SiteConfig) error {
-			siteConfig.APIKey = apiKey
-			return nil
-		})
-		utils.UserNote("Updated API key for site \"%s\"", env.SiteName) // do not print the key
-	},
-}
+var configUpdateCmdArgs = struct {
+	cloudURL string
+	apiKey string
+}{}
 
-var configCloudURLCmd = &cobra.Command{
-	Use:   "cloud-url <url>",
-	Short: "Set cloud URL for default site",
-	Long:  "Set cloud URL for default site",
-	Args:  cobra.ExactArgs(1),
+var configUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update configuration",
+	Long:  "Update configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		cloudURL := args[0]
-		env.UpdateSiteConfig(func(siteConfig *env.SiteConfig) error {
-			siteConfig.CloudURL = cloudURL
+		env.UpdateConfig(func(config *env.Config, siteConfig *env.SiteConfig) error {
+			atLeastOne := false
+			if configUpdateCmdArgs.apiKey != "" {
+				siteConfig.APIKey = configUpdateCmdArgs.apiKey
+				atLeastOne = true
+			}
+			if configUpdateCmdArgs.cloudURL != "" {
+				siteConfig.CloudURL = configUpdateCmdArgs.cloudURL
+				atLeastOne = true
+			}
+			if !atLeastOne {
+				utils.UserError("at least one configuration value must be set, see help for more info")
+			}
 			return nil
 		})
-		utils.UserNote("Updated cloud URL for site \"%s\": %s", env.SiteName, cloudURL)
+		utils.UserNote("Updated site configuration: \"%s\"", env.SiteName)
 	},
 }
 
@@ -64,7 +65,7 @@ var configDefaultSiteCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName := args[0]
-		env.UpdateConfig(func(config *env.Config) error {
+		env.UpdateConfig(func(config *env.Config, siteConfig *env.SiteConfig) error {
 			_, exists := config.Sites[siteName]
 			if !exists {
 				return fmt.Errorf("no such site: \"%s\"", siteName)
@@ -72,7 +73,7 @@ var configDefaultSiteCmd = &cobra.Command{
 			config.DefaultSite = siteName
 			return nil
 		})
-		utils.UserNote("Set default site configuration: \"%s\"", siteName)
+		utils.UserNote("Default site configuration set: \"%s\"", siteName)
 	},
 }
 
@@ -108,7 +109,7 @@ var configSiteAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName, cloudURL, apiKey := args[0], args[1], args[2]
-		env.UpdateConfig(func(config *env.Config) error {
+		env.UpdateConfig(func(config *env.Config, siteConfig *env.SiteConfig) error {
 			_, exists := config.Sites[siteName]
 			if exists {
 				return fmt.Errorf("site already exists: \"%s\"", siteName)
@@ -120,26 +121,6 @@ var configSiteAddCmd = &cobra.Command{
 	},
 }
 
-var configSiteUpdateCmd = &cobra.Command{
-	Use:   "update <site> <cloud-url> <api-key>",
-	Short: "Update site configuration",
-	Long:  "Update site configuration",
-	Args:  cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
-		siteName, cloudURL, apiKey := args[0], args[1], args[2]
-		env.UpdateConfig(func(config *env.Config) error {
-			site, exists := config.Sites[siteName]
-			if !exists {
-				return fmt.Errorf("no such site: \"%s\"", siteName)
-			}
-			site.APIKey = apiKey
-			site.CloudURL = cloudURL
-			return nil
-		})
-		utils.UserNote("Updated site configuration: \"%s\"", siteName)
-	},
-}
-
 var configSiteRemoveCmd = &cobra.Command{
 	Use:   "remove <site>",
 	Short: "Remove a configured site",
@@ -147,7 +128,7 @@ var configSiteRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		siteName := args[0]
-		env.UpdateConfig(func(config *env.Config) error {
+		env.UpdateConfig(func(config *env.Config, siteConfig *env.SiteConfig) error {
 			_, exists := config.Sites[siteName]
 			if !exists {
 				return fmt.Errorf("no such site: \"%s\"", siteName)
