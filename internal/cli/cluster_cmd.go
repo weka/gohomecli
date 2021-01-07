@@ -16,15 +16,16 @@ func init() {
 
 var clusterCmd = &cobra.Command{
 	Use:   "cluster",
+	Aliases: []string{"clusters"}, // backward compatibility
 	Short: "Interact with clusters",
 	Long:  "Interact with clusters",
 }
 
 var clusterGetCmd = &cobra.Command{
-	Use:   "get <cluster-id>",
-	Short: "Show a single cluster",
-	Long:  "Show a single cluster",
-	Args:  cobra.ExactArgs(1),
+	Use:     "get <cluster-id>",
+	Short:   "Show a single cluster",
+	Long:    "Show a single cluster",
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
 		cluster, err := client.GetCluster(args[0])

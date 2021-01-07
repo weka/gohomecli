@@ -31,7 +31,7 @@ var configCmd = &cobra.Command{
 
 var configUpdateCmdArgs = struct {
 	cloudURL string
-	apiKey string
+	apiKey   string
 }{}
 
 var configUpdateCmd = &cobra.Command{

@@ -22,6 +22,7 @@ func init() {
 
 var usageReportCmd = &cobra.Command{
 	Use:   "usage-report { --all-active | --cluster ID }",
+	Aliases: []string{"usage-reports"}, // backward compatibility
 	Short: "Get cluster usage report",
 	Long:  "Get cluster usage report",
 	Args: func(cmd *cobra.Command, args []string) error {
