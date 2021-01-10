@@ -3,8 +3,8 @@ package client
 import "fmt"
 
 func (client *Client) GetAnalytics(clusterID string) ([]byte, error) {
-	result := &genericRawResponse{}
-	err := client.GetRaw(fmt.Sprintf("clusters/%s/analytics", clusterID), result)
+	result := &rawResponse{}
+	err := client.Get(fmt.Sprintf("clusters/%s/analytics", clusterID), result, nil)
 	if err != nil {
 		return nil, err
 	}

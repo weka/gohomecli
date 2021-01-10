@@ -31,16 +31,16 @@ var analyticsCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		client := client.GetClient()
+		api := client.GetClient()
 		if analyticsCmdArgs.clusterID != "" {
-			cluster, err := client.GetCluster(analyticsCmdArgs.clusterID)
+			cluster, err := api.GetCluster(analyticsCmdArgs.clusterID)
 			if err != nil {
 				utils.UserError(err.Error())
 			}
-			outputClusterAnalytics(client, cluster, false)
+			outputClusterAnalytics(api, cluster, false)
 			return
 		}
-		query, err := client.QueryClusters()
+		query, err := api.QueryClusters(&client.RequestOptions{Params: client.GetActiveClustersParams()})
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -52,7 +52,7 @@ var analyticsCmd = &cobra.Command{
 			if cluster == nil {
 				break
 			}
-			outputClusterAnalytics(client, cluster, true)
+			outputClusterAnalytics(api, cluster, true)
 		}
 	},
 }

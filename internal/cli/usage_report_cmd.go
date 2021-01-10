@@ -21,10 +21,10 @@ func init() {
 }
 
 var usageReportCmd = &cobra.Command{
-	Use:   "usage-report { --all-active | --cluster ID }",
+	Use:     "usage-report { --all-active | --cluster ID }",
 	Aliases: []string{"usage-reports"}, // backward compatibility
-	Short: "Get cluster usage report",
-	Long:  "Get cluster usage report",
+	Short:   "Get cluster usage report",
+	Long:    "Get cluster usage report",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if !usageReportCmdArgs.allActiveClusters && usageReportCmdArgs.clusterID == "" {
 			return errors.New("please specify either --all-active or --cluster")
@@ -32,16 +32,16 @@ var usageReportCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		client := client.GetClient()
+		api := client.GetClient()
 		if usageReportCmdArgs.clusterID != "" {
-			cluster, err := client.GetCluster(usageReportCmdArgs.clusterID)
+			cluster, err := api.GetCluster(usageReportCmdArgs.clusterID)
 			if err != nil {
 				utils.UserError(err.Error())
 			}
-			outputClusterUsageReport(client, cluster, false)
+			outputClusterUsageReport(api, cluster, false)
 			return
 		}
-		query, err := client.QueryClusters()
+		query, err := api.QueryClusters(&client.RequestOptions{Params: client.GetActiveClustersParams()})
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -53,7 +53,7 @@ var usageReportCmd = &cobra.Command{
 			if cluster == nil {
 				break
 			}
-			outputClusterUsageReport(client, cluster, true)
+			outputClusterUsageReport(api, cluster, true)
 		}
 	},
 }

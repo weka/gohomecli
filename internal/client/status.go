@@ -13,7 +13,7 @@ type ServerStatus struct {
 func (client *Client) GetServerStatus() (*ServerStatus, error) {
 	logger.Info().Msg("Fetching server status")
 	status := &ServerStatus{}
-	err := client.GetRaw("status", status)
+	err := client.Get("status", status, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch server status: %s", err)
 	}
@@ -21,8 +21,8 @@ func (client *Client) GetServerStatus() (*ServerStatus, error) {
 }
 
 func (client *Client) GetDBStatus() ([]byte, error) {
-	result := &genericRawResponse{}
-	err := client.GetRaw("db/status", result)
+	result := &rawResponse{}
+	err := client.Get("db/status", result, nil)
 	if err != nil {
 		return nil, err
 	}

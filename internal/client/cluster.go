@@ -47,13 +47,20 @@ func (client *Client) GetClusterCustomer(cluster *Cluster) (*Customer, error) {
 	return customer, nil
 }
 
-func (client *Client) QueryClusters() (*PagedQuery, error) {
-	params := map[string]interface{}{"seen_within_seconds": 60 * 60}
-	query, err := client.QueryEntities("clusters", params)
+func (client *Client) QueryClusters(options *RequestOptions) (*PagedQuery, error) {
+	query, err := client.QueryEntities("clusters", options)
 	if err != nil {
 		return nil, err
 	}
 	return query, nil
+}
+
+func GetActiveClustersParams() map[string]interface{} {
+	return map[string]interface{}{
+		"seen_within_seconds": 60 * 60,
+		"muted":               "false",
+		"monitored":           "true",
+	}
 }
 
 func (query *PagedQuery) NextCluster() (*Cluster, error) {

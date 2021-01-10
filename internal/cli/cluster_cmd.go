@@ -11,21 +11,23 @@ func init() {
 	rootCmd.AddCommand(clusterCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
+	clusterListCmd.Flags().BoolVar(&clusterListCmdArgs.active, "active", false,
+		"show only active clusters")
 	clusterCmd.AddCommand(aliasCmd)
 }
 
 var clusterCmd = &cobra.Command{
-	Use:   "cluster",
+	Use:     "cluster",
 	Aliases: []string{"clusters"}, // backward compatibility
-	Short: "Interact with clusters",
-	Long:  "Interact with clusters",
+	Short:   "Interact with clusters",
+	Long:    "Interact with clusters",
 }
 
 var clusterGetCmd = &cobra.Command{
-	Use:     "get <cluster-id>",
-	Short:   "Show a single cluster",
-	Long:    "Show a single cluster",
-	Args:    cobra.ExactArgs(1),
+	Use:   "get <cluster-id>",
+	Short: "Show a single cluster",
+	Long:  "Show a single cluster",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
 		cluster, err := client.GetCluster(args[0])
@@ -47,13 +49,21 @@ var clusterGetCmd = &cobra.Command{
 	},
 }
 
+var clusterListCmdArgs = struct {
+	active bool
+}{}
+
 var clusterListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all clusters",
 	Long:  "List all clusters",
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
-		query, err := api.QueryClusters()
+		options := &client.RequestOptions{}
+		if clusterListCmdArgs.active {
+			options.Params = client.GetActiveClustersParams()
+		}
+		query, err := api.QueryClusters(options)
 		if err != nil {
 			utils.UserError(err.Error())
 		}

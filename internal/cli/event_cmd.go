@@ -10,10 +10,10 @@ func init() {
 }
 
 var eventCmd = &cobra.Command{
-	Use:   "event",
+	Use:     "event",
 	Aliases: []string{"events"}, // backward compatibility
-	Short: "Show events",
-	Long:  "Show events",
+	Short:   "Show events",
+	Long:    "Show events",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.UserError("Not implemented")
 	},

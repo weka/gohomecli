@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/weka/gohomecli/internal/env"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -19,24 +20,24 @@ type metaData struct {
 	PageSize int `json:"page_size"`
 }
 
-type genericRawResponse struct {
+type rawResponse struct {
 	Data json.RawMessage `json:"data"`
 	Meta metaData        `json:"meta"`
 }
 
-type genericResponseEnvelope struct {
-	Data interface{} `json:"data"`
-	Meta metaData    `json:"meta"`
-}
-
-type genericEntityEnvelope struct {
+type entityEnvelope struct {
 	ID            string          `json:"id"`
 	Type          string          `json:"type"`
 	Attributes    interface{}     `json:"attributes"`
 	Relationships json.RawMessage `json:"relationships"`
 }
 
-type genericQueryResultsEnvelope struct {
+type responseEnvelope struct {
+	Data entityEnvelope `json:"data"`
+	Meta metaData       `json:"meta"`
+}
+
+type queryResultsEnvelope struct {
 	Data []struct {
 		ID            string          `json:"id"`
 		Type          string          `json:"type"`
@@ -48,17 +49,19 @@ type genericQueryResultsEnvelope struct {
 
 // Client is an API client for a given service URL
 type Client struct {
-	BaseURL    string
-	apiKey     string
-	HTTPClient *http.Client
+	BaseURL       string
+	DefaultPrefix string
+	apiKey        string
+	HTTPClient    *http.Client
 }
 
 // NewClient creates and returns a new Client instance
 func NewClient(url string, apiKey string) *Client {
 	url = strings.TrimRight(url, "/")
 	return &Client{
-		BaseURL: fmt.Sprintf("%s/api/v3", url),
-		apiKey:  apiKey,
+		BaseURL:       url,
+		DefaultPrefix: "api/v3",
+		apiKey:        apiKey,
 		HTTPClient: &http.Client{
 			Timeout: time.Minute,
 		},
@@ -71,8 +74,31 @@ func GetClient() *Client {
 	return NewClient(env.CurrentSiteConfig.CloudURL, env.CurrentSiteConfig.APIKey)
 }
 
-func (client *Client) SendRequest(method string, url string, result interface{}, raw bool) error {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", client.BaseURL, url), nil)
+func (client *Client) getFullURL(url string, options *RequestOptions) string {
+	if options.Prefix == "" {
+		options.Prefix = client.DefaultPrefix
+	}
+	fullURL := fmt.Sprintf("%s/%s/%s", client.BaseURL, options.Prefix, url)
+	if options.Params != nil {
+		fullURL = fmt.Sprintf("%s?%s", fullURL, queryParamsToString(options.Params))
+	}
+	return fullURL
+}
+
+type QueryParams map[string]interface{}
+
+type RequestOptions struct {
+	Prefix string
+	Params QueryParams
+	Body   io.Reader
+}
+
+func (client *Client) SendRequest(method string, url string, result interface{}, options *RequestOptions) error {
+	if options == nil {
+		options = &RequestOptions{}
+	}
+	fullURL := client.getFullURL(url, options)
+	req, err := http.NewRequest(method, fullURL, options.Body)
 	if err != nil {
 		return err
 	}
@@ -108,11 +134,6 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 		Int("status", res.StatusCode).
 		Msg("Response")
 
-	if !raw {
-		result = &genericResponseEnvelope{
-			Data: result,
-		}
-	}
 	if err = json.NewDecoder(res.Body).Decode(result); err != nil {
 		logger.Error().Err(err).Msg("Unable to parse JSON")
 		return err
@@ -121,23 +142,20 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 	return nil
 }
 
-// Get sends a GET request
-func (client *Client) Get(url string, result interface{}) error {
-	return client.SendRequest("GET", url, result, false)
-}
-
-// GetRaw sends a GET request, and does not expect the response to be enveloped
-func (client *Client) GetRaw(url string, result interface{}) error {
-	return client.SendRequest("GET", url, result, true)
+// Get sends a GET request, and does not expect the response to be enveloped
+func (client *Client) Get(url string, result interface{}, options *RequestOptions) error {
+	return client.SendRequest("GET", url, result, options)
 }
 
 // GetAPIEntity is a general implementation for getting a single object from an
 // API resource
 func (client *Client) GetAPIEntity(resource string, id string, result interface{}) error {
-	entity := genericEntityEnvelope{
-		Attributes: result,
+	entity := responseEnvelope{
+		Data: entityEnvelope{
+			Attributes: result,
+		},
 	}
-	return client.Get(fmt.Sprintf("%s/%s", resource, id), &entity)
+	return client.Get(fmt.Sprintf("%s/%s", resource, id), &entity, nil)
 }
 
 func queryParamsToString(queryParamGroups ...map[string]interface{}) string {
@@ -151,70 +169,4 @@ func queryParamsToString(queryParamGroups ...map[string]interface{}) string {
 		return ""
 	}
 	return strings.Join(parts, "&")
-}
-
-type PagedQuery struct {
-	Client          *Client
-	URL             string
-	QueryParams     map[string]interface{}
-	Page            int
-	PageResults     genericQueryResultsEnvelope
-	HasMorePages    bool
-	index           int
-	maxIndex        int
-	queryMetaParams map[string]interface{}
-	queryParamsStr  string
-}
-
-func (client *Client) QueryEntities(url string, queryParams map[string]interface{}) (*PagedQuery, error) {
-	query := PagedQuery{
-		Client:          client,
-		URL:             url,
-		QueryParams:     queryParams,
-		queryParamsStr:  queryParamsToString(queryParams),
-		Page:            0,
-		queryMetaParams: make(map[string]interface{}),
-	}
-	err := query.fetchNextPage()
-	if err != nil {
-		return nil, err
-	}
-	return &query, nil
-}
-
-func (query *PagedQuery) fetchNextPage() error {
-	query.Page++
-	query.queryMetaParams["page"] = query.Page
-	query.PageResults = genericQueryResultsEnvelope{}
-	allQueryParamsStr := queryParamsToString(query.queryMetaParams)
-	if query.queryParamsStr != "" {
-		allQueryParamsStr = query.queryParamsStr + "&" + allQueryParamsStr
-	}
-	urlWithParams := fmt.Sprintf("%s?%s", query.URL, allQueryParamsStr)
-	err := query.Client.GetRaw(urlWithParams, &query.PageResults)
-	if err != nil {
-		return err
-	}
-	query.HasMorePages = len(query.PageResults.Data) == query.PageResults.Meta.PageSize
-	query.index = -1
-	query.maxIndex = len(query.PageResults.Data) - 1
-	return nil
-}
-
-func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
-	if query.index == query.maxIndex {
-		if !query.HasMorePages {
-			return false, nil
-		}
-		err := query.fetchNextPage()
-		if err != nil {
-			return false, err
-		}
-	}
-	query.index++
-	err = json.Unmarshal(query.PageResults.Data[query.index].Attributes, result)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }

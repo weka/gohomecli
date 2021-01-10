@@ -11,10 +11,10 @@ func init() {
 }
 
 var integrationCmd = &cobra.Command{
-	Use:   "integration",
+	Use:     "integration",
 	Aliases: []string{"integrations"}, // backward compatibility
-	Short: "Integrations",
-	Long:  "Integrations",
+	Short:   "Integrations",
+	Long:    "Integrations",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.UserError("Not implemented")
 	},
