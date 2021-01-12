@@ -4,16 +4,19 @@ import (
 	"encoding/json"
 )
 
+const defaultPageSize = 50
+
 type PagedQuery struct {
-	Client          *Client
-	URL             string
-	Options         *RequestOptions
-	Page            int
-	PageResults     queryResultsEnvelope
-	HasMorePages    bool
-	index           int
-	maxIndex        int
-	queryMetaParams map[string]interface{}
+	Client            *Client
+	URL               string
+	Options           *RequestOptions
+	Page              int
+	PageResults       queryResultsEnvelope
+	noMetaPageResults []json.RawMessage
+	HasMorePages      bool
+	index             int
+	maxIndex          int
+	queryMetaParams   map[string]interface{}
 }
 
 func (client *Client) QueryEntities(url string, options *RequestOptions) (*PagedQuery, error) {
@@ -29,39 +32,53 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 		Options: options,
 		Page:    0,
 	}
-	err := query.fetchNextPage()
+	err := query.FetchNextPage()
 	if err != nil {
 		return nil, err
 	}
 	return &query, nil
 }
 
-func (query *PagedQuery) fetchNextPage() error {
+func (query *PagedQuery) FetchNextPage() error {
 	query.Page++
 	query.Options.Params["page"] = query.Page
-	query.PageResults = queryResultsEnvelope{}
-	err := query.Client.Get(query.URL, &query.PageResults, query.Options)
-	if err != nil {
-		return err
+	var numResultsInPage int
+	if query.Options.NoMetadata {
+		err := query.Client.Get(query.URL, &query.noMetaPageResults, query.Options)
+		if err != nil {
+			return err
+		}
+		numResultsInPage = len(query.noMetaPageResults)
+		query.HasMorePages = numResultsInPage == defaultPageSize
+	} else {
+		err := query.Client.Get(query.URL, &query.PageResults, query.Options)
+		if err != nil {
+			return err
+		}
+		numResultsInPage = len(query.PageResults.Data)
+		query.HasMorePages = numResultsInPage == query.PageResults.Meta.PageSize
 	}
-	query.HasMorePages = len(query.PageResults.Data) == query.PageResults.Meta.PageSize
 	query.index = -1
-	query.maxIndex = len(query.PageResults.Data) - 1
+	query.maxIndex = numResultsInPage - 1
 	return nil
 }
 
 func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
 	if query.index == query.maxIndex {
-		if !query.HasMorePages {
+		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
 			return false, nil
 		}
-		err := query.fetchNextPage()
+		err := query.FetchNextPage()
 		if err != nil {
 			return false, err
 		}
 	}
 	query.index++
-	err = json.Unmarshal(query.PageResults.Data[query.index].Attributes, result)
+	if query.Options.NoMetadata {
+		err = json.Unmarshal(query.noMetaPageResults[query.index], result)
+	} else {
+		err = json.Unmarshal(query.PageResults.Data[query.index].Attributes, result)
+	}
 	if err != nil {
 		return false, err
 	}

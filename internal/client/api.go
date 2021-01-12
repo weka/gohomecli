@@ -88,9 +88,11 @@ func (client *Client) getFullURL(url string, options *RequestOptions) string {
 type QueryParams map[string]interface{}
 
 type RequestOptions struct {
-	Prefix string
-	Params QueryParams
-	Body   io.Reader
+	Prefix     string
+	Params     QueryParams
+	Body       io.Reader
+	NoMetadata bool
+	NoAutoFetchNextPage bool
 }
 
 func (client *Client) SendRequest(method string, url string, result interface{}, options *RequestOptions) error {

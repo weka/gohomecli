@@ -49,7 +49,7 @@ var customerListCmd = &cobra.Command{
 			utils.UserError(err.Error())
 		}
 		utils.RenderTableRows(
-			[]string{"ID", "Name", "Version"},
+			[]string{"ID", "Name", "Monitored"},
 			func() []string {
 				customer, err := query.NextCustomer()
 				if err != nil {

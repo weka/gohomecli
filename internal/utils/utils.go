@@ -9,17 +9,25 @@ import (
 )
 
 const (
-	ColorWhite  = "\033[1;37m"
-	ColorBlue   = "\033[1;34m"
-	ColorCyan   = "\033[1;36m"
-	ColorYellow = "\033[1;33m"
-	ColorRed    = "\033[1;31m"
-	ColorReset  = "\033[0m"
+	ColorRed           = "\033[0;31m"
+	ColorGreen         = "\033[0;32m"
+	ColorYellow        = "\033[0;33m"
+	ColorBlue          = "\033[0;34m"
+	ColorMagenta       = "\033[0;35m"
+	ColorCyan          = "\033[0;36m"
+	ColorBrightRed     = "\033[1;31m"
+	ColorBrightGreen   = "\033[1;32m"
+	ColorBrightYellow  = "\033[1;33m"
+	ColorBrightBlue    = "\033[1;34m"
+	ColorBrightMagenta = "\033[1;35m"
+	ColorBrightCyan    = "\033[1;36m"
+	ColorWhite         = "\033[1;37m"
+	ColorReset         = "\033[0m"
 
 	ColorOutput  = ColorWhite
-	ColorSuccess = ColorCyan
-	ColorWarning = ColorYellow
-	ColorError   = ColorRed
+	ColorSuccess = ColorBrightCyan
+	ColorWarning = ColorBrightYellow
+	ColorError   = ColorBrightRed
 )
 
 var IsColorOutputSupported bool
@@ -93,6 +101,11 @@ type TableRenderer struct {
 func (tr *TableRenderer) Render() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetHeaderLine(false)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetTablePadding("aaa")
 	table.SetHeader(tr.Headers)
 	tr.Populate(table)
 	table.Render()
