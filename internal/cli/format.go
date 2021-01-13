@@ -10,6 +10,17 @@ func FormatTime(t time.Time) string {
 	return utils.Colorize(utils.ColorCyan, t.Format(time.RFC3339))
 }
 
+func ParseTime(text string) (time.Time, error) {
+	if text == "" {
+		return time.Time{}, nil
+	}
+	result, err := time.Parse(time.RFC3339, text)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 func FormatBoolean(b bool) string {
 	if b {
 		return "Yes"

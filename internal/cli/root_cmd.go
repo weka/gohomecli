@@ -47,7 +47,7 @@ func init() {
 	cobra.OnInitialize(initLogging)
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&siteName, "site", "s", "",
+	rootCmd.PersistentFlags().StringVar(&siteName, "site", "",
 		"target Weka Home site")
 	rootCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
 		"verbose output")

@@ -7,6 +7,7 @@ import (
 	"github.com/weka/gohomecli/internal/env"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -164,7 +165,8 @@ func queryParamsToString(queryParamGroups ...map[string]interface{}) string {
 	var parts []string
 	for _, queryParams := range queryParamGroups {
 		for param, value := range queryParams {
-			parts = append(parts, fmt.Sprintf("%s=%v", param, value))
+			parts = append(parts,
+				fmt.Sprintf("%s=%v", url.QueryEscape(param), url.QueryEscape(fmt.Sprint(value))))
 		}
 	}
 	if len(parts) == 0 {
