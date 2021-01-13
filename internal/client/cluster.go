@@ -55,12 +55,11 @@ func (client *Client) QueryClusters(options *RequestOptions) (*PagedQuery, error
 	return query, nil
 }
 
-func GetActiveClustersParams() map[string]interface{} {
-	return map[string]interface{}{
-		"seen_within_seconds": 60 * 60,
-		"muted":               "false",
-		"monitored":           "true",
-	}
+func GetActiveClustersParams() *QueryParams {
+	return (&QueryParams{}).
+		Set("seen_within_seconds", 60*60).
+		Set("muted", "false").
+		Set("monitored", "true")
 }
 
 func (query *PagedQuery) NextCluster() (*Cluster, error) {

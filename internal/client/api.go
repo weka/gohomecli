@@ -80,17 +80,53 @@ func (client *Client) getFullURL(url string, options *RequestOptions) string {
 		options.Prefix = client.DefaultPrefix
 	}
 	fullURL := fmt.Sprintf("%s/%s/%s", client.BaseURL, options.Prefix, url)
-	if options.Params != nil {
-		fullURL = fmt.Sprintf("%s?%s", fullURL, queryParamsToString(options.Params))
+	queryParams := options.Params.String()
+	if queryParams != "" {
+		fullURL = fmt.Sprintf("%s?%s", fullURL, queryParams)
 	}
 	return fullURL
 }
 
-type QueryParams map[string]interface{}
+type QueryParams struct {
+	Names  []string
+	Values []interface{}
+}
+
+// Set sets a parameter, and overrides its value if it was already set
+func (params *QueryParams) Set(name string, value interface{}) *QueryParams {
+	for i, existingName := range params.Names {
+		if existingName == name {
+			params.Values[i] = value
+			return params
+		}
+	}
+	return params.Append(name, value)
+}
+
+// Append adds a new parameter, even if one already exists with the same name
+func (params *QueryParams) Append(name string, value interface{}) *QueryParams {
+	params.Names = append(params.Names, name)
+	params.Values = append(params.Values, value)
+	return params
+}
+
+// String returns all parameters as one string, ready to be appended to the URL
+func (params *QueryParams) String() string {
+	var parts []string
+	for i, name := range params.Names {
+		value := params.Values[i]
+		parts = append(parts,
+			fmt.Sprintf("%s=%v", url.QueryEscape(name), url.QueryEscape(fmt.Sprint(value))))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, "&")
+}
 
 type RequestOptions struct {
 	Prefix              string
-	Params              QueryParams
+	Params              *QueryParams
 	Body                io.Reader
 	NoMetadata          bool
 	NoAutoFetchNextPage bool
@@ -159,18 +195,4 @@ func (client *Client) GetAPIEntity(resource string, id string, result interface{
 		},
 	}
 	return client.Get(fmt.Sprintf("%s/%s", resource, id), &entity, nil)
-}
-
-func queryParamsToString(queryParamGroups ...map[string]interface{}) string {
-	var parts []string
-	for _, queryParams := range queryParamGroups {
-		for param, value := range queryParams {
-			parts = append(parts,
-				fmt.Sprintf("%s=%v", url.QueryEscape(param), url.QueryEscape(fmt.Sprint(value))))
-		}
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, "&")
 }

@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/weka/gohomecli/internal/utils"
 	"time"
 )
 
@@ -53,40 +52,46 @@ type EventQueryOptions struct {
 	//Params             string
 }
 
-func (options *EventQueryOptions) ToQueryParams() (QueryParams, error) {
-	params := make(QueryParams)
+func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
+	params := &QueryParams{}
 	if options.WithInternalEvents {
-		params["intr"] = "t"
+		params.Set("intr", "t")
 	}
 	if options.SortByIngestTime {
-		params["dt"] = "t"
+		params.Set("dt", "t")
 	}
 	if len(options.IncludeTypes) != 0 {
-		utils.UserError("--type is not supported yet")
+		for _, eventType := range options.IncludeTypes {
+			params.Append("et[]", eventType)
+		}
 	}
 	if len(options.ExcludeTypes) != 0 {
-		utils.UserError("--exclude-type is not supported yet")
+		for _, eventType := range options.ExcludeTypes {
+			params.Append("ex_et[]", eventType)
+		}
 	}
 	if len(options.NodeIDs) != 0 {
-		utils.UserError("--node-ids is not supported yet")
+		for _, nodeID := range options.NodeIDs {
+			params.Append("node_id", nodeID)
+		}
 	}
 	if options.MinSeverity != "" {
-		params["svr"] = options.MinSeverity
+		params.Set("svr", options.MinSeverity)
 	}
 	if !options.StartTime.IsZero() {
-		params["frm"] = options.StartTime.Format(time.RFC3339)
+		params.Set("frm", options.StartTime.Format(time.RFC3339))
 	}
 	if !options.EndTime.IsZero() {
-		params["to"] = options.EndTime.Format(time.RFC3339)
+		params.Set("to", options.EndTime.Format(time.RFC3339))
 	}
 	//if options.Params != "" {
-	//	params["params"] = options.Params
+	//	params.Set("params" ,options.Params)
 	//}
 	return params, nil
 }
 
 func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) (*PagedQuery, error) {
-	var params QueryParams
+	var params *QueryParams
 	if options != nil {
 		var err error
 		params, err = options.ToQueryParams()

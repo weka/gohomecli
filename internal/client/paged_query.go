@@ -24,7 +24,7 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 		options = &RequestOptions{}
 	}
 	if options.Params == nil {
-		options.Params = make(map[string]interface{})
+		options.Params = &QueryParams{}
 	}
 	query := PagedQuery{
 		Client:  client,
@@ -41,7 +41,7 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 
 func (query *PagedQuery) FetchNextPage() error {
 	query.Page++
-	query.Options.Params["page"] = query.Page
+	query.Options.Params.Set("page", query.Page)
 	var numResultsInPage int
 	if query.Options.NoMetadata {
 		err := query.Client.Get(query.URL, &query.noMetaPageResults, query.Options)
