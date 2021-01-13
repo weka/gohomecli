@@ -22,10 +22,10 @@ const (
 	ColorBrightMagenta = "\033[1;35m"
 	ColorBrightCyan    = "\033[1;36m"
 
-	ColorDarkGrey         = "\033[1;30m"
-	ColorWhite         = "\033[1;37m"
+	ColorDarkGrey = "\033[1;30m"
+	ColorWhite    = "\033[1;37m"
 
-	ColorReset         = "\033[0m"
+	ColorReset = "\033[0m"
 
 	ColorOutput  = ColorWhite
 	ColorSuccess = ColorBrightCyan
@@ -136,4 +136,20 @@ func RenderTableRows(headers []string, nextRow func() []string) {
 		},
 	}
 	table.Render()
+}
+
+type TableRow struct {
+	Cells []string
+	index int
+}
+
+func NewTableRow(numCells int) *TableRow {
+	return &TableRow{Cells: make([]string, numCells)}
+}
+
+func (row *TableRow) Append(cells ...string) {
+	for _, cellText := range cells {
+		row.Cells[row.index] = cellText
+		row.index++
+	}
 }

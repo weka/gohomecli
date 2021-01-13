@@ -13,16 +13,20 @@ type Event struct {
 	ClusterID      string          `json:"cluster_id"`
 	EventType      string          `json:"type"`
 	Category       string          `json:"category"`
-	IsBackend       bool          `json:"is_backend"`
+	IsBackend      bool            `json:"is_backend"`
 	Entity         string          `json:"entity"`
 	Params         json.RawMessage `json:"params"` // map[string]interface{}
 	NodeID         string          `json:"nid"`
 	Permission     string          `json:"permission"`
 	Severity       string          `json:"severity"`
 	Time           time.Time       `json:"timestamp"`
-	IngestTime     time.Time       `json:"ingest_time"`
+	IngestTime     time.Time       `json:"cloud_digested_ts"`
 	OrganizationID int64           `json:"org_id"`
 	Processed      bool            `json:"processed"`
+}
+
+func (event *Event) ComputeProcessingTime() float64 {
+	return event.IngestTime.Sub(event.Time).Seconds()
 }
 
 // GetCluster returns a single event
@@ -38,12 +42,16 @@ func (client *Client) GetEvent(clusterID string, eventID string) (*Event, error)
 
 type EventQueryOptions struct {
 	WithInternalEvents bool
+	SortByIngestTime bool
 }
 
 func (options *EventQueryOptions) ToQueryParams() QueryParams {
 	params := make(QueryParams)
 	if options.WithInternalEvents {
 		params["intr"] = "t"
+	}
+	if options.SortByIngestTime {
+		params["dt"] = "t"
 	}
 	return params
 }

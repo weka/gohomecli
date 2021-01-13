@@ -17,6 +17,10 @@ func FormatBoolean(b bool) string {
 	return "No"
 }
 
+func FormatUUID(uuid string) string {
+	return utils.Colorize(utils.ColorYellow, uuid)
+}
+
 var nodeIDPattern, _ = regexp.Compile("^NodeId<(\\d+)>$")
 
 func FormatNodeID(nodeID string) string {

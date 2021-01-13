@@ -88,10 +88,10 @@ func (client *Client) getFullURL(url string, options *RequestOptions) string {
 type QueryParams map[string]interface{}
 
 type RequestOptions struct {
-	Prefix     string
-	Params     QueryParams
-	Body       io.Reader
-	NoMetadata bool
+	Prefix              string
+	Params              QueryParams
+	Body                io.Reader
+	NoMetadata          bool
 	NoAutoFetchNextPage bool
 }
 
