@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 	"strconv"
@@ -77,7 +78,7 @@ var eventsCmd = &cobra.Command{
 			// pagination so we have to have the server do the sorting.
 			utils.UserError("--reverse is not supported yet")
 		}
-		clusterID := args[0]
+		clusterID := env.ParseClusterIdentifier(args[0])
 		api := client.GetClient()
 		query, err := api.QueryEvents(clusterID, &client.EventQueryOptions{
 			WithInternalEvents: !eventsCmdArgs.HideInternal,

@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
@@ -32,8 +33,9 @@ var analyticsCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
-		if analyticsCmdArgs.clusterID != "" {
-			cluster, err := api.GetCluster(analyticsCmdArgs.clusterID)
+		clusterID := env.ParseClusterIdentifier(analyticsCmdArgs.clusterID)
+		if clusterID != "" {
+			cluster, err := api.GetCluster(clusterID)
 			if err != nil {
 				utils.UserError(err.Error())
 			}

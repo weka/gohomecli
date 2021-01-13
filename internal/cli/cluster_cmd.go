@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
@@ -30,7 +31,8 @@ var clusterGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
-		cluster, err := client.GetCluster(args[0])
+		clusterID := env.ParseClusterIdentifier(args[0])
+		cluster, err := client.GetCluster(clusterID)
 		if err != nil {
 			utils.UserError(err.Error())
 		}

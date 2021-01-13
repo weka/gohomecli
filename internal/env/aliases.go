@@ -122,3 +122,11 @@ func (aliases *Aliases) save() {
 		logger.Fatal().Str("file", aliases.FilePath).Err(err).Msg("Failed to write aliases file")
 	}
 }
+
+func ParseClusterIdentifier(aliasOrClusterID string) string {
+	if aliasOrClusterID == "" {
+		return ""
+	}
+	result, _ := NewAliases().Get(aliasOrClusterID)
+	return result
+}
