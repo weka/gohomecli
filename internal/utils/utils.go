@@ -21,7 +21,10 @@ const (
 	ColorBrightBlue    = "\033[1;34m"
 	ColorBrightMagenta = "\033[1;35m"
 	ColorBrightCyan    = "\033[1;36m"
+
+	ColorDarkGrey         = "\033[1;30m"
 	ColorWhite         = "\033[1;37m"
+
 	ColorReset         = "\033[0m"
 
 	ColorOutput  = ColorWhite
@@ -86,13 +89,6 @@ func UserError(msg string, format ...interface{}) {
 	os.Exit(2)
 }
 
-func BoolToYesNo(b bool) string {
-	if b {
-		return "Yes"
-	}
-	return "No"
-}
-
 type TableRenderer struct {
 	Headers  []string
 	Populate func(table *tablewriter.Table)
@@ -107,8 +103,18 @@ func (tr *TableRenderer) Render() {
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetTablePadding("aaa")
 	table.SetHeader(tr.Headers)
+	table.SetAutoFormatHeaders(false)
+	table.SetHeaderColor(tr.getHeaderColors()...)
 	tr.Populate(table)
 	table.Render()
+}
+
+func (tr *TableRenderer) getHeaderColors() []tablewriter.Colors {
+	result := make([]tablewriter.Colors, len(tr.Headers))
+	for i := range tr.Headers {
+		result[i] = tablewriter.Colors{tablewriter.FgBlueColor}
+	}
+	return result
 }
 
 func RenderTable(headers []string, populate func(table *tablewriter.Table)) {

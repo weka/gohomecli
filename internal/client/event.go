@@ -13,8 +13,9 @@ type Event struct {
 	ClusterID      string          `json:"cluster_id"`
 	EventType      string          `json:"type"`
 	Category       string          `json:"category"`
+	IsBackend       bool          `json:"is_backend"`
 	Entity         string          `json:"entity"`
-	Fields         json.RawMessage `json:"eventFields"` // map[string]interface{}
+	Params         json.RawMessage `json:"params"` // map[string]interface{}
 	NodeID         string          `json:"nid"`
 	Permission     string          `json:"permission"`
 	Severity       string          `json:"severity"`
@@ -35,10 +36,26 @@ func (client *Client) GetEvent(clusterID string, eventID string) (*Event, error)
 	return event, nil
 }
 
-func (client *Client) QueryEvents(clusterID string) (*PagedQuery, error) {
+type EventQueryOptions struct {
+	WithInternalEvents bool
+}
+
+func (options *EventQueryOptions) ToQueryParams() QueryParams {
+	params := make(QueryParams)
+	if options.WithInternalEvents {
+		params["intr"] = "t"
+	}
+	return params
+}
+
+func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) (*PagedQuery, error) {
+	var params QueryParams
+	if options != nil {
+		params = options.ToQueryParams()
+	}
 	query, err := client.QueryEntities(
 		fmt.Sprintf("%s/events/list", clusterID),
-		&RequestOptions{Prefix: "api", NoMetadata: true})
+		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params})
 	if err != nil {
 		return nil, err
 	}

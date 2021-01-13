@@ -5,12 +5,17 @@ import (
 	"github.com/weka/gohomecli/internal/client"
 	"github.com/weka/gohomecli/internal/utils"
 	"strconv"
-	"time"
 )
 
 func init() {
 	rootCmd.AddCommand(eventsCmd)
+	eventsCmd.Flags().BoolVar(&eventsCmdArgs.HideInternal, "hide-internal", false,
+		"do not show internal events")
 }
+
+var eventsCmdArgs = struct {
+	HideInternal bool
+}{}
 
 var eventsCmd = &cobra.Command{
 	Use:     "events",
@@ -21,7 +26,9 @@ var eventsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterID := args[0]
 		api := client.GetClient()
-		query, err := api.QueryEvents(clusterID)
+		query, err := api.QueryEvents(clusterID, &client.EventQueryOptions{
+			WithInternalEvents: !eventsCmdArgs.HideInternal,
+		})
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -29,31 +36,27 @@ var eventsCmd = &cobra.Command{
 		headers := []string{
 			"Time", "Type", "Category",
 			"Is Backend", "Node", "Org ID",
-			"Params", "Permission", "Processed",
-			"Severity",
+			"Permission", "Processed", "Severity",
 		}
-		utils.RenderTableRows(
-			headers,
-			func() []string {
-				event, err := query.NextEvent()
-				if err != nil {
-					utils.UserError(err.Error())
-				}
-				if event == nil {
-					return nil
-				}
-				return []string{
-					utils.Colorize(utils.ColorCyan, event.Time.Format(time.RFC3339)),
-					utils.Colorize(utils.ColorBlue, event.EventType),
-					event.Category,
-					"N/A",  // is_backend
-					event.NodeID,
-					strconv.FormatInt(event.OrganizationID, 10),
-					string(event.Fields),
-					event.Permission,
-					utils.BoolToYesNo(event.Processed),
-					event.Severity,
-				}
-			})
+		utils.RenderTableRows(headers, func() []string {
+			event, err := query.NextEvent()
+			if err != nil {
+				utils.UserError(err.Error())
+			}
+			if event == nil {
+				return nil
+			}
+			return []string{
+				FormatTime(event.Time),
+				FormatEventType(event.EventType),
+				event.Category,
+				FormatBoolean(event.IsBackend),
+				FormatNodeID(event.NodeID),
+				strconv.FormatInt(event.OrganizationID, 10),
+				event.Permission,
+				FormatBoolean(event.Processed),
+				FormatEventSeverity(event.Severity),
+			}
+		})
 	},
 }

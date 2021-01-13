@@ -33,7 +33,7 @@ var customerGetCmd = &cobra.Command{
 		utils.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"ID", customer.ID})
 			table.Append([]string{"Name", customer.Name})
-			table.Append([]string{"Monitored", utils.BoolToYesNo(customer.Monitored)})
+			table.Append([]string{"Monitored", FormatBoolean(customer.Monitored)})
 		})
 	},
 }
@@ -58,7 +58,7 @@ var customerListCmd = &cobra.Command{
 				if customer == nil {
 					return nil
 				}
-				return []string{customer.ID, customer.Name, utils.BoolToYesNo(customer.Monitored)}
+				return []string{customer.ID, customer.Name, FormatBoolean(customer.Monitored)}
 			})
 	},
 }
