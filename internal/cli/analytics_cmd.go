@@ -3,8 +3,8 @@ package cli
 import (
 	"errors"
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/client"
 	"github.com/weka/gohomecli/internal/utils"
+	"github.com/weka/gohomecli/pkg/client"
 )
 
 var analyticsCmdArgs = struct {

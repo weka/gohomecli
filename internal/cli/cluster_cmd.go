@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/client"
 	"github.com/weka/gohomecli/internal/utils"
+	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
