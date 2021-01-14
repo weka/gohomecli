@@ -26,6 +26,9 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 	if options.Params == nil {
 		options.Params = &QueryParams{}
 	}
+	if options.PageSize != 0 {
+		options.Params.Set("page_size", options.PageSize)
+	}
 	query := PagedQuery{
 		Client:  client,
 		URL:     url,

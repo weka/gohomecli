@@ -130,6 +130,7 @@ type RequestOptions struct {
 	Body                io.Reader
 	NoMetadata          bool
 	NoAutoFetchNextPage bool
+	PageSize            int
 }
 
 func (client *Client) SendRequest(method string, url string, result interface{}, options *RequestOptions) error {
