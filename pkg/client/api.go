@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,7 +28,7 @@ type rawResponse struct {
 }
 
 type entityEnvelope struct {
-	ID            string          `json:"id"`
+	ID            interface{}     `json:"id"`
 	Type          string          `json:"type"`
 	Attributes    interface{}     `json:"attributes"`
 	Relationships json.RawMessage `json:"relationships"`
@@ -40,7 +41,7 @@ type responseEnvelope struct {
 
 type queryResultsEnvelope struct {
 	Data []struct {
-		ID            string          `json:"id"`
+		ID            interface{}     `json:"id"`
 		Type          string          `json:"type"`
 		Attributes    json.RawMessage `json:"attributes"`
 		Relationships json.RawMessage `json:"relationships"`
@@ -112,6 +113,9 @@ func (params *QueryParams) Append(name string, value interface{}) *QueryParams {
 
 // String returns all parameters as one string, ready to be appended to the URL
 func (params *QueryParams) String() string {
+	if params == nil {
+		return ""
+	}
 	var parts []string
 	for i, name := range params.Names {
 		value := params.Values[i]
@@ -127,7 +131,7 @@ func (params *QueryParams) String() string {
 type RequestOptions struct {
 	Prefix              string
 	Params              *QueryParams
-	Body                io.Reader
+	Body                interface{}
 	NoMetadata          bool
 	NoAutoFetchNextPage bool
 	PageSize            int
@@ -138,7 +142,15 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 		options = &RequestOptions{}
 	}
 	fullURL := client.getFullURL(url, options)
-	req, err := http.NewRequest(method, fullURL, options.Body)
+	var body io.Reader = nil
+	if options.Body != nil {
+		bodyBytes, err := json.Marshal(options.Body)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal request body: %s", err)
+		}
+		body = bytes.NewReader(bodyBytes)
+	}
+	req, err := http.NewRequest(method, fullURL, body)
 	if err != nil {
 		return err
 	}
@@ -189,11 +201,16 @@ func (client *Client) Get(url string, result interface{}, options *RequestOption
 
 // GetAPIEntity is a general implementation for getting a single object from an
 // API resource
-func (client *Client) GetAPIEntity(resource string, id string, result interface{}) error {
+func (client *Client) GetAPIEntity(resource string, id interface{}, result interface{}) error {
 	entity := responseEnvelope{
 		Data: entityEnvelope{
 			Attributes: result,
 		},
 	}
-	return client.Get(fmt.Sprintf("%s/%s", resource, id), &entity, nil)
+	return client.Get(fmt.Sprintf("%s/%v", resource, id), &entity, nil)
+}
+
+// Post sends a POST request, and does not expect the response to be enveloped
+func (client *Client) Post(url string, result interface{}, options *RequestOptions) error {
+	return client.SendRequest("POST", url, result, options)
 }
