@@ -1,0 +1,41 @@
+package client
+
+import (
+	"fmt"
+	"time"
+)
+
+// Cluster API structure
+type Diag struct {
+	ID             int             `json:"id"`
+	FileName       string          `json:filename`
+	ClusterID      string          `json:"cluster_id"`
+	HostName       string          `json:"hostname"`
+	S3Key          string          `json:"s3_key"`
+	Completed      bool            `json:"completed"`
+	Topic          string          `json:"topic"`
+	TopicId        string          `json:"topic_id"`
+	UploadTime     time.Time       `json:"upload_time"`
+}
+
+func (client *Client) QueryDiags(clusterID string) (*PagedQuery, error) {
+	query, err := client.QueryEntities(
+		fmt.Sprintf("clusters/%s/support/files", clusterID),
+		&RequestOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return query, nil
+}
+
+func (query *PagedQuery) NextDiag() (*Diag, error) {
+	diag := &Diag{}
+	ok, err := query.NextEntity(diag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get next diag: %s", err)
+	}
+	if !ok {
+		return nil, nil
+	}
+	return diag, nil
+}
