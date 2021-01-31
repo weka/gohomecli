@@ -4,10 +4,12 @@ go 1.15
 
 require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20201222001619-a42f9ac2ec8e
-	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pelletier/go-toml v1.2.0
 	github.com/rs/zerolog v1.20.0
 	github.com/spf13/cobra v1.1.1
-	github.com/spf13/viper v1.7.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sys v0.0.0-20201223074533-0d417f636930 // indirect
 )

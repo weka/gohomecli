@@ -2,17 +2,20 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
+	"golang.org/x/sync/semaphore"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/weka/gohomecli/internal/utils"
 )
 
 var logger = utils.GetLogger("API")
@@ -191,6 +194,90 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 		return err
 	}
 
+	return nil
+}
+
+//TODO check if mage sense to use SendRequest
+func (client *Client) Download(url string, fileName string, options *RequestOptions) error {
+	if options == nil {
+		options = &RequestOptions{}
+	}
+	fullURL := client.getFullURL(url, options)
+	var body io.Reader = nil
+	if options.Body != nil {
+		bodyBytes, err := json.Marshal(options.Body)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal request body: %s", err)
+		}
+		body = bytes.NewReader(bodyBytes)
+	}
+	req, err := http.NewRequest("GET", fullURL, body)
+	if err != nil {
+		return err
+	}
+
+	req = req.WithContext(context.Background())
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.apiKey))
+
+	logger.Debug().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Msg("Request")
+
+	res, err := client.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
+		logger.Error().
+			Str("method", req.Method).
+			Str("url", req.URL.String()).
+			Int("status", res.StatusCode).
+			Msg("Response")
+		return fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
+	}
+	logger.Debug().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Int("status", res.StatusCode).
+		Msg("Response")
+
+	var reader io.ReadCloser
+	switch res.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(res.Body)
+		defer reader.Close()
+	default:
+		reader = res.Body
+	}
+	destFile, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("failed to open destination file: %s", err)
+	}
+	defer destFile.Close()
+	utils.UserOutput("Downloading " + fileName)
+	io.Copy(destFile, res.Body)
+	return nil
+}
+
+func (client *Client) DownloadMany(urlTemplate string, fileNames []string, options *RequestOptions) error {
+	sem := semaphore.NewWeighted(10)
+	baseContext := context.Background()
+	dlCtx, _ := context.WithTimeout(baseContext, time.Minute)
+	wg := sync.WaitGroup{}
+	for _, file := range fileNames {
+		wg.Add(1)
+		_ = sem.Acquire(dlCtx, 1)
+		go func(file string){
+			client.Download(fmt.Sprintf(urlTemplate, file), file, options)
+			wg.Done()
+			sem.Release(1)
+		}(file)
+	}
+	wg.Wait()
 	return nil
 }
 

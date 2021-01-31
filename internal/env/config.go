@@ -58,6 +58,9 @@ func InitConfig(siteNameFromCommandLine string) {
 	if initialized {
 		return
 	}
+	if _, err := os.Stat(ConfigDir); os.IsNotExist(err) {
+
+	}
 	if _, err := os.Stat(ConfigFilePath); os.IsNotExist(err) {
 		logger.Warn().
 			Str("file", ConfigFilePath).

@@ -39,3 +39,17 @@ func (query *PagedQuery) NextDiag() (*Diag, error) {
 	}
 	return diag, nil
 }
+
+func (client *Client) DownloadDiags(clusterID string, fileName string) (error) {
+	return client.Download(
+		fmt.Sprintf("clusters/%s/support/files/%s/content", clusterID, fileName),
+		fileName,
+		&RequestOptions{})
+}
+
+func (client *Client) DownloadManyDiags(clusterID string, fileNames []string) (error) {
+	return client.DownloadMany(
+		fmt.Sprintf("clusters/%s/support/files/%%s/content", clusterID),
+		fileNames,
+		&RequestOptions{})
+}
