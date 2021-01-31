@@ -59,13 +59,17 @@ func InitConfig(siteNameFromCommandLine string) {
 		return
 	}
 	if _, err := os.Stat(ConfigDir); os.IsNotExist(err) {
-
+		logger.Warn().
+			Str("directory", ConfigDir).
+			Str("file", ConfigFilePath).
+			Msg("Config directory does not exist, creating directory and default config file")
+		createDefaultConfigFileAndExit(true)
 	}
 	if _, err := os.Stat(ConfigFilePath); os.IsNotExist(err) {
 		logger.Warn().
 			Str("file", ConfigFilePath).
 			Msg("Config file does not exist, creating default config file")
-		createDefaultConfigFileAndExit()
+		createDefaultConfigFileAndExit(false)
 	}
 	CurrentConfig = readCLIConfig()
 	CurrentSiteConfig, SiteName = getSiteConfig(CurrentConfig, siteNameFromCommandLine)
@@ -74,7 +78,10 @@ func InitConfig(siteNameFromCommandLine string) {
 		Msg("Site configuration loaded")
 }
 
-func createDefaultConfigFileAndExit() {
+func createDefaultConfigFileAndExit(createDir bool) {
+	if createDir {
+		os.MkdirAll(ConfigDir, os.ModePerm)
+	}
 	writeCLIConfig(&Config{
 		DefaultSite: DefaultSiteName,
 		Sites: map[string]*SiteConfig{
