@@ -13,8 +13,8 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show server version",
-	Long:  "Show server version",
+	Short: "Show client version",
+	Long:  "Show client version",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.UserOutput(
 			"Client version: %s (built on %s)",
