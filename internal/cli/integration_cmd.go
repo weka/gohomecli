@@ -73,7 +73,7 @@ var integrationTestCmd = &cobra.Command{
 	Use:   "test <integration-id> <event-code>",
 	Short: "Test integration",
 	Long:  "Test integration",
-	Args: cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
 		integrationID, err := strconv.Atoi(args[0])

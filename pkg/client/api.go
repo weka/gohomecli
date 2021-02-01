@@ -266,12 +266,13 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 func (client *Client) DownloadMany(urlTemplate string, fileNames []string, options *RequestOptions) error {
 	sem := semaphore.NewWeighted(10)
 	baseContext := context.Background()
-	dlCtx, _ := context.WithTimeout(baseContext, time.Minute)
+	dlCtx, cancel := context.WithTimeout(baseContext, time.Minute)
+	defer cancel()
 	wg := sync.WaitGroup{}
 	for _, file := range fileNames {
 		wg.Add(1)
 		_ = sem.Acquire(dlCtx, 1)
-		go func(file string){
+		go func(file string) {
 			client.Download(fmt.Sprintf(urlTemplate, file), file, options)
 			wg.Done()
 			sem.Release(1)

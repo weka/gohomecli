@@ -7,21 +7,21 @@ import (
 
 // Cluster API structure
 type Diag struct {
-	ID             int             `json:"id"`
-	FileName       string          `json:filename`
-	ClusterID      string          `json:"cluster_id"`
-	HostName       string          `json:"hostname"`
-	S3Key          string          `json:"s3_key"`
-	Completed      bool            `json:"completed"`
-	Topic          string          `json:"topic"`
-	TopicId        string          `json:"topic_id"`
-	UploadTime     time.Time       `json:"upload_time"`
+	ID         int       `json:"id"`
+	FileName   string    `json:"filename"`
+	ClusterID  string    `json:"cluster_id"`
+	HostName   string    `json:"hostname"`
+	S3Key      string    `json:"s3_key"`
+	Completed  bool      `json:"completed"`
+	Topic      string    `json:"topic"`
+	TopicId    string    `json:"topic_id"`
+	UploadTime time.Time `json:"upload_time"`
 }
 
-func (client *Client) QueryDiags(clusterID string) (*PagedQuery, error) {
+func (client *Client) QueryDiags(clusterID string, options *RequestOptions) (*PagedQuery, error) {
 	query, err := client.QueryEntities(
 		fmt.Sprintf("clusters/%s/support/files", clusterID),
-		&RequestOptions{})
+		options)
 	if err != nil {
 		return nil, err
 	}
@@ -40,16 +40,22 @@ func (query *PagedQuery) NextDiag() (*Diag, error) {
 	return diag, nil
 }
 
-func (client *Client) DownloadDiags(clusterID string, fileName string) (error) {
+func (client *Client) DownloadDiags(clusterID string, fileName string) error {
 	return client.Download(
 		fmt.Sprintf("clusters/%s/support/files/%s/content", clusterID, fileName),
 		fileName,
 		&RequestOptions{})
 }
 
-func (client *Client) DownloadManyDiags(clusterID string, fileNames []string) (error) {
+func (client *Client) DownloadManyDiags(clusterID string, fileNames []string) error {
 	return client.DownloadMany(
 		fmt.Sprintf("clusters/%s/support/files/%%s/content", clusterID),
 		fileNames,
 		&RequestOptions{})
+}
+
+func GetDiagBatchParams(topic string, topicId string) *QueryParams {
+	return (&QueryParams{}).
+		Set("topic", topic).
+		Set("topic_id", topicId)
 }
