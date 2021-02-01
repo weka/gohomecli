@@ -112,7 +112,7 @@ func (aliases *Aliases) save() {
 	if err != nil {
 		logger.Panic().Err(err).Msg("Failed to serialize aliases")
 	}
-	file, err := os.OpenFile(aliases.FilePath, os.O_WRONLY|os.O_TRUNC, os.ModeExclusive|0644)
+	file, err := os.OpenFile(aliases.FilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModeExclusive|0644)
 	if err != nil {
 		logger.Fatal().Str("file", aliases.FilePath).Err(err).
 			Msg("Failed to open aliases file for writing")
