@@ -1,0 +1,9 @@
+version: '3'
+
+tasks:
+  deploy:
+    desc: Build and upload binaries
+    env:
+      DEPLOY: 1
+    cmds:
+      - ./deploy.sh
