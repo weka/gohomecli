@@ -42,7 +42,7 @@ if [[ "$BUILDKITE_BRANCH" == "ga" ]]; then
     -X POST \
     -H "$AUTH" \
     https://api.github.com/repos/weka/gohomecli/releases \
-    -d "{\"tag_name\":\"$BUILD_VERSION\", \"body\":\"GA release\"}")
+    -d "{\"tag_name\":\"$BUILD_VERSION\", \"name\":\"$BUILD_VERSION\", \"body\":\"GA release\", \"draft\": true}")
 
   id=$(echo "$result" | jq -c ".id")
 
