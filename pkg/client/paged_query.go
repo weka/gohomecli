@@ -68,12 +68,12 @@ func (query *PagedQuery) FetchNextPage() error {
 
 func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
 	if query.index == query.maxIndex {
-		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
-			return false, nil
-		}
 		err := query.FetchNextPage()
 		if err != nil {
 			return false, err
+		}
+		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
+			return false, nil
 		}
 	}
 	query.index++
