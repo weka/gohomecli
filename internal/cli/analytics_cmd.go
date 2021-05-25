@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
@@ -59,6 +60,8 @@ var analyticsCmd = &cobra.Command{
 	},
 }
 
+var customersCache = make(map[string]string)
+
 func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, silenceFailure bool) {
 	analytics, err := client.GetAnalytics(cluster.ID)
 	if err != nil {
@@ -67,5 +70,35 @@ func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, sile
 		}
 		utils.UserError("Failed to get analytics for cluster %s: %s", cluster.ID, err)
 	}
-	utils.UserOutputJSON(analytics)
+	var customerName string
+	if _, ok := customersCache[cluster.CustomerID]; ok {
+		customerName = customersCache[cluster.CustomerID]
+	} else {
+		customer, err := client.GetCustomer(cluster.CustomerID)
+		if err != nil {
+			if silenceFailure {
+				return
+			}
+			utils.UserError("Failed to get customer for cluster %s: %s", cluster.ID, err)
+		}
+		customersCache[cluster.CustomerID] = customer.Name
+		customerName = customer.Name
+	}
+	var jsn map[string]interface{}
+	err = json.Unmarshal(analytics, &jsn)
+	if err != nil {
+		if silenceFailure {
+			return
+		}
+		utils.UserError("Failed to unmarshal analytics json for cluster %s: %s", cluster.ID, err)
+	}
+	jsn["_meta"] = map[string]string{"customer_name": customerName}
+	newAnalytics, err := json.Marshal(jsn)
+	if err != nil {
+		if silenceFailure {
+			return
+		}
+		utils.UserError("Failed to marshal analytics json with customer name for cluster %s: %s", cluster.ID, err)
+	}
+	utils.UserOutputJSON(newAnalytics)
 }
