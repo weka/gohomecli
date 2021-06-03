@@ -12,6 +12,11 @@ var diagsDownloadBacthCmdArgs = struct {
 	topic string
 }{}
 
+var diagsListCmdArgs = struct {
+	topic string
+	topicId string
+}{}
+
 func init() {
 	rootCmd.AddCommand(diagsCmd)
 	diagsCmd.AddCommand(diagsListCmd)
@@ -19,7 +24,10 @@ func init() {
 	diagsCmd.AddCommand(diagsDownloadBacthCmd)
 	diagsDownloadBacthCmd.Flags().StringVar(&diagsDownloadBacthCmdArgs.topic, "topic", "diags",
 		"topic identifier")
-}
+	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topicId, "topic-id", "",
+		"filter topic id")
+	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topic, "topic", "",
+		"filter topic")}
 
 var diagsCmd = &cobra.Command{
 	Use:   "diags [OPTIONS] <cluster-id>",
@@ -35,7 +43,9 @@ var diagsListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterID := env.ParseClusterIdentifier(args[0])
 		api := client.GetClient()
-		query, err := api.QueryDiags(clusterID, &client.RequestOptions{})
+		options := &client.RequestOptions{}
+		options.Params = client.GetDiagsParams(diagsListCmdArgs.topic, diagsListCmdArgs.topicId,)
+		query, err := api.QueryDiags(clusterID, options)
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -88,7 +98,7 @@ var diagsDownloadBacthCmd = &cobra.Command{
 		clusterID := env.ParseClusterIdentifier(args[0])
 		api := client.GetClient()
 		options := &client.RequestOptions{}
-		options.Params = client.GetDiagBatchParams(diagsDownloadBacthCmdArgs.topic, args[1])
+		options.Params = client.GetDiagsParams(diagsDownloadBacthCmdArgs.topic, args[1])
 		query, err := api.QueryDiags(clusterID, options)
 		if err != nil {
 			utils.UserError(err.Error())

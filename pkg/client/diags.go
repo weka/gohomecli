@@ -30,6 +30,9 @@ func (client *Client) QueryDiags(clusterID string, options *RequestOptions) (*Pa
 
 func (query *PagedQuery) NextDiag() (*Diag, error) {
 	diag := &Diag{}
+	if len(query.PageResults.Data) == 0 {
+		return nil, nil
+	}
 	ok, err := query.NextEntity(diag)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get next diag: %s", err)
@@ -54,8 +57,13 @@ func (client *Client) DownloadManyDiags(clusterID string, fileNames []string) er
 		&RequestOptions{})
 }
 
-func GetDiagBatchParams(topic string, topicId string) *QueryParams {
-	return (&QueryParams{}).
-		Set("topic", topic).
-		Set("topic_id", topicId)
+func GetDiagsParams(topic string, topicId string) *QueryParams {
+	params := &QueryParams{}
+	if topic != "" {
+		params.Set("topic", topic)
+	}
+	if topicId != "" {
+		params.Set("topic_id", topicId)
+	}
+	return params
 }
