@@ -71,12 +71,18 @@ var eventsCmd = &cobra.Command{
 		endTime, err := ParseTime(eventsCmdArgs.EndTime)
 		if err != nil {
 			utils.UserError(err.Error())
+			return
+		}
+		if eventsCmdArgs.Limit > 1000 {
+			utils.UserError("Querying only up to 1000 events supported")
+			return
 		}
 		if eventsCmdArgs.ReverseSort {
 			// Need server side support for this. Legacy CLI used to get a single
 			// page of events and then reverse it, but here we want to support
 			// pagination so we have to have the server do the sorting.
 			utils.UserError("--reverse is not supported yet")
+			return
 		}
 		clusterID := env.ParseClusterIdentifier(args[0])
 		api := client.GetClient()
@@ -89,10 +95,12 @@ var eventsCmd = &cobra.Command{
 			MinSeverity:        eventsCmdArgs.MinSeverity,
 			StartTime:          startTime,
 			EndTime:            endTime,
+			Limit:              eventsCmdArgs.Limit,
 			//Params:             eventsCmdArgs.Params,
 		})
 		if err != nil {
 			utils.UserError(err.Error())
+			return
 		}
 		query.Options.NoAutoFetchNextPage = true
 		headers := []string{"Time", "Type", "Category"}

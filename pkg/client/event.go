@@ -49,6 +49,7 @@ type EventQueryOptions struct {
 	MinSeverity        string
 	StartTime          time.Time
 	EndTime            time.Time
+	Limit              int
 	//Params             string
 }
 
@@ -83,6 +84,10 @@ func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
 	}
 	if !options.EndTime.IsZero() {
 		params.Set("to", options.EndTime.Format(time.RFC3339))
+	}
+
+	if options.Limit!=0 {
+		params.Set("page_size", options.Limit)
 	}
 	//if options.Params != "" {
 	//	params.Set("params" ,options.Params)
