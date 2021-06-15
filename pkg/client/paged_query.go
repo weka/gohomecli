@@ -26,9 +26,13 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 	if options.Params == nil {
 		options.Params = &QueryParams{}
 	}
-	if options.PageSize != 0 {
-		options.Params.Set("page_size", options.PageSize)
+	if options.PageSize == 0 {
+		options.PageSize = defaultPageSize
 	}
+	if options.PageSize > 1000 {
+		options.PageSize = 1000
+	}
+	options.Params.Set("page_size", options.PageSize)
 	query := PagedQuery{
 		Client:  client,
 		URL:     url,
@@ -52,7 +56,7 @@ func (query *PagedQuery) FetchNextPage() error {
 			return err
 		}
 		numResultsInPage = len(query.noMetaPageResults)
-		query.HasMorePages = numResultsInPage == defaultPageSize
+		query.HasMorePages = numResultsInPage == query.Options.PageSize
 	} else {
 		err := query.Client.Get(query.URL, &query.PageResults, query.Options)
 		if err != nil {
@@ -68,13 +72,16 @@ func (query *PagedQuery) FetchNextPage() error {
 
 func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
 	if query.index == query.maxIndex {
+		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
+			return false, nil
+		}
 		err := query.FetchNextPage()
 		if err != nil {
 			return false, err
 		}
-		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
-			return false, nil
-		}
+	}
+	if query.maxIndex <= 0 {
+		return false, nil
 	}
 	query.index++
 	if query.Options.NoMetadata {

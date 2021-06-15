@@ -86,9 +86,9 @@ func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
 		params.Set("to", options.EndTime.Format(time.RFC3339))
 	}
 
-	if options.Limit!=0 {
-		params.Set("page_size", options.Limit)
-	}
+	//if options.Limit!=0 {
+	//	params.Set("page_size", limit)
+	//}
 	//if options.Params != "" {
 	//	params.Set("params" ,options.Params)
 	//}
@@ -106,7 +106,7 @@ func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) 
 	}
 	query, err := client.QueryEntities(
 		fmt.Sprintf("%s/events/list", clusterID),
-		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params})
+		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params, PageSize: options.Limit})
 	if err != nil {
 		return nil, err
 	}

@@ -22,7 +22,7 @@ func init() {
 		"show event processing time")
 	eventsCmd.Flags().BoolVar(&eventsCmdArgs.SortByIngestTime, "by-ingest-time", false,
 		"sort events by ingest time")
-	eventsCmd.Flags().IntVar(&eventsCmdArgs.Limit, "limit", 0,
+	eventsCmd.Flags().IntVar(&eventsCmdArgs.Limit, "limit", 1000,
 		"show at most this many events")
 	eventsCmd.Flags().StringArrayVarP(&eventsCmdArgs.IncludeTypes, "type", "T", []string{},
 		"show events of these types only")
@@ -73,10 +73,6 @@ var eventsCmd = &cobra.Command{
 			utils.UserError(err.Error())
 			return
 		}
-		if eventsCmdArgs.Limit > 1000 {
-			utils.UserError("Querying only up to 1000 events supported")
-			return
-		}
 		if eventsCmdArgs.ReverseSort {
 			// Need server side support for this. Legacy CLI used to get a single
 			// page of events and then reverse it, but here we want to support
@@ -95,14 +91,14 @@ var eventsCmd = &cobra.Command{
 			MinSeverity:        eventsCmdArgs.MinSeverity,
 			StartTime:          startTime,
 			EndTime:            endTime,
-			Limit:              eventsCmdArgs.Limit,
+			Limit: eventsCmdArgs.Limit,
 			//Params:             eventsCmdArgs.Params,
 		})
 		if err != nil {
 			utils.UserError(err.Error())
 			return
 		}
-		query.Options.NoAutoFetchNextPage = true
+		//query.Options.NoAutoFetchNextPage = false
 		headers := []string{"Time", "Type", "Category"}
 		if eventsCmdArgs.ShowEventIDs {
 			headers = append(headers, "UUID")
@@ -118,11 +114,8 @@ var eventsCmd = &cobra.Command{
 		numEvents := 0
 		utils.RenderTableRows(headers, func() []string {
 			// Limit
-			if eventsCmdArgs.Limit != 0 {
-				numEvents++
-				if numEvents > eventsCmdArgs.Limit {
-					return nil
-				}
+			if numEvents >= eventsCmdArgs.Limit {
+				return nil
 			}
 			// Get event
 			event, err := query.NextEvent()
@@ -132,6 +125,7 @@ var eventsCmd = &cobra.Command{
 			if event == nil {
 				return nil
 			}
+			numEvents++
 			// Build row
 			row := utils.NewTableRow(len(headers))
 			row.Append(

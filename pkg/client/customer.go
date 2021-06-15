@@ -27,7 +27,9 @@ func (client *Client) GetCustomer(id string) (*Customer, error) {
 }
 
 func (client *Client) QueryCustomers() (*PagedQuery, error) {
-	query, err := client.QueryEntities("customers", nil)
+	query, err := client.QueryEntities("customers", &RequestOptions{
+		NoAutoFetchNextPage: true,
+	})
 	if err != nil {
 		return nil, err
 	}

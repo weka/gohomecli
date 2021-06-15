@@ -13,8 +13,9 @@ var diagsDownloadBacthCmdArgs = struct {
 }{}
 
 var diagsListCmdArgs = struct {
-	topic string
+	topic   string
 	topicId string
+	Limit   int
 }{}
 
 func init() {
@@ -27,7 +28,10 @@ func init() {
 	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topicId, "topic-id", "",
 		"filter topic id")
 	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topic, "topic", "",
-		"filter topic")}
+		"filter topic")
+	diagsListCmd.Flags().IntVar(&diagsListCmdArgs.Limit, "limit", 500,
+		"show at most this many files")
+}
 
 var diagsCmd = &cobra.Command{
 	Use:   "diags [OPTIONS] <cluster-id>",
@@ -44,14 +48,18 @@ var diagsListCmd = &cobra.Command{
 		clusterID := env.ParseClusterIdentifier(args[0])
 		api := client.GetClient()
 		options := &client.RequestOptions{}
-		options.Params = client.GetDiagsParams(diagsListCmdArgs.topic, diagsListCmdArgs.topicId,)
+		options.PageSize = diagsListCmdArgs.Limit
+		options.Params = client.GetDiagsParams(diagsListCmdArgs.topic, diagsListCmdArgs.topicId)
 		query, err := api.QueryDiags(clusterID, options)
 		if err != nil {
 			utils.UserError(err.Error())
 		}
 		headers := []string{"Upload Time", "Filename", "Hostname", "Id", "Diags Collection Id"}
+		index := 0
 		utils.RenderTableRows(headers, func() []string {
-
+			if index >= diagsListCmdArgs.Limit{
+				return nil
+			}
 			// Get event
 			diag, err := query.NextDiag()
 			if err != nil {
@@ -61,6 +69,7 @@ var diagsListCmd = &cobra.Command{
 				return nil
 			}
 			// Build row
+			index++
 			row := utils.NewTableRow(len(headers))
 			row.Append(
 				FormatTime(diag.UploadTime),

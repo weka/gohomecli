@@ -15,6 +15,8 @@ func init() {
 	clusterListCmd.Flags().BoolVar(&clusterListCmdArgs.active, "active", false,
 		"show only active clusters")
 	clusterCmd.AddCommand(aliasCmd)
+	clusterListCmd.Flags().IntVar(&clusterListCmdArgs.Limit, "limit", 500,
+		"show at most this many clusters")
 }
 
 var clusterCmd = &cobra.Command{
@@ -53,6 +55,7 @@ var clusterGetCmd = &cobra.Command{
 
 var clusterListCmdArgs = struct {
 	active bool
+	Limit int
 }{}
 
 var clusterListCmd = &cobra.Command{
@@ -65,17 +68,23 @@ var clusterListCmd = &cobra.Command{
 		if clusterListCmdArgs.active {
 			options.Params = client.GetActiveClustersParams()
 		}
+		options.PageSize = clusterListCmdArgs.Limit
 		query, err := api.QueryClusters(options)
 		if err != nil {
 			utils.UserError(err.Error())
 		}
+		index := 0
 		utils.RenderTableRows(
 			[]string{"ID", "Name", "Version"},
 			func() []string {
+				if index >= clusterListCmdArgs.Limit {
+					return nil
+				}
 				cluster, err := query.NextCluster()
 				if err != nil {
 					utils.UserError(err.Error())
 				}
+				index++
 				if cluster == nil {
 					return nil
 				}

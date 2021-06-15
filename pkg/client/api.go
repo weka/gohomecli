@@ -107,6 +107,15 @@ func (params *QueryParams) Set(name string, value interface{}) *QueryParams {
 	return params.Append(name, value)
 }
 
+func (params *QueryParams) GetInt(name string, defaultTo int) int {
+	for i, existingName := range params.Names {
+		if existingName == name {
+			return params.Values[i].(int)
+		}
+	}
+	return defaultTo
+}
+
 // Append adds a new parameter, even if one already exists with the same name
 func (params *QueryParams) Append(name string, value interface{}) *QueryParams {
 	params.Names = append(params.Names, name)
