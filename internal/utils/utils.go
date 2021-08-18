@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/olekukonko/tablewriter"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -152,4 +154,12 @@ func (row *TableRow) Append(cells ...string) {
 		row.Cells[row.index] = cellText
 		row.index++
 	}
+}
+
+func UnescapeUnicodeCharactersInJSON(_jsonRaw json.RawMessage) (json.RawMessage, error) {
+	str, err := strconv.Unquote(strings.Replace(strconv.Quote(string(_jsonRaw)), `\\u`, `\u`, -1))
+	if err != nil {
+		return nil, err
+	}
+	return []byte(str), nil
 }

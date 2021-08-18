@@ -50,6 +50,7 @@ type EventQueryOptions struct {
 	StartTime          time.Time
 	EndTime            time.Time
 	Limit              int
+	Wide               bool
 	//Params             string
 }
 

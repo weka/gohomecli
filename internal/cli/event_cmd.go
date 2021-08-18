@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
@@ -36,6 +37,8 @@ func init() {
 		"show events emitted at this time or later")
 	eventsCmd.Flags().StringVar(&eventsCmdArgs.EndTime, "end", "",
 		"show events emitted at this time or later")
+	eventsCmd.Flags().BoolVar(&eventsCmdArgs.Wide, "wide", false,
+		"show more information on events, specifically their params")
 	//eventsCmd.Flags().StringVar(&eventsCmdArgs.Params, "param", "",
 	//	"show events having these parameters")
 }
@@ -54,6 +57,7 @@ var eventsCmdArgs = struct {
 	MinSeverity        string
 	StartTime          string
 	EndTime            string
+	Wide               bool
 	//Params             string
 }{}
 
@@ -91,7 +95,8 @@ var eventsCmd = &cobra.Command{
 			MinSeverity:        eventsCmdArgs.MinSeverity,
 			StartTime:          startTime,
 			EndTime:            endTime,
-			Limit: eventsCmdArgs.Limit,
+			Limit:              eventsCmdArgs.Limit,
+			Wide:               eventsCmdArgs.Wide,
 			//Params:             eventsCmdArgs.Params,
 		})
 		if err != nil {
@@ -110,6 +115,9 @@ var eventsCmd = &cobra.Command{
 			"Is Backend", "Node", "Org ID", "Permission", "Processed", "Severity")
 		if eventsCmdArgs.ShowProcessingTime {
 			headers = append(headers, "Processing Time")
+		}
+		if eventsCmdArgs.Wide {
+			headers = append(headers, "Params")
 		}
 		numEvents := 0
 		utils.RenderTableRows(headers, func() []string {
@@ -149,6 +157,11 @@ var eventsCmd = &cobra.Command{
 			)
 			if eventsCmdArgs.ShowProcessingTime {
 				row.Append(strconv.FormatFloat(event.ComputeProcessingTime(), 'f', 2, 64))
+			}
+			if eventsCmdArgs.Wide {
+				var jsonRawUnescaped json.RawMessage // json raw with unescaped unicode chars
+				jsonRawUnescaped, _ = utils.UnescapeUnicodeCharactersInJSON(event.Params)
+				row.Append(string(jsonRawUnescaped))
 			}
 			return row.Cells
 		})

@@ -55,7 +55,7 @@ var clusterGetCmd = &cobra.Command{
 
 var clusterListCmdArgs = struct {
 	active bool
-	Limit int
+	Limit  int
 }{}
 
 var clusterListCmd = &cobra.Command{

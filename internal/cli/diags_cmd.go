@@ -57,7 +57,7 @@ var diagsListCmd = &cobra.Command{
 		headers := []string{"Upload Time", "Filename", "Hostname", "Id", "Diags Collection Id"}
 		index := 0
 		utils.RenderTableRows(headers, func() []string {
-			if index >= diagsListCmdArgs.Limit{
+			if index >= diagsListCmdArgs.Limit {
 				return nil
 			}
 			// Get event
