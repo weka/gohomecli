@@ -57,7 +57,7 @@ func (client *Client) QueryClusters(options *RequestOptions) (*PagedQuery, error
 
 func GetActiveClustersParams() *QueryParams {
 	return (&QueryParams{}).
-		Set("seen_within_seconds", 60*60).
+		Set("seen_within_seconds", 24*60*60).
 		Set("muted", "false").
 		Set("monitored", "true")
 }
