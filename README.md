@@ -37,3 +37,6 @@ default_site = "prod"
     api_key = "key3"
     cloud_url = "http://localhost:8000"
 ```
+
+## Using different site
+Every command has `--site` flag to point to specific site, using name that was added during create
