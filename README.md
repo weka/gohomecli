@@ -1,9 +1,9 @@
-#Weka Home Command Line Utility
+# Weka Home Command Line Utility
 
 
 ### Configuration
 
-####Initial configuration file create
+#### Initial configuration file create
 - Run `gohomecli config site list`, on first run it will auto-create configuration file, **without** setting API key
 - Set api key: edit `~/.config/home-cli/config.toml`. API Key retrieved from `https://home.weka.io/api-keys` or similar URL from different deployment
 
