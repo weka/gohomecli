@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
@@ -34,7 +35,10 @@ var usageReportCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
-		clusterID := env.ParseClusterIdentifier(usageReportCmdArgs.clusterID)
+		clusterID, err := env.ParseClusterIdentifier(usageReportCmdArgs.clusterID)
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		if clusterID != "" {
 			cluster, err := api.GetCluster(clusterID)
 			if err != nil {

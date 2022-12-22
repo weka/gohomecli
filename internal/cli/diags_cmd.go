@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
@@ -45,7 +46,10 @@ var diagsListCmd = &cobra.Command{
 	Long:  "List cluster diagnostics",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := env.ParseClusterIdentifier(args[0])
+		clusterID, err := env.ParseClusterIdentifier(args[0])
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		api := client.GetClient()
 		options := &client.RequestOptions{}
 		options.PageSize = diagsListCmdArgs.Limit
@@ -88,9 +92,12 @@ var diagsDownloadCmd = &cobra.Command{
 	Long:  "Download cluster diagnostics file",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := env.ParseClusterIdentifier(args[0])
+		clusterID, err := env.ParseClusterIdentifier(args[0])
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		api := client.GetClient()
-		err := api.DownloadDiags(clusterID, args[1])
+		err = api.DownloadDiags(clusterID, args[1])
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -104,7 +111,10 @@ var diagsDownloadBacthCmd = &cobra.Command{
 	Long:  "Download batch diagnostic files",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := env.ParseClusterIdentifier(args[0])
+		clusterID, err := env.ParseClusterIdentifier(args[0])
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		api := client.GetClient()
 		options := &client.RequestOptions{}
 		options.Params = client.GetDiagsParams(diagsDownloadBacthCmdArgs.topic, args[1])
@@ -124,7 +134,10 @@ var diagsDownloadBacthCmd = &cobra.Command{
 			files = append(files, diag.FileName)
 		}
 		if len(files) > 0 {
-			api.DownloadManyDiags(clusterID, files)
+			err := api.DownloadManyDiags(clusterID, files)
+			if err != nil {
+				utils.UserError(err.Error())
+			}
 		} else {
 			utils.UserOutput("No files found for topic:%s  topic-id: %s",
 				diagsDownloadBacthCmdArgs.topic, args[1])

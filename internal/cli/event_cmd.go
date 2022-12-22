@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
@@ -84,7 +85,10 @@ var eventsCmd = &cobra.Command{
 			utils.UserError("--reverse is not supported yet")
 			return
 		}
-		clusterID := env.ParseClusterIdentifier(args[0])
+		clusterID, err := env.ParseClusterIdentifier(args[0])
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		api := client.GetClient()
 		query, err := api.QueryEvents(clusterID, &client.EventQueryOptions{
 			WithInternalEvents: !eventsCmdArgs.HideInternal,

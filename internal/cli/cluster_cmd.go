@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/env"
@@ -33,7 +34,10 @@ var clusterGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		client := client.GetClient()
-		clusterID := env.ParseClusterIdentifier(args[0])
+		clusterID, err := env.ParseClusterIdentifier(args[0])
+		if err != nil {
+			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		}
 		cluster, err := client.GetCluster(clusterID)
 		if err != nil {
 			utils.UserError(err.Error())

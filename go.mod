@@ -3,6 +3,7 @@ module github.com/weka/gohomecli
 go 1.15
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20201222001619-a42f9ac2ec8e
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

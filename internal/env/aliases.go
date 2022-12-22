@@ -2,8 +2,8 @@ package env
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/pelletier/go-toml"
-	"io/ioutil"
 	"os"
 )
 
@@ -86,7 +86,7 @@ func (aliases *Aliases) Remove(alias string) error {
 
 func (aliases *Aliases) load() {
 	logger.Debug().Str("file", aliases.FilePath).Msg("Reading aliases")
-	data, err := ioutil.ReadFile(aliases.FilePath)
+	data, err := os.ReadFile(aliases.FilePath)
 	if err != nil {
 		logger.Fatal().Str("file", aliases.FilePath).Err(err).Msg("Failed to read aliases file")
 	}
@@ -123,10 +123,18 @@ func (aliases *Aliases) save() {
 	}
 }
 
-func ParseClusterIdentifier(aliasOrClusterID string) string {
+func ParseClusterIdentifier(aliasOrClusterID string) (string, error) {
 	if aliasOrClusterID == "" {
-		return ""
+		return "", nil
 	}
-	result, _ := NewAliases().Get(aliasOrClusterID)
-	return result
+	result, exists := NewAliases().Get(aliasOrClusterID)
+	if !exists {
+		// check for a valid cluster id if not in the aliases
+		_, err := uuid.Parse(result)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
 }
