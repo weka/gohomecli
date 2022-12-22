@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml"
+	"io/ioutil"
 	"os"
 )
 
@@ -86,7 +87,7 @@ func (aliases *Aliases) Remove(alias string) error {
 
 func (aliases *Aliases) load() {
 	logger.Debug().Str("file", aliases.FilePath).Msg("Reading aliases")
-	data, err := os.ReadFile(aliases.FilePath)
+	data, err := ioutil.ReadFile(aliases.FilePath)
 	if err != nil {
 		logger.Fatal().Str("file", aliases.FilePath).Err(err).Msg("Failed to read aliases file")
 	}
