@@ -40,6 +40,8 @@ func init() {
 		"show events emitted at this time or later")
 	eventsCmd.Flags().BoolVar(&eventsCmdArgs.Wide, "wide", false,
 		"show more information on events, specifically their params")
+	eventsCmd.Flags().BoolVar(&eventsCmdArgs.Json, "json", false,
+		"Use JSON output format")
 	//eventsCmd.Flags().StringVar(&eventsCmdArgs.Params, "param", "",
 	//	"show events having these parameters")
 }
@@ -59,6 +61,7 @@ var eventsCmdArgs = struct {
 	StartTime          string
 	EndTime            string
 	Wide               bool
+	Json               bool
 	//Params             string
 }{}
 
@@ -122,6 +125,24 @@ var eventsCmd = &cobra.Command{
 		}
 		if eventsCmdArgs.Wide {
 			headers = append(headers, "Params")
+		}
+		if eventsCmdArgs.Json {
+			for {
+				event, err := query.NextEvent()
+				if err != nil {
+					utils.UserError(err.Error())
+				}
+				if event == nil {
+					break
+				}
+				val, err := json.MarshalIndent(event, "", "    ")
+				if err != nil {
+					utils.UserError(err.Error())
+					return
+				}
+				fmt.Println(string(val))
+			}
+			return
 		}
 		numEvents := 0
 		utils.RenderTableRows(headers, func() []string {
