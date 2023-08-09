@@ -80,7 +80,7 @@ func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
 			return false, err
 		}
 	}
-	if query.maxIndex <= 0 {
+	if query.maxIndex < 0 {
 		return false, nil
 	}
 	query.index++
