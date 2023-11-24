@@ -11,9 +11,7 @@ const (
 	markerFileName = ".bundle"
 )
 
-var (
-	execDir string
-)
+var execDir string
 
 func executableDirectory() string {
 	if execDir != "" {
