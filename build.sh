@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 BUILD_VERSION=$1
 BUILD_TIME=$(date +'%Y-%m-%d_%T')
