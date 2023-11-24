@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	versionFileName = "versions.json"
+	versionFileName = "MANIFEST.json"
 )
 
 type Manifest struct {
