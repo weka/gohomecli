@@ -1,7 +1,6 @@
 package k3s
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
@@ -9,12 +8,12 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path"
+
+	"github.com/weka/gohomecli/internal/bundle"
 )
 
 var (
-	ErrExists      = errors.New("k3s already installed")
-	ErrWrongBundle = errors.New("invalid bundle provided")
+	ErrExists = errors.New("k3s already installed")
 )
 
 type Config struct {
@@ -30,23 +29,13 @@ func Install(ctx context.Context, c Config) error {
 		return ErrExists
 	}
 
-	bundle, err := os.Open(c.BundlePath)
-	if err != nil {
-		return err
-	}
+	bundle := bundle.Tar(c.BundlePath)
 
-	err = func() error {
-		if err := copyK3S(bundle); err != nil {
-			return err
-		}
-		if err := copyAirgapImages(bundle); err != nil {
-			return err
-		}
-		if err := runInstallScript(ctx, bundle, c); err != nil {
-			return err
-		}
-		return nil
-	}()
+	err := errors.Join(
+		bundle.GetFiles(copyK3S, "k3s"),
+		bundle.GetFiles(copyAirgapImages, "airgap-*"),
+		bundle.GetFiles(runInstallScript(c), "install.sh"),
+	)
 
 	if err != nil {
 		// TODO: cleanup
@@ -75,7 +64,7 @@ func Uninstall() error {
 }
 
 func hasK3S() bool {
-	f, err := os.OpenFile("/usr/local/bin/k3s", os.O_RDONLY, 0)
+	_, err := os.Stat("/usr/local/bin/k3s")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false
@@ -84,7 +73,6 @@ func hasK3S() bool {
 		os.Exit(1)
 		return false
 	}
-	defer f.Close()
 	return true
 }
 
@@ -100,70 +88,40 @@ func hasSystemd() bool {
 	return true
 }
 
-func readBundleFile(bundle io.ReadSeeker, fileName string, cb func(fs.FileInfo, io.Reader) error) error {
-	bundle.Seek(0, 0)
-
-	archive := tar.NewReader(bundle)
-
-	for {
-		header, err := archive.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		fmt.Println("Reading ", header.FileInfo().Name())
-		match, err := path.Match(fileName, header.FileInfo().Name())
-		if err != nil {
-			return err
-		}
-
-		if !match {
-			continue
-		}
-		return cb(header.FileInfo(), archive)
+func copyK3S(_ fs.FileInfo, r io.Reader) error {
+	f, err := os.OpenFile("/usr/local/bin/k3s", os.O_CREATE|os.O_WRONLY, fs.FileMode(0755))
+	if err != nil {
+		return err
 	}
+	defer f.Close()
 
-	return ErrWrongBundle
+	_, err = io.Copy(f, r)
+	if err != nil && !errors.Is(err, io.EOF) {
+		err = errors.Join(err, f.Close())
+		err = errors.Join(err, os.Remove("/usr/local/bin/k3s"))
+		return err
+	}
+	return nil
 }
 
-func copyK3S(rs io.ReadSeeker) error {
-	return readBundleFile(rs, "k3s", func(_ fs.FileInfo, r io.Reader) error {
-		f, err := os.OpenFile("/usr/local/bin/k3s", os.O_CREATE|os.O_WRONLY, fs.FileMode(0755))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+func copyAirgapImages(info fs.FileInfo, r io.Reader) error {
+	os.MkdirAll("/var/lib/rancher/k3s/agent/images/", 0644)
 
-		_, err = io.Copy(f, r)
-		if err != nil && !errors.Is(err, io.EOF) {
-			err = errors.Join(err, f.Close())
-			err = errors.Join(err, os.Remove("/usr/local/bin/k3s"))
-			return err
-		}
-		return nil
-	})
+	f, err := os.OpenFile("/var/lib/rancher/k3s/agent/images/"+info.Name(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0644))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, r)
+	if err != nil && !errors.Is(err, io.EOF) {
+		err = errors.Join(err, f.Close())
+		err = errors.Join(err, os.Remove("/var/lib/rancher/k3s/agent/images/"+info.Name()))
+		return err
+	}
+	return nil
 }
 
-func copyAirgapImages(rs io.ReadSeeker) error {
-	return readBundleFile(rs, "k3s-airgap-images-*.tar", func(info fs.FileInfo, r io.Reader) error {
-		os.MkdirAll("/var/lib/rancher/k3s/agent/images/", 0644)
-
-		f, err := os.OpenFile("/var/lib/rancher/k3s/agent/images/"+info.Name(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0644))
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(f, r)
-		if err != nil && !errors.Is(err, io.EOF) {
-			err = errors.Join(err, f.Close())
-			err = errors.Join(err, os.Remove("/var/lib/rancher/k3s/agent/images/"+info.Name()))
-			return err
-		}
-		return nil
-	})
-}
-
-func runInstallScript(ctx context.Context, rs io.ReadSeeker, c Config) error {
-	return readBundleFile(rs, "install.sh", func(info fs.FileInfo, r io.Reader) error {
+func runInstallScript(c Config) func(fs.FileInfo, io.Reader) error {
+	return func(fi fs.FileInfo, r io.Reader) error {
 		os.Setenv("K3S_HOSTNAME", "$HOSTNAME")
 		os.Setenv("K3S_NODE_NAME", "$K3S_HOSTNAME")
 		os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
@@ -171,11 +129,11 @@ func runInstallScript(ctx context.Context, rs io.ReadSeeker, c Config) error {
 		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
 		os.Setenv("INSTALL_K3S_EXEC", fmt.Sprintf("--with-node-id --flannel-iface=%s --default-local-storage-path=/opt/local-path-provisioner", c.Iface))
 
-		cmd := exec.CommandContext(ctx, "sh", "-")
+		cmd := exec.Command("sh", "-")
 		cmd.Stdin = r
 
 		stdout, _ := cmd.StdoutPipe()
 		go io.Copy(os.Stdout, stdout)
 		return cmd.Run()
-	})
+	}
 }
