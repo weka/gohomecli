@@ -36,8 +36,8 @@ func executableDirectory() string {
 	return execDir
 }
 
-func IsInsideBundle() bool {
-	markerPath := filepath.Join(executableDirectory(), markerFileName)
+func IsBundled() bool {
+	markerPath := GetPath(markerFileName)
 	_, err := os.Stat(markerPath)
 	return err == nil
 }
