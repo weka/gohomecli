@@ -13,6 +13,7 @@ type Manifest struct {
 	WekaHome     string            `json:"wekaHome"`
 	K3S          string            `json:"k3S"`
 	DockerImages map[string]string `json:"dockerImages"`
+	FilesDigest  map[string]string `json:"filesDigest"`
 }
 
 func GetManifest() (Manifest, error) {
