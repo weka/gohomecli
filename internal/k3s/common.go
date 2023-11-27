@@ -6,6 +6,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 func serviceCmd(action string) *exec.Cmd {
@@ -88,4 +91,59 @@ func validateNetwork(iface string, nodeIPs []string) error {
 	}
 
 	return nil
+}
+
+func findBundle(path string) (filename string, version string, err error) {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return "", "", err
+	}
+
+	var matches []string
+
+	for _, file := range files {
+		if k3sBundleRegexp.MatchString(file.Name()) {
+			matches = append(matches, file.Name())
+			version = k3sBundleRegexp.FindStringSubmatch(file.Name())[1]
+		}
+	}
+
+	if len(matches) == 0 {
+		return "", "", fmt.Errorf("k3s-*.(tar(.gz))|(tgz) bundle is not found")
+	}
+
+	if len(matches) > 1 {
+		return "", "", fmt.Errorf("ambigious bundle, found: %q", matches)
+	}
+
+	if !semver.IsValid(version) {
+		return "", "", fmt.Errorf("unable to parse version %q", version)
+	}
+
+	return matches[0], semver.Canonical(version), nil
+}
+
+func getK3SVersion(binary string) (string, error) {
+	cmd := exec.Command(binary, "-v")
+	rc, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+	line, err := bufio.NewReader(rc).ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	if err := cmd.Wait(); err != nil {
+		return "", err
+	}
+
+	version := strings.Split(line, " ")[2]
+	if !semver.IsValid(version) {
+		return "", fmt.Errorf("invalid k3s version: %q", version)
+	}
+
+	return semver.Canonical(version), nil
 }

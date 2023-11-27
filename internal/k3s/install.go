@@ -26,10 +26,11 @@ var (
 	k3SInstallDir string
 	k3sBinary     string
 
-	k3sBundleRegexp = regexp.MustCompile(`k3s-.*\.(tar(\.gz)?)|(tgz)`)
+	k3sBundleRegexp = regexp.MustCompile(`k3s-(.*)\.(tar(\.gz)?)|(tgz)`)
 )
 
 func init() {
+	// by default install to current directory
 	exe, _ := os.Executable()
 	k3SInstallDir = path.Dir(exe)
 	k3sBinary = path.Join(k3SInstallDir, "k3s")
@@ -59,22 +60,29 @@ func Install(ctx context.Context, c InstallConfig) error {
 	}
 	c.dnsFixed = fixed
 
-	name, err := findBundle(c.BundlePath)
+	name, version, err := findBundle(c.BundlePath)
 	if err != nil {
 		return err
 	}
 
 	bundle := bundle.Tar(name)
 
+	fmt.Printf("Installing K3S %q\n", version)
+
 	err = errors.Join(
 		bundle.GetFiles(copyK3S, "k3s"),
 		bundle.GetFiles(copyAirgapImages, "k3s-airgap-*.tar"),
-		bundle.GetFiles(runInstallScript(c), "install.sh"),
+		bundle.GetFiles(runInstallScript(ctx, c), "install.sh"),
 	)
 
 	if err != nil {
 		cleanup()
 		return err
+	}
+
+	if errors.Is(ctx.Err(), context.Canceled) {
+		cleanup()
+		return ctx.Err()
 	}
 
 	return nil
@@ -120,7 +128,7 @@ func copyAirgapImages(info fs.FileInfo, r io.Reader) error {
 	return nil
 }
 
-func runInstallScript(c InstallConfig) func(fs.FileInfo, io.Reader) error {
+func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io.Reader) error {
 	return func(fi fs.FileInfo, r io.Reader) error {
 		if c.Hostname != "" {
 			os.Setenv("K3S_HOSTNAME", c.Hostname)
@@ -136,7 +144,7 @@ func runInstallScript(c InstallConfig) func(fs.FileInfo, io.Reader) error {
 		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
 		os.Setenv("INSTALL_K3S_EXEC", fmt.Sprintf("--with-node-id --flannel-iface=%s --default-local-storage-path=%s", c.Iface, defaultLocalStoragePath))
 
-		cmd := exec.Command("sh", "-")
+		cmd := exec.CommandContext(ctx, "sh", "-")
 		cmd.Stdin = r
 
 		stdout, _ := cmd.StdoutPipe()
@@ -193,28 +201,4 @@ func createk3sResolvConf() error {
 
 	_, err = f.WriteString("nameserver 127.0.0.1:9999")
 	return err
-}
-
-func findBundle(path string) (string, error) {
-	files, err := os.ReadDir(path)
-	if err != nil {
-		return "", err
-	}
-
-	var matches []string
-	for _, file := range files {
-		if k3sBundleRegexp.MatchString(file.Name()) {
-			matches = append(matches, file.Name())
-		}
-	}
-
-	if len(matches) == 0 {
-		return "", fmt.Errorf("k3s-*.(tar(.gz))|(tgz) bundle is not found")
-	}
-
-	if len(matches) > 1 {
-		return "", fmt.Errorf("ambigious bundle, found: %q", matches)
-	}
-
-	return matches[0], nil
 }

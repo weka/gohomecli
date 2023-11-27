@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/weka/gohomecli/internal/bundle"
+	"golang.org/x/mod/semver"
 )
 
 var ErrNotExist = errors.New("k3s not exists")
@@ -19,6 +20,23 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return ErrNotExist
 	}
 
+	file, version, err := findBundle(c.BundlePath)
+	if err != nil {
+		return err
+	}
+
+	curVersion, err := getK3SVersion(k3sBinary)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Found k3s bundle %q, current version %q\n", version, curVersion)
+
+	if semver.Compare(version, curVersion) < 0 {
+		fmt.Println("Downgrading kubernetes cluster is not possible")
+		return nil
+	}
+
 	fmt.Println("Starting K3S upgrade...")
 	fmt.Println("Stopping k3s service")
 	if err := serviceCmd("stop").Run(); err != nil {
@@ -26,9 +44,9 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 	}
 
 	fmt.Println("Copying new k3s image...")
-	bundle := bundle.Tar(c.BundlePath)
+	bundle := bundle.Tar(file)
 
-	err := errors.Join(
+	err = errors.Join(
 		bundle.GetFiles(copyK3S, "k3s"),
 		bundle.GetFiles(copyAirgapImages, "k3s-airgap*.tar"),
 	)

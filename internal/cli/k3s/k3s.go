@@ -2,7 +2,9 @@ package cli
 
 import (
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/cli/app"
@@ -49,6 +51,10 @@ var k3sCmd = &cobra.Command{
 var k3sInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "install cluster from scratch",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGHUP)
+		cmd.SetContext(ctx)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return k3s.Install(cmd.Context(), k3sInstallConfig)
 	},
@@ -57,6 +63,10 @@ var k3sInstallCmd = &cobra.Command{
 var k3sUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "upgrade cluster to bundled version",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGHUP)
+		cmd.SetContext(ctx)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return k3s.Upgrade(cmd.Context(), k3sUpgradeConfig)
 	},
