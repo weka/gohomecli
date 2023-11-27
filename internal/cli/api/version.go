@@ -1,14 +1,17 @@
-package cli
+package api
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
-	"strings"
 )
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	app.AppCmd.AddCommand(versionCmd)
 }
 
 var versionCmd = &cobra.Command{

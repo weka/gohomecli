@@ -1,17 +1,19 @@
-package cli
+package api
 
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
-	"strconv"
 )
 
 func init() {
-	rootCmd.AddCommand(eventsCmd)
+	app.AppCmd.AddCommand(eventsCmd)
 	eventsCmd.Flags().BoolVar(&eventsCmdArgs.HideInternal, "hide-internal", false,
 		"do not show internal events")
 	eventsCmd.Flags().BoolVarP(&eventsCmdArgs.ReverseSort, "reverse", "r", false,
@@ -70,6 +72,7 @@ var eventsCmd = &cobra.Command{
 	Aliases: []string{"events"}, // backward compatibility
 	Short:   "Show cluster events",
 	Long:    "Show cluster events",
+	GroupID: "API",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		startTime, err := ParseTime(eventsCmdArgs.StartTime)

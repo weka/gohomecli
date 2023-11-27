@@ -1,10 +1,13 @@
-package cli
+package api
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
@@ -16,7 +19,7 @@ var analyticsCmdArgs = struct {
 }{}
 
 func init() {
-	rootCmd.AddCommand(analyticsCmd)
+	app.AppCmd.AddCommand(analyticsCmd)
 	analyticsCmd.Flags().BoolVarP(&analyticsCmdArgs.allActiveClusters, "all-active", "a",
 		false, "get analytics for all active clusters")
 	analyticsCmd.Flags().StringVarP(&analyticsCmdArgs.clusterID, "cluster", "c",
@@ -24,9 +27,10 @@ func init() {
 }
 
 var analyticsCmd = &cobra.Command{
-	Use:   "analytics { --all-active | --cluster ID }",
-	Short: "Get cluster analytics data",
-	Long:  "Get cluster analytics data",
+	Use:     "analytics { --all-active | --cluster ID }",
+	Short:   "Get cluster analytics data",
+	Long:    "Get cluster analytics data",
+	GroupID: "API",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if !analyticsCmdArgs.allActiveClusters && analyticsCmdArgs.clusterID == "" {
 			return errors.New("please specify either --all-active or --cluster")

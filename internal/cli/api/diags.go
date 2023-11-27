@@ -1,12 +1,15 @@
-package cli
+package api
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
-	"strconv"
 )
 
 var diagsDownloadBacthCmdArgs = struct {
@@ -20,7 +23,7 @@ var diagsListCmdArgs = struct {
 }{}
 
 func init() {
-	rootCmd.AddCommand(diagsCmd)
+	app.AppCmd.AddCommand(diagsCmd)
 	diagsCmd.AddCommand(diagsListCmd)
 	diagsCmd.AddCommand(diagsDownloadCmd)
 	diagsCmd.AddCommand(diagsDownloadBacthCmd)
@@ -35,9 +38,10 @@ func init() {
 }
 
 var diagsCmd = &cobra.Command{
-	Use:   "diags [OPTIONS] <cluster-id>",
-	Short: "Download cluster diagnostics",
-	Long:  "Download cluster diagnostics",
+	Use:     "diags [OPTIONS] <cluster-id>",
+	Short:   "Download cluster diagnostics",
+	Long:    "Download cluster diagnostics",
+	GroupID: "API",
 }
 
 var diagsListCmd = &cobra.Command{
@@ -142,6 +146,5 @@ var diagsDownloadBacthCmd = &cobra.Command{
 			utils.UserOutput("No files found for topic:%s  topic-id: %s",
 				diagsDownloadBacthCmdArgs.topic, args[1])
 		}
-		return
 	},
 }
