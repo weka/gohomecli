@@ -1,24 +1,28 @@
-package cli
+package api
 
 import (
+	"strconv"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
-	"strconv"
 )
 
 func init() {
-	rootCmd.AddCommand(integrationCmd)
+	app.AppCmd.AddCommand(integrationCmd)
 	integrationCmd.AddCommand(integrationGetCmd)
 	integrationCmd.AddCommand(integrationListCmd)
 	integrationCmd.AddCommand(integrationTestCmd)
 }
 
 var integrationCmd = &cobra.Command{
-	Use:   "integration",
-	Short: "Interact with integrations",
-	Long:  "Interact with integrations",
+	Use:     "integration",
+	Short:   "Interact with integrations",
+	Long:    "Interact with integrations",
+	GroupID: "API",
 }
 
 var integrationGetCmd = &cobra.Command{

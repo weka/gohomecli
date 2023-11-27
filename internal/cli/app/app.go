@@ -1,8 +1,10 @@
-package cli
+package app
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -21,8 +23,8 @@ func isValidColorMode(mode string) bool {
 	return false
 }
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// AppCmd represents the base command when called without any subcommands
+var AppCmd = &cobra.Command{
 	Use:   "homecli",
 	Short: "Weka Home Command Line Utility",
 	Long:  `Weka Home Command Line Utility`,
@@ -37,7 +39,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := AppCmd.Execute(); err != nil {
 		utils.UserError(err.Error())
 	}
 }
@@ -47,11 +49,11 @@ func init() {
 	cobra.OnInitialize(initLogging)
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&siteName, "site", "",
+	AppCmd.PersistentFlags().StringVar(&siteName, "site", "",
 		"target Weka Home site")
-	rootCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
+	AppCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
 		"verbose output")
-	rootCmd.PersistentFlags().StringVar(&colorMode, "color", "auto",
+	AppCmd.PersistentFlags().StringVar(&colorMode, "color", "auto",
 		"colored output, even when stdout is not a terminal")
 }
 

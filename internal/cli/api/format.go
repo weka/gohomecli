@@ -1,9 +1,10 @@
-package cli
+package api
 
 import (
-	"github.com/weka/gohomecli/internal/utils"
 	"regexp"
 	"time"
+
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func FormatTime(t time.Time) string {
@@ -32,7 +33,7 @@ func FormatUUID(uuid string) string {
 	return utils.Colorize(utils.ColorYellow, uuid)
 }
 
-var nodeIDPattern, _ = regexp.Compile("^NodeId<(\\d+)>$")
+var nodeIDPattern = regexp.MustCompile(`^NodeId<(\d+)>$`)
 
 func FormatNodeID(nodeID string) string {
 	submatches := nodeIDPattern.FindStringSubmatch(nodeID)

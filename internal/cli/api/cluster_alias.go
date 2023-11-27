@@ -1,19 +1,20 @@
-package cli
+package api
 
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
-	aliasCmd.AddCommand(aliasListCmd)
-	aliasCmd.AddCommand(aliasAddCmd)
-	aliasCmd.AddCommand(aliasRemoveCmd)
+	clusterAliasCmd.AddCommand(aliasListCmd)
+	clusterAliasCmd.AddCommand(aliasAddCmd)
+	clusterAliasCmd.AddCommand(aliasRemoveCmd)
 }
 
-var aliasCmd = &cobra.Command{
+var clusterAliasCmd = &cobra.Command{
 	Use:   "alias",
 	Short: "Alias commands",
 	Long:  "Alias commands",

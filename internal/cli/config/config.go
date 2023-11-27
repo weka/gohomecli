@@ -1,16 +1,19 @@
-package cli
+package config
 
 import (
 	"fmt"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
-	rootCmd.AddCommand(configCmd)
-
+	app.AppCmd.AddCommand(configCmd)
+	app.AppCmd.AddGroup(&cobra.Group{ID: "Config", Title: "CLI Configuration"})
 	configCmd.AddCommand(configSiteCmd)
 	configCmd.AddCommand(configUpdateCmd)
 	configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.cloudURL, "cloud-url", "",
@@ -24,9 +27,10 @@ func init() {
 }
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Configuration commands",
-	Long:  "Configuration commands",
+	Use:     "config",
+	Short:   "Configuration commands",
+	Long:    "Configuration commands",
+	GroupID: "Config",
 }
 
 var configUpdateCmdArgs = struct {
