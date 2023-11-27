@@ -53,7 +53,7 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 
 		var match bool
 		for _, fileName := range fileNames {
-			match, err = path.Match(fileName, header.Name)
+			match, err = path.Match(fileName, header.FileInfo().Name())
 			if err != nil {
 				return err
 			}
@@ -74,7 +74,7 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 	}
 
 	if !found {
-		return ErrWrongBundle
+		return errors.Join(ErrWrongBundle, fmt.Errorf("missing files: %s", fileNames))
 	}
 
 	return nil
