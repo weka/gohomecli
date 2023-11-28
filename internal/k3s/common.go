@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -93,8 +94,8 @@ func validateNetwork(iface string, nodeIPs []string) error {
 	return nil
 }
 
-func findBundle(path string) (filename string, version string, err error) {
-	files, err := os.ReadDir(path)
+func findBundle(dir string) (filename string, version string, err error) {
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return "", "", err
 	}
@@ -120,7 +121,7 @@ func findBundle(path string) (filename string, version string, err error) {
 		return "", "", fmt.Errorf("unable to parse version %q", version)
 	}
 
-	return matches[0], semver.Canonical(version), nil
+	return path.Join(dir, matches[0]), semver.Canonical(version), nil
 }
 
 func getK3SVersion(binary string) (string, error) {
