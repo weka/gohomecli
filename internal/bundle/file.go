@@ -11,9 +11,7 @@ const (
 	markerFileName = ".bundle"
 )
 
-var (
-	execDir string
-)
+var execDir string
 
 func executableDirectory() string {
 	if execDir != "" {
@@ -36,8 +34,8 @@ func executableDirectory() string {
 	return execDir
 }
 
-func IsInsideBundle() bool {
-	markerPath := filepath.Join(executableDirectory(), markerFileName)
+func IsBundled() bool {
+	markerPath := GetPath(markerFileName)
 	_, err := os.Stat(markerPath)
 	return err == nil
 }

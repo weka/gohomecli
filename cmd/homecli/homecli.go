@@ -17,9 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"strings"
+
 	"github.com/weka/gohomecli/internal/cli"
 	"github.com/weka/gohomecli/internal/env"
-	"strings"
 )
 
 var (

@@ -1,22 +1,25 @@
-package cli
+package api
 
 import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+
+	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
-	rootCmd.AddCommand(customerCmd)
+	app.AppCmd.AddCommand(customerCmd)
 	customerCmd.AddCommand(customerGetCmd)
 	customerCmd.AddCommand(customerListCmd)
 }
 
 var customerCmd = &cobra.Command{
-	Use:   "customer",
-	Short: "Interact with customers",
-	Long:  "Interact with customers",
+	Use:     "customer",
+	Short:   "Interact with customers",
+	Long:    "Interact with customers",
+	GroupID: "API",
 }
 
 var customerGetCmd = &cobra.Command{
