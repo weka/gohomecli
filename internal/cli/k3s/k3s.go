@@ -19,9 +19,9 @@ func init() {
 
 	k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Iface, "iface", "i", "", "iterface for k3s network")
 	k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Hostname, "hostname", "n", k3s.Hostname(), "hostname for cluster")
-	k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.NodeIP, "ip", nil, "IP addresses for wekahome API")
-	k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.ExternalIP, "ip_ext", nil, "external IP addresses")
-	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.BundlePath, "bundle", bundlePath, "bundle directory where placed k3s to install")
+	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
+	k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API")
+	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.BundlePath, "bundle", bundlePath, "bundle directory with k3s package")
 
 	k3sInstallCmd.MarkFlagRequired("iface")
 

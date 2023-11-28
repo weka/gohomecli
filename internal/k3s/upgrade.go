@@ -48,7 +48,7 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 
 	err = errors.Join(
 		bundle.GetFiles(copyK3S, "k3s"),
-		bundle.GetFiles(copyAirgapImages, "k3s-airgap*.tar"),
+		bundle.GetFiles(copyAirgapImages, "k3s-airgap*.tar*"),
 	)
 
 	if err != nil {

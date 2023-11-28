@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"slices"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -54,59 +55,51 @@ func Hostname() string {
 	return hostname
 }
 
-func validateNetwork(iface string, nodeIPs *[]string) error {
-	var (
-		ifaceExists bool
-		ipRequired  bool
-		ips         = make(map[string]bool)
-	)
+func setupNetwork(iface string, nodeIP *string, additionalIPs *[]string) error {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return err
 	}
 
+	var nodeIface *net.Interface
 	for _, i := range ifaces {
-		if iface != i.Name {
+		if iface == i.Name && i.Flags&net.FlagLoopback == 0 {
+			nodeIface = &i
+			break
+		}
+	}
+
+	if nodeIface == nil {
+		return fmt.Errorf("interface %q is not exists or it's loopback interface", iface)
+	}
+
+	addr, _ := nodeIface.Addrs()
+	var ipMatch bool
+	for _, a := range addr {
+		ipnet, ok := a.(*net.IPNet)
+		if !ok || ipnet.IP.To4() == nil {
 			continue
 		}
 
-		ifaceExists = true
-
-		ipv4Count := 0
-		addr, _ := i.Addrs()
-		for _, a := range addr {
-			ip := a.(*net.IPNet).IP
-			if ip.To4() != nil {
-				ips[ip.String()] = true
-				ipv4Count += 1
-			}
+		ip := ipnet.IP.To4()
+		// setup first ip as default one
+		if *nodeIP == "" {
+			fmt.Printf("IP not defined, using %q from %q as NodeIP\n", ip.String(), iface)
+			*nodeIP = ip.String()
 		}
-		if ipv4Count > 1 {
-			ipRequired = true
+		// check if provided node ip matched to interface
+		if *nodeIP == ip.String() {
+			ipMatch = true
+		} else {
+			*additionalIPs = append(*additionalIPs, ip.String())
 		}
 	}
 
-	if !ifaceExists {
-		return fmt.Errorf("interface %q is not exists", iface)
+	if !ipMatch {
+		return fmt.Errorf("IP address for node %q not belongs to %q", *nodeIP, iface)
 	}
 
-	var notExists []string
-	for _, ip := range *nodeIPs {
-		if _, found := ips[net.ParseIP(ip).String()]; !found {
-			notExists = append(notExists, ip)
-		}
-	}
-
-	if len(notExists) > 0 {
-		return fmt.Errorf("wrong ip addresses provided: %q, available: %v", notExists, ips)
-	}
-
-	if ipRequired && len(*nodeIPs) == 0 {
-		for ip := range ips {
-			fmt.Printf("IP is not defined, using %q from %q\n", ip, iface)
-			*nodeIPs = append(*nodeIPs, ip)
-		}
-	}
+	*additionalIPs = slices.Compact(*additionalIPs)
 
 	return nil
 }

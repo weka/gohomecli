@@ -38,12 +38,12 @@ func init() {
 }
 
 type InstallConfig struct {
-	Iface      string   // interface for k3s network to work on, required
-	BundlePath string   // path to bundle with k3s and images
-	Hostname   string   // host name of the cluster, optional, default from env
-	NodeIP     []string // list of node ip addresses, optional
-	ExternalIP []string // list of external ip addresses, optional
-	dnsFixed   bool
+	Iface       string   // interface for k3s network to work on, required
+	BundlePath  string   // path to bundle with k3s and images
+	Hostname    string   // host name of the cluster, optional, default from env
+	NodeIP      string   // node ip to bind on as primary internal ip
+	ExternalIPs []string // list of external ip addresses, optional
+	dnsFixed    bool
 }
 
 func Install(ctx context.Context, c InstallConfig) error {
@@ -51,7 +51,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return ErrExists
 	}
 
-	if err := validateNetwork(c.Iface, &c.NodeIP); err != nil {
+	if err := setupNetwork(c.Iface, &c.NodeIP, &c.ExternalIPs); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 
 	err = errors.Join(
 		bundle.GetFiles(copyK3S, "k3s"),
-		bundle.GetFiles(copyAirgapImages, "k3s-airgap-*.tar"),
+		bundle.GetFiles(copyAirgapImages, "k3s-airgap-*.tar*"),
 		bundle.GetFiles(runInstallScript(ctx, c), "install.sh"),
 	)
 
@@ -144,19 +144,13 @@ func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io
 		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
 
 		k3sArgs := []string{
-			"--with-node-id",
+			// binding node to localhost only
+			fmt.Sprintf("--node-ip=%s", c.NodeIP),
 			fmt.Sprintf("--flannel-iface=%s", c.Iface),
 			fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
 		}
-		if len(c.NodeIP) > 0 {
-			for _, ip := range c.NodeIP {
-				k3sArgs = append(k3sArgs, fmt.Sprintf("--node-ip=%s", ip))
-			}
-		}
-		if len(c.ExternalIP) > 0 {
-			for _, ip := range c.ExternalIP {
-				k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", ip))
-			}
+		if len(c.ExternalIPs) > 0 {
+			k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", strings.Join(c.ExternalIPs, ",")))
 		}
 
 		os.Setenv("INSTALL_K3S_EXEC", strings.Join(k3sArgs, " "))
