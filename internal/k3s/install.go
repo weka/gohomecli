@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/weka/gohomecli/internal/bundle"
 )
@@ -50,7 +51,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return ErrExists
 	}
 
-	if err := validateNetwork(c.Iface, c.NodeIP); err != nil {
+	if err := validateNetwork(c.Iface, &c.NodeIP); err != nil {
 		return err
 	}
 
@@ -89,7 +90,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 }
 
 func cleanup() error {
-	exec.Command("k3s-uninstall.sh").Run()
+	//exec.Command("k3s-uninstall.sh").Run()
 	os.RemoveAll(k3sImagesPath)
 	os.Remove(k3sBinary)
 	os.Remove(k3sResolvConfPath)
@@ -137,12 +138,28 @@ func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io
 		if c.dnsFixed {
 			os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 		}
-
 		os.Setenv("INSTALL_K3S_BIN_DIR", k3SInstallDir)
 		os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 		os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
-		os.Setenv("INSTALL_K3S_EXEC", fmt.Sprintf("--with-node-id --flannel-iface=%s --default-local-storage-path=%s", c.Iface, defaultLocalStoragePath))
+
+		k3sArgs := []string{
+			"--with-node-id",
+			fmt.Sprintf("--flannel-iface=%s", c.Iface),
+			fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
+		}
+		if len(c.NodeIP) > 0 {
+			for _, ip := range c.NodeIP {
+				k3sArgs = append(k3sArgs, fmt.Sprintf("--node-ip=%s", ip))
+			}
+		}
+		if len(c.ExternalIP) > 0 {
+			for _, ip := range c.ExternalIP {
+				k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", ip))
+			}
+		}
+
+		os.Setenv("INSTALL_K3S_EXEC", strings.Join(k3sArgs, " "))
 
 		cmd := exec.CommandContext(ctx, "sh", "-")
 		cmd.Stdin = r

@@ -54,9 +54,10 @@ func Hostname() string {
 	return hostname
 }
 
-func validateNetwork(iface string, nodeIPs []string) error {
+func validateNetwork(iface string, nodeIPs *[]string) error {
 	var (
 		ifaceExists bool
+		ipRequired  bool
 		ips         = make(map[string]bool)
 	)
 	ifaces, err := net.Interfaces()
@@ -68,11 +69,20 @@ func validateNetwork(iface string, nodeIPs []string) error {
 		if iface != i.Name {
 			continue
 		}
+
 		ifaceExists = true
 
+		ipv4Count := 0
 		addr, _ := i.Addrs()
 		for _, a := range addr {
-			ips[a.(*net.IPNet).IP.String()] = true
+			ip := a.(*net.IPNet).IP
+			if ip.To4() != nil {
+				ips[ip.String()] = true
+				ipv4Count += 1
+			}
+		}
+		if ipv4Count > 1 {
+			ipRequired = true
 		}
 	}
 
@@ -81,7 +91,7 @@ func validateNetwork(iface string, nodeIPs []string) error {
 	}
 
 	var notExists []string
-	for _, ip := range nodeIPs {
+	for _, ip := range *nodeIPs {
 		if _, found := ips[net.ParseIP(ip).String()]; !found {
 			notExists = append(notExists, ip)
 		}
@@ -89,6 +99,13 @@ func validateNetwork(iface string, nodeIPs []string) error {
 
 	if len(notExists) > 0 {
 		return fmt.Errorf("wrong ip addresses provided: %q, available: %v", notExists, ips)
+	}
+
+	if ipRequired && len(*nodeIPs) == 0 {
+		for ip := range ips {
+			fmt.Printf("IP is not defined, using %q from %q\n", ip, iface)
+			*nodeIPs = append(*nodeIPs, ip)
+		}
 	}
 
 	return nil
