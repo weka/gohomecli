@@ -9,6 +9,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/rs/zerolog v1.20.0
 	github.com/spf13/cobra v1.7.0
+	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.5.0
 )
 
