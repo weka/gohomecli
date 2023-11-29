@@ -10,8 +10,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/weka/gohomecli/internal/bundle"
 	"golang.org/x/mod/semver"
+
+	"github.com/weka/gohomecli/internal/bundle"
 )
 
 func serviceCmd(action string) *exec.Cmd {
@@ -31,8 +32,10 @@ func hasK3S() bool {
 	}
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Println("os.Stat: ", err)
+		// something very rare like file-system error: immediately exit
 		os.Exit(255)
 	}
+
 	// check k3s in PATH
 	err = exec.Command("k3s").Run()
 	return err == nil
