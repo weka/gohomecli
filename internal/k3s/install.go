@@ -1,7 +1,6 @@
 package k3s
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -43,23 +42,17 @@ type InstallConfig struct {
 	Hostname    string   // host name of the cluster, optional, default from env
 	NodeIP      string   // node ip to bind on as primary internal ip
 	ExternalIPs []string // list of external ip addresses, optional
-	dnsFixed    bool
 }
 
+// Install runs K3S installation process
 func Install(ctx context.Context, c InstallConfig) error {
 	if hasK3S() {
 		return ErrExists
 	}
 
-	if err := setupNetwork(c.Iface, &c.NodeIP, &c.ExternalIPs); err != nil {
+	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
 		return err
 	}
-
-	fixed, err := dnsFixed()
-	if err != nil {
-		return err
-	}
-	c.dnsFixed = fixed
 
 	name, version, err := findBundle(c.BundlePath)
 	if err != nil {
@@ -90,7 +83,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 }
 
 func cleanup() error {
-	//exec.Command("k3s-uninstall.sh").Run()
+	exec.Command("k3s-uninstall.sh").Run()
 	os.RemoveAll(k3sImagesPath)
 	os.Remove(k3sBinary)
 	os.Remove(k3sResolvConfPath)
@@ -135,7 +128,11 @@ func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io
 			os.Setenv("K3S_HOSTNAME", c.Hostname)
 			os.Setenv("K3S_NODE_NAME", c.Hostname)
 		}
-		if c.dnsFixed {
+		overriden, err := resolvConfOverriden()
+		if err != nil {
+			return err
+		}
+		if overriden {
 			os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 		}
 		os.Setenv("INSTALL_K3S_BIN_DIR", k3SInstallDir)
@@ -167,49 +164,4 @@ func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io
 
 		return nil
 	}
-}
-
-var resolvRegexp = regexp.MustCompile(`%s*nameserver.*`)
-
-func dnsFixed() (bool, error) {
-	f, err := os.Open("/etc/resolv.conf")
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			fmt.Println("Nameserver is not found, fixing...")
-			return true, createk3sResolvConf()
-		}
-	}
-	defer f.Close()
-
-	var nameServerFound bool
-
-	scan := bufio.NewScanner(f)
-
-	for scan.Scan() {
-		if resolvRegexp.Match(scan.Bytes()) {
-			fmt.Println("Nameserver found, no fix needed")
-			nameServerFound = true
-			break
-		}
-	}
-
-	if !nameServerFound {
-		fmt.Println("Nameserver is not found, fixing...")
-		return true, createk3sResolvConf()
-	}
-
-	return false, nil
-}
-
-const k3sResolvConfPath = "/etc/k3s-resolv.conf"
-
-func createk3sResolvConf() error {
-	f, err := os.OpenFile(k3sResolvConfPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.WriteString("nameserver 127.0.0.1:9999")
-	return err
 }

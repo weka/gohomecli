@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"slices"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -55,7 +54,9 @@ func Hostname() string {
 	return hostname
 }
 
-func setupNetwork(iface string, nodeIP *string, additionalIPs *[]string) error {
+// setupNetwork checks if provided nodeIP belongs to interface
+// if nodeIP is empty it will write first ip from the interface into nodeIP
+func setupNetwork(iface string, nodeIP *string) error {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return err
@@ -90,16 +91,12 @@ func setupNetwork(iface string, nodeIP *string, additionalIPs *[]string) error {
 		// check if provided node ip matched to interface
 		if *nodeIP == ip.String() {
 			ipMatch = true
-		} else {
-			*additionalIPs = append(*additionalIPs, ip.String())
 		}
 	}
 
 	if !ipMatch {
 		return fmt.Errorf("IP address for node %q not belongs to %q", *nodeIP, iface)
 	}
-
-	*additionalIPs = slices.Compact(*additionalIPs)
 
 	return nil
 }
