@@ -43,6 +43,10 @@ func BundlePath() string {
 	return bundlePath
 }
 
+func BundleBinDir() string {
+	return filepath.Join(BundlePath(), "bin")
+}
+
 // SetBundlePath allows to override default bundle directory
 func SetBundlePath(path string) error {
 	if _, err := os.Stat(path); err != nil {

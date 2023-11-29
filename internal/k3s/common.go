@@ -8,12 +8,17 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/bundle"
 )
+
+func k3sBinary() string {
+	return filepath.Join(bundle.BundleBinDir(), "k3s")
+}
 
 func serviceCmd(action string) *exec.Cmd {
 	var cmd *exec.Cmd
@@ -26,7 +31,7 @@ func serviceCmd(action string) *exec.Cmd {
 }
 
 func hasK3S() bool {
-	_, err := os.Stat(k3sBinary)
+	_, err := os.Stat(k3sBinary())
 	if err == nil {
 		return true
 	}

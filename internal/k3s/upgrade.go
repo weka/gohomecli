@@ -33,7 +33,7 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return err
 	}
 
-	curVersion, err := getK3SVersion(k3sBinary)
+	curVersion, err := getK3SVersion(k3sBinary())
 	if err != nil {
 		return err
 	}

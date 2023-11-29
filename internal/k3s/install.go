@@ -23,18 +23,8 @@ var (
 )
 
 var (
-	k3SInstallDir string
-	k3sBinary     string
-
 	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
 )
-
-func init() {
-	// by default install to current directory
-	exe, _ := os.Executable()
-	k3SInstallDir = path.Dir(exe)
-	k3sBinary = path.Join(k3SInstallDir, "k3s")
-}
 
 type InstallConfig struct {
 	Iface       string   // interface for k3s network to work on, required
@@ -110,13 +100,13 @@ func cleanup(debug bool) {
 	if !debug {
 		exec.Command("k3s-uninstall.sh").Run()
 		os.RemoveAll(k3sImagesPath)
-		os.Remove(k3sBinary)
+		os.Remove(k3sBinary())
 		os.Remove(k3sResolvConfPath)
 	}
 }
 
 func copyK3S(_ fs.FileInfo, r io.Reader) error {
-	f, err := os.OpenFile(k3sBinary, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, fs.FileMode(0755))
+	f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, fs.FileMode(0755))
 	if err != nil {
 		return err
 	}
@@ -124,7 +114,7 @@ func copyK3S(_ fs.FileInfo, r io.Reader) error {
 
 	_, err = io.Copy(f, r)
 	if err != nil && !errors.Is(err, io.EOF) {
-		err = errors.Join(err, f.Close(), os.Remove(k3sBinary))
+		err = errors.Join(err, f.Close(), os.Remove(k3sBinary()))
 		return err
 	}
 	return nil
@@ -159,7 +149,7 @@ func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io
 		if overriden {
 			os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 		}
-		os.Setenv("INSTALL_K3S_BIN_DIR", k3SInstallDir)
+		os.Setenv("INSTALL_K3S_BIN_DIR", bundle.BundleBinDir())
 		os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 		os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
