@@ -2,7 +2,9 @@ package k3s
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"os"
@@ -142,18 +144,24 @@ func getK3SVersion(binary string) (string, error) {
 	if err := cmd.Start(); err != nil {
 		return "", err
 	}
-	line, err := bufio.NewReader(rc).ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	if err := cmd.Wait(); err != nil {
-		return "", err
+
+	go cmd.Wait()
+
+	var line string
+	for {
+		line, err = bufio.NewReader(rc).ReadString('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		if strings.HasPrefix(line, "k3s version") || errors.Is(err, io.EOF) {
+			break
+		}
 	}
 
-	version := strings.Split(line, " ")[2]
-	if !semver.IsValid(version) {
-		return "", fmt.Errorf("invalid k3s version: %q", version)
+	version := strings.Split(line, " ")
+	if len(version) < 3 || !semver.IsValid(version[2]) {
+		return "", fmt.Errorf("invalid k3s version: %q", line)
 	}
 
-	return version, nil
+	return version[2], nil
 }
