@@ -14,14 +14,21 @@ var ErrNotExist = errors.New("k3s not exists")
 
 type UpgradeConfig struct {
 	BundlePath string
+	Force      bool
 }
 
 func Upgrade(ctx context.Context, c UpgradeConfig) error {
 	if !hasK3S() {
 		return ErrNotExist
 	}
+	if c.BundlePath != "" {
+		err := bundle.SetBundlePath(c.BundlePath)
+		if err != nil {
+			return err
+		}
+	}
 
-	file, version, err := findBundle(c.BundlePath)
+	file, manifest, err := findBundle()
 	if err != nil {
 		return err
 	}
@@ -31,9 +38,9 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return err
 	}
 
-	fmt.Printf("Found k3s bundle %q, current version %q\n", version, curVersion)
+	fmt.Printf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
 
-	if semver.Compare(version, curVersion) < 0 {
+	if semver.Compare(manifest.K3S, curVersion) == -1 && !c.Force {
 		fmt.Println("Downgrading kubernetes cluster is not possible")
 		return nil
 	}

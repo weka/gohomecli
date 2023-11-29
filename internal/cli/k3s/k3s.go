@@ -1,31 +1,28 @@
 package cli
 
 import (
-	"os"
 	"os/signal"
-	"path"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/k3s"
 )
 
 func init() {
-	// by default homecli is located in /opt/wekahome/{release}/bin
-	// and bundle in /opt/wekahome/{release}/
-	bundlePath, _ := os.Executable()
-	bundlePath = path.Join(path.Dir(bundlePath), "..")
-
 	k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Iface, "iface", "i", "", "interface for k3s network")
 	k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Hostname, "hostname", "n", k3s.Hostname(), "hostname for cluster")
 	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
-	k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API")
-	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.BundlePath, "bundle", bundlePath, "bundle directory with k3s package")
-
+	k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
+	k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
 	k3sInstallCmd.MarkFlagRequired("iface")
+	k3sInstallCmd.Flags().MarkHidden("bundle")
+	k3sInstallCmd.Flags().MarkHidden("ip")
 
-	k3sUpgradeCmd.Flags().StringVar(&k3sUpgradeConfig.BundlePath, "bundle", bundlePath, "bundle with k3s to install")
+	k3sUpgradeCmd.Flags().StringVar(&k3sUpgradeConfig.BundlePath, "bundle", bundle.BundlePath(), "bundle with k3s to install")
+	k3sUpgradeCmd.Flags().BoolVar(&k3sUpgradeConfig.Force, "force", false, "perform force upgrade")
+	k3sUpgradeCmd.Flags().MarkHidden("bundle")
 
 	app.AppCmd.AddGroup(&cobra.Group{
 		ID:    "k3s",

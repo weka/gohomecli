@@ -74,7 +74,7 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 	}
 
 	if !found {
-		return errors.Join(ErrWrongBundle, fmt.Errorf("missing files: %s", fileNames))
+		return errors.Join(ErrWrongBundlePath, fmt.Errorf("missing files: %s", fileNames))
 	}
 
 	return nil

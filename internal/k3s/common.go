@@ -3,12 +3,14 @@ package k3s
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 
+	"github.com/weka/gohomecli/internal/bundle"
 	"golang.org/x/mod/semver"
 )
 
@@ -101,34 +103,26 @@ func setupNetwork(iface string, nodeIP *string) error {
 	return nil
 }
 
-func findBundle(dir string) (filename string, version string, err error) {
-	files, err := os.ReadDir(dir)
+func findBundle() (filename string, manifest bundle.Manifest, err error) {
+	manifest, err = bundle.GetManifest()
 	if err != nil {
-		return "", "", err
+		return
 	}
 
-	var matches []string
-
+	var files []fs.DirEntry
+	files, err = os.ReadDir(bundle.BundlePath())
+	if err != nil {
+		return
+	}
 	for _, file := range files {
 		if k3sBundleRegexp.MatchString(file.Name()) {
-			matches = append(matches, file.Name())
-			version = k3sBundleRegexp.FindStringSubmatch(file.Name())[1]
+			filename = path.Join(bundle.BundlePath(), file.Name())
+			return
 		}
 	}
 
-	if len(matches) == 0 {
-		return "", "", fmt.Errorf("k3s-*.(tar(.gz))|(tgz) bundle is not found")
-	}
-
-	if len(matches) > 1 {
-		return "", "", fmt.Errorf("ambigious bundle, found: %q", matches)
-	}
-
-	if !semver.IsValid(version) {
-		return "", "", fmt.Errorf("unable to parse version %q", version)
-	}
-
-	return path.Join(dir, matches[0]), semver.Canonical(version), nil
+	err = fmt.Errorf("k3s bundle is not found")
+	return
 }
 
 func getK3SVersion(binary string) (string, error) {
@@ -153,5 +147,5 @@ func getK3SVersion(binary string) (string, error) {
 		return "", fmt.Errorf("invalid k3s version: %q", version)
 	}
 
-	return semver.Canonical(version), nil
+	return version, nil
 }
