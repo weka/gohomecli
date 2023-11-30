@@ -1,6 +1,7 @@
 package k3s
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -52,12 +54,10 @@ func (c InstallConfig) k3sInstallArgs() string {
 
 // Install runs K3S installation process
 func Install(ctx context.Context, c InstallConfig) error {
+	setupLogger(c.Debug)
+
 	if hasK3S() {
 		return ErrExists
-	}
-
-	if c.Debug {
-		logger.Level(utils.DebugLevel)
 	}
 
 	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
@@ -80,20 +80,16 @@ func Install(ctx context.Context, c InstallConfig) error {
 
 	bundle := bundle.Tar(name)
 
-	err = errors.Join(
-		bundle.GetFiles(copyK3S, "k3s"),
-		bundle.GetFiles(copyAirgapImages, "k3s-airgap-*.tar*"),
-		bundle.GetFiles(runInstallScript(ctx, c), "install.sh"),
-	)
-
+	err = bundle.GetFiles(ctx, copyK3S(), copyAirgapImages(), runInstallScript(c))
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			logger.Info().Msg("Setup was cancelled")
+			cleanup(false)
+			return nil
+		}
+
 		cleanup(c.Debug)
 		return err
-	}
-
-	if errors.Is(ctx.Err(), context.Canceled) {
-		cleanup(c.Debug)
-		return ctx.Err()
 	}
 
 	return nil
@@ -103,6 +99,8 @@ func Install(ctx context.Context, c InstallConfig) error {
 // if debug flag is not enabled
 func cleanup(debug bool) {
 	if !debug {
+		logger.Info().Msg("Cleaning up installation")
+
 		exec.Command("k3s-uninstall.sh").Run()
 		os.RemoveAll(k3sImagesPath)
 		os.Remove(k3sBinary())
@@ -110,66 +108,130 @@ func cleanup(debug bool) {
 	}
 }
 
-func copyK3S(_ fs.FileInfo, r io.Reader) error {
-	f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, fs.FileMode(0755))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func copyK3S() bundle.TarCallback {
+	return bundle.TarCallback{
+		FileName: "k3s",
 
-	_, err = io.Copy(f, r)
-	if err != nil && !errors.Is(err, io.EOF) {
-		err = errors.Join(err, f.Close(), os.Remove(k3sBinary()))
-		return err
+		Callback: func(ctx context.Context, _ fs.FileInfo, r io.Reader) (err error) {
+			logger.Info().Msg("Copying k3s binary")
+
+			f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0755))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = io.Copy(f, r)
+			if err != nil {
+				f.Close()
+				os.Remove(k3sBinary())
+				return err
+			}
+
+			return nil
+		},
 	}
-	return nil
 }
 
-func copyAirgapImages(info fs.FileInfo, r io.Reader) error {
-	os.MkdirAll(k3sImagesPath, 0644)
+func copyAirgapImages() bundle.TarCallback {
+	return bundle.TarCallback{
+		FileName: "k3s-airgap-*.tar*",
 
-	f, err := os.OpenFile(path.Join(k3sImagesPath, info.Name()), os.O_CREATE|os.O_WRONLY, fs.FileMode(0644))
-	if err != nil {
-		return err
+		Callback: func(ctx context.Context, info fs.FileInfo, r io.Reader) (err error) {
+			logger.Info().Msg("Copying airgap images")
+
+			os.MkdirAll(k3sImagesPath, 0644)
+
+			var f *os.File
+			f, err = os.OpenFile(path.Join(k3sImagesPath, info.Name()), os.O_CREATE|os.O_WRONLY, fs.FileMode(0644))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = io.Copy(f, r)
+			if err != nil {
+				err = errors.Join(err, os.Remove(path.Join(k3sImagesPath, info.Name())))
+				return err
+			}
+
+			return nil
+		},
 	}
-	_, err = io.Copy(f, r)
-	if err != nil && !errors.Is(err, io.EOF) {
-		err = errors.Join(err, f.Close())
-		err = errors.Join(err, os.Remove(path.Join(k3sImagesPath, info.Name())))
-		return err
-	}
-	return nil
 }
 
-func runInstallScript(ctx context.Context, c InstallConfig) func(fs.FileInfo, io.Reader) error {
-	return func(fi fs.FileInfo, r io.Reader) error {
-		if c.Hostname != "" {
-			os.Setenv("K3S_HOSTNAME", c.Hostname)
-			os.Setenv("K3S_NODE_NAME", c.Hostname)
-		}
-		overriden, err := resolvConfOverriden()
-		if err != nil {
-			return err
-		}
-		if overriden {
-			os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
-		}
-		os.Setenv("INSTALL_K3S_BIN_DIR", bundle.BundleBinDir())
-		os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
-		os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
-		os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
-		os.Setenv("INSTALL_K3S_EXEC", c.k3sInstallArgs())
+func runInstallScript(c InstallConfig) bundle.TarCallback {
+	return bundle.TarCallback{
+		FileName: "install.sh",
 
-		cmd := exec.CommandContext(ctx, "sh", "-")
-		cmd.Stdin = r
+		Callback: func(ctx context.Context, fi fs.FileInfo, r io.Reader) error {
+			logger.Info().Msg("Starting k3s install")
 
-		stdout, _ := cmd.StdoutPipe()
-		go io.Copy(os.Stdout, stdout)
+			if c.Hostname != "" {
+				os.Setenv("K3S_HOSTNAME", c.Hostname)
+				os.Setenv("K3S_NODE_NAME", c.Hostname)
+			}
+			overriden, err := resolvConfOverriden()
+			if err != nil {
+				return err
+			}
+			if overriden {
+				os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
+			}
+			os.Setenv("INSTALL_K3S_BIN_DIR", bundle.BundleBinDir())
+			os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
+			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
+			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
+			os.Setenv("INSTALL_K3S_EXEC", c.k3sInstallArgs())
 
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("install.sh: %w", err)
+			cmd := exec.CommandContext(ctx, "sh", "-")
+			cmd.Stdin = r
+
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				return err
+			}
+			stderr, err := cmd.StderrPipe()
+			if err != nil {
+				return err
+			}
+
+			err = cmd.Start()
+			if err != nil {
+				return err
+			}
+
+			go logReader(stdout, utils.InfoLevel)
+			go logReader(stderr, utils.DebugLevel)
+
+			err = cmd.Wait()
+			if err != nil {
+				return errors.Join(err, ctx.Err())
+			}
+
+			logger.Info().Msg("Install completed")
+
+			return nil
+		},
+	}
+}
+
+var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
+
+func logReader(r io.Reader, lvl zerolog.Level) {
+	b := bufio.NewScanner(r)
+	for b.Scan() {
+		matches := logRegexp.FindStringSubmatch(b.Text())
+		if matches == nil {
+			logger.WithLevel(lvl).Msg(b.Text())
+			continue
 		}
 
-		return nil
+		parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(matches[2]))
+		if parsedLvl != zerolog.NoLevel {
+			lvl = parsedLvl
+		}
+
+		logger.WithLevel(lvl).Msg(matches[3])
 	}
 }

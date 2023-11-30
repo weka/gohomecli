@@ -21,6 +21,15 @@ import (
 
 var logger = utils.GetLogger("K3S")
 
+func setupLogger(debug bool) {
+	if debug {
+		utils.SetGlobalLoggingLevel(utils.DebugLevel)
+	} else {
+		utils.SetGlobalLoggingLevel(utils.InfoLevel)
+	}
+	bundle.SetLogger(logger)
+}
+
 func k3sBinary() string {
 	return filepath.Join(bundle.BundleBinDir(), "k3s")
 }

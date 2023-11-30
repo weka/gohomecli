@@ -8,7 +8,6 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/bundle"
-	"github.com/weka/gohomecli/internal/utils"
 )
 
 var ErrNotExist = errors.New("k3s not exists")
@@ -19,12 +18,10 @@ type UpgradeConfig struct {
 }
 
 func Upgrade(ctx context.Context, c UpgradeConfig) error {
+	setupLogger(c.Debug)
+
 	if !hasK3S() {
 		return ErrNotExist
-	}
-
-	if c.Debug {
-		logger.Level(utils.DebugLevel)
 	}
 
 	if c.BundlePath != "" {
@@ -59,11 +56,7 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 	logger.Info().Msg("Copying new k3s image...")
 	bundle := bundle.Tar(file)
 
-	err = errors.Join(
-		bundle.GetFiles(copyK3S, "k3s"),
-		bundle.GetFiles(copyAirgapImages, "k3s-airgap*.tar*"),
-	)
-
+	err = bundle.GetFiles(ctx, copyK3S(), copyAirgapImages())
 	if err != nil {
 		return err
 	}
@@ -72,7 +65,7 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return fmt.Errorf("start K3S service: %w", err)
 	}
 
-	logger.Info().Msg("Upgrade completed successfully")
+	logger.Info().Msg("Upgrade completed")
 
 	return nil
 }
