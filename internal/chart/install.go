@@ -48,7 +48,7 @@ func InstallOrUpgrade(
 		namespace = opts.NamespaceOverride
 	}
 
-	logger.Debug().
+	logger.Info().
 		Str("namespace", namespace).
 		Str("kubeContext", opts.KubeContext).
 		Msg("Configuring helm client")
@@ -73,6 +73,7 @@ func InstallOrUpgrade(
 	logger.Debug().
 		Interface("configuration", cfg).
 		Msg("Generating chart values")
+
 	values, err := generateValuesV3(cfg)
 	if err != nil {
 		return err
@@ -82,8 +83,9 @@ func InstallOrUpgrade(
 	if err != nil {
 		return fmt.Errorf("failed serializing values yaml: %w", err)
 	}
+	logger.Debug().Msgf("Generated values:\n %s", string(valuesYaml))
 
-	chartVersion := "" // latest available
+	chartVersion := "" // any available
 	if opts.Override != nil {
 		chartVersion = opts.Override.Version
 	}
@@ -100,7 +102,7 @@ func InstallOrUpgrade(
 		Timeout:         time.Minute * 5,
 	}
 
-	logger.Debug().
+	logger.Info().
 		Str("namespace", namespace).
 		Str("chart", chartSpec.ChartName).
 		Str("release", chartSpec.ReleaseName).

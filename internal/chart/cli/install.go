@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultVersionSelected = "latest"
+	defaultVersionSelected = "any"
 )
 
 var (
