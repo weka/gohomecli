@@ -9,9 +9,11 @@ import (
 )
 
 func init() {
-	clusterAliasCmd.AddCommand(aliasListCmd)
-	clusterAliasCmd.AddCommand(aliasAddCmd)
-	clusterAliasCmd.AddCommand(aliasRemoveCmd)
+	inits = append(inits, func() {
+		clusterAliasCmd.AddCommand(aliasListCmd)
+		clusterAliasCmd.AddCommand(aliasAddCmd)
+		clusterAliasCmd.AddCommand(aliasRemoveCmd)
+	})
 }
 
 var clusterAliasCmd = &cobra.Command{

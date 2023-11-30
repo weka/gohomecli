@@ -6,21 +6,22 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
-	app.AppCmd.AddCommand(clusterCmd)
-	clusterCmd.AddCommand(clusterGetCmd)
-	clusterCmd.AddCommand(clusterListCmd)
-	clusterListCmd.Flags().BoolVar(&clusterListCmdArgs.active, "active", false,
-		"show only active clusters")
-	clusterCmd.AddCommand(clusterAliasCmd)
-	clusterListCmd.Flags().IntVar(&clusterListCmdArgs.Limit, "limit", 500,
-		"show at most this many clusters")
+	inits = append(inits, func() {
+		appCmd.AddCommand(clusterCmd)
+		clusterCmd.AddCommand(clusterGetCmd)
+		clusterCmd.AddCommand(clusterListCmd)
+		clusterListCmd.Flags().BoolVar(&clusterListCmdArgs.active, "active", false,
+			"show only active clusters")
+		clusterCmd.AddCommand(clusterAliasCmd)
+		clusterListCmd.Flags().IntVar(&clusterListCmdArgs.Limit, "limit", 500,
+			"show at most this many clusters")
+	})
 }
 
 var clusterCmd = &cobra.Command{

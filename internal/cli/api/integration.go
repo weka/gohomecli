@@ -6,16 +6,17 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
-	app.AppCmd.AddCommand(integrationCmd)
-	integrationCmd.AddCommand(integrationGetCmd)
-	integrationCmd.AddCommand(integrationListCmd)
-	integrationCmd.AddCommand(integrationTestCmd)
+	inits = append(inits, func() {
+		appCmd.AddCommand(integrationCmd)
+		integrationCmd.AddCommand(integrationGetCmd)
+		integrationCmd.AddCommand(integrationListCmd)
+		integrationCmd.AddCommand(integrationTestCmd)
+	})
 }
 
 var integrationCmd = &cobra.Command{

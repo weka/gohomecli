@@ -7,24 +7,25 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
+func init() {
+	inits = append(inits, func() {
+		appCmd.AddCommand(analyticsCmd)
+		analyticsCmd.Flags().BoolVarP(&analyticsCmdArgs.allActiveClusters, "all-active", "a",
+			false, "get analytics for all active clusters")
+		analyticsCmd.Flags().StringVarP(&analyticsCmdArgs.clusterID, "cluster", "c",
+			"", "get analytics for this cluster")
+	})
+}
+
 var analyticsCmdArgs = struct {
 	allActiveClusters bool
 	clusterID         string
 }{}
-
-func init() {
-	app.AppCmd.AddCommand(analyticsCmd)
-	analyticsCmd.Flags().BoolVarP(&analyticsCmdArgs.allActiveClusters, "all-active", "a",
-		false, "get analytics for all active clusters")
-	analyticsCmd.Flags().StringVarP(&analyticsCmdArgs.clusterID, "cluster", "c",
-		"", "get analytics for this cluster")
-}
 
 var analyticsCmd = &cobra.Command{
 	Use:     "analytics { --all-active | --cluster ID }",

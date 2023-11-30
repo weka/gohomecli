@@ -3,11 +3,12 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hokaccha/go-prettyjson"
-	"github.com/olekukonko/tablewriter"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/hokaccha/go-prettyjson"
+	"github.com/olekukonko/tablewriter"
 )
 
 const (

@@ -1,10 +1,15 @@
-package app
+package cli
 
 import (
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
+	"github.com/weka/gohomecli/internal/cli/api"
+	"github.com/weka/gohomecli/internal/cli/config"
+	"github.com/weka/gohomecli/internal/cli/k3s"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -23,8 +28,8 @@ func isValidColorMode(mode string) bool {
 	return false
 }
 
-// AppCmd represents the base command when called without any subcommands
-var AppCmd = &cobra.Command{
+// appCmd represents the base command when called without any subcommands
+var appCmd = &cobra.Command{
 	Use:   "homecli",
 	Short: "Weka Home Command Line Utility",
 	Long:  `Weka Home Command Line Utility`,
@@ -34,27 +39,33 @@ var AppCmd = &cobra.Command{
 		}
 		return nil
 	},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGHUP)
+		cmd.SetContext(ctx)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := AppCmd.Execute(); err != nil {
+	if err := appCmd.Execute(); err != nil {
 		utils.UserError(err.Error())
 	}
 }
 
 func init() {
-	cobra.OnInitialize(initEnv)
-	cobra.OnInitialize(initLogging)
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initEnv, initLogging, initConfig)
 
-	AppCmd.PersistentFlags().StringVar(&siteName, "site", "",
+	appCmd.PersistentFlags().StringVar(&siteName, "site", "",
 		"target Weka Home site")
-	AppCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
+	appCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
 		"verbose output")
-	AppCmd.PersistentFlags().StringVar(&colorMode, "color", "auto",
+	appCmd.PersistentFlags().StringVar(&colorMode, "color", "auto",
 		"colored output, even when stdout is not a terminal")
+
+	api.Init(appCmd)
+	config.Init(appCmd)
+	k3s.Init(appCmd)
 }
 
 func initEnv() {
@@ -74,7 +85,6 @@ func initLogging() {
 	}
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	env.InitConfig(siteName)
 }
