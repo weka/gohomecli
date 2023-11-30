@@ -13,20 +13,28 @@ import (
 )
 
 const (
-	releaseName    = "wekahome"
-	repositoryURL  = "https://weka.github.io/gohome"
-	repositoryName = "wekahome"
-	chartName      = "wekahome"
+	ReleaseName      = "wekahome"
+	ReleaseNamespace = "home-weka-io"
+	RepositoryURL    = "https://weka.github.io/gohome"
+	RepositoryName   = "wekahome"
+	ChartName        = "wekahome"
 )
+
+var ErrUnableToFindChart = fmt.Errorf("unable to determine chart location")
 
 var logger = utils.GetLogger("HelmChart")
 
+type LocationOverride struct {
+	Path           string
+	RemoteDownload bool
+	Version        string
+}
+
 type HelmOptions struct {
-	KubeConfig    []byte
-	KubeContext   string
-	Namespace     string
-	AllowDownload bool
-	PathOverride  string
+	KubeConfig        []byte
+	Override          *LocationOverride
+	KubeContext       string
+	NamespaceOverride string
 }
 
 func InstallOrUpgrade(
@@ -34,12 +42,18 @@ func InstallOrUpgrade(
 	cfg *Configuration,
 	opts *HelmOptions,
 ) error {
+	namespace := ReleaseNamespace
+	if opts.NamespaceOverride != "" {
+		namespace = opts.NamespaceOverride
+	}
+
 	logger.Debug().
-		Str("namespace", opts.Namespace).
+		Str("namespace", namespace).
+		Str("kubeContext", opts.KubeContext).
 		Msg("Configuring helm client")
 	// kubeContext override isn't working - https://github.com/mittwald/go-helm-client/issues/127
 	client, err := helmclient.NewClientFromKubeConf(&helmclient.KubeConfClientOptions{
-		Options:     &helmclient.Options{Namespace: opts.Namespace},
+		Options:     &helmclient.Options{Namespace: namespace},
 		KubeContext: opts.KubeContext,
 		KubeConfig:  opts.KubeConfig,
 	})
@@ -48,8 +62,7 @@ func InstallOrUpgrade(
 	}
 
 	logger.Debug().
-		Bool("allowDownload", opts.AllowDownload).
-		Str("pathOverride", opts.PathOverride).
+		Interface("locationOverride", opts.Override).
 		Msg("Determining chart location")
 	chartLocation, err := getChartLocation(client, opts)
 	if err != nil {
@@ -69,10 +82,15 @@ func InstallOrUpgrade(
 		return fmt.Errorf("failed serializing values yaml: %w", err)
 	}
 
+	chartVersion := "" // latest available
+	if opts.Override != nil {
+		chartVersion = opts.Override.Version
+	}
 	chartSpec := &helmclient.ChartSpec{
-		ReleaseName:     releaseName,
+		ReleaseName:     ReleaseName,
 		ChartName:       chartLocation,
-		Namespace:       opts.Namespace,
+		Version:         chartVersion,
+		Namespace:       namespace,
 		ValuesYaml:      string(valuesYaml),
 		CreateNamespace: true,
 		ResetValues:     true,
@@ -82,12 +100,10 @@ func InstallOrUpgrade(
 	}
 
 	logger.Debug().
-		Str("namespace", opts.Namespace).
+		Str("namespace", namespace).
 		Str("chart", chartSpec.ChartName).
 		Str("release", chartSpec.ReleaseName).
 		Msg("Installing/upgrading chart")
-
-	fmt.Print()
 
 	_, err = client.InstallOrUpgradeChart(ctx, chartSpec, nil)
 	if err != nil {
@@ -100,23 +116,26 @@ func InstallOrUpgrade(
 func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
 	var chartLocation string
 
-	if opts.PathOverride != "" {
-		chartLocation = opts.PathOverride
-	} else if bundle.IsBundled() {
-		chartLocation = bundle.GetPath("chart.tgz")
-	} else if opts.AllowDownload {
+	if opts.Override != nil && opts.Override.RemoteDownload {
 		err := client.AddOrUpdateChartRepo(repo.Entry{
-			Name: repositoryName,
-			URL:  repositoryURL,
+			Name: RepositoryName,
+			URL:  RepositoryURL,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed adding chart repo: %w", err)
 		}
 
-		chartLocation = fmt.Sprintf("%s/%s", repositoryName, chartName)
-	} else {
-		return "", fmt.Errorf("unable to determine chart location")
+		chartLocation = fmt.Sprintf("%s/%s", RepositoryName, ChartName)
+		return chartLocation, nil
 	}
 
-	return chartLocation, nil
+	if opts.Override != nil && opts.Override.Path != "" {
+		return opts.Override.Path, nil
+	}
+
+	if bundle.IsBundled() {
+		return bundle.GetPath("chart.tgz"), nil
+	}
+
+	return "", ErrUnableToFindChart
 }

@@ -5,9 +5,7 @@ import (
 	"strings"
 )
 
-var (
-	errConflictingKeys = fmt.Errorf("conflicting value overrides for key")
-)
+var errConflictingKeys = fmt.Errorf("conflicting value overrides for key")
 
 type yamlMap = map[string]interface{}
 
