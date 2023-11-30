@@ -40,11 +40,11 @@ type InstallConfig struct {
 
 func (c InstallConfig) k3sInstallArgs() string {
 	k3sArgs := []string{
-		// binding node to localhost only
 		fmt.Sprintf("--node-ip=%s", c.NodeIP),
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
 		fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
 	}
+
 	if len(c.ExternalIPs) > 0 {
 		k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", strings.Join(c.ExternalIPs, ",")))
 	}
@@ -56,7 +56,7 @@ func (c InstallConfig) k3sInstallArgs() string {
 func Install(ctx context.Context, c InstallConfig) error {
 	setupLogger(c.Debug)
 
-	if hasK3S() {
+	if hasK3S() && !c.Debug {
 		return ErrExists
 	}
 
@@ -202,11 +202,11 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			}
 
 			go logReader(stdout, utils.InfoLevel)
-			go logReader(stderr, utils.DebugLevel)
+			go logReader(stderr, utils.InfoLevel)
 
 			err = cmd.Wait()
 			if err != nil {
-				return errors.Join(err, ctx.Err())
+				return fmt.Errorf("install.sh: %w", errors.Join(err, ctx.Err()))
 			}
 
 			logger.Info().Msg("Install completed")
@@ -218,6 +218,7 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 
 var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
 
+// logReader parses log files from reader and uses our logging system
 func logReader(r io.Reader, lvl zerolog.Level) {
 	b := bufio.NewScanner(r)
 	for b.Scan() {
