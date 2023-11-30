@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/weka/gohomecli/internal/bundle"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 const k3sImagesPath = "/var/lib/rancher/k3s/agent/images/"
@@ -55,6 +56,10 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return ErrExists
 	}
 
+	if c.Debug {
+		logger.Level(utils.DebugLevel)
+	}
+
 	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
 		return err
 	}
@@ -71,7 +76,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	fmt.Printf("Installing K3S %q\n", manifest.K3S)
+	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
 
 	bundle := bundle.Tar(name)
 

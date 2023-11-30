@@ -21,7 +21,7 @@ func init() {
 	k3sInstallCmd.Flags().MarkHidden("ip")
 
 	k3sUpgradeCmd.Flags().StringVar(&k3sUpgradeConfig.BundlePath, "bundle", bundle.BundlePath(), "bundle with k3s to install")
-	k3sUpgradeCmd.Flags().BoolVar(&k3sUpgradeConfig.Force, "force", false, "perform force upgrade")
+	k3sUpgradeCmd.Flags().BoolVar(&k3sUpgradeConfig.Debug, "debug", false, "perform force upgrade, for debug only")
 	k3sUpgradeCmd.Flags().MarkHidden("bundle")
 
 	app.AppCmd.AddGroup(&cobra.Group{

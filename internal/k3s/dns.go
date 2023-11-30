@@ -3,7 +3,6 @@ package k3s
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"regexp"
 )
@@ -18,30 +17,24 @@ func resolvConfOverriden() (bool, error) {
 	f, err := os.Open("/etc/resolv.conf")
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			fmt.Println("Nameserver is not found, fixing...")
+			logger.Warn().Msg("Nameserver is not found, fixing...")
 			return true, createk3sResolvConf()
 		}
+		return false, err
 	}
 	defer f.Close()
-
-	var nameServerFound bool
 
 	scan := bufio.NewScanner(f)
 
 	for scan.Scan() {
 		if resolvRegexp.Match(scan.Bytes()) {
-			fmt.Println("Nameserver found, no fix needed")
-			nameServerFound = true
-			break
+			logger.Debug().Msg("Nameserver found, no fix needed")
+			return false, nil
 		}
 	}
 
-	if !nameServerFound {
-		fmt.Println("Nameserver is not found, fixing...")
-		return true, createk3sResolvConf()
-	}
-
-	return false, nil
+	logger.Warn().Msg("Nameserver is not found, fixing...")
+	return true, createk3sResolvConf()
 }
 
 func createk3sResolvConf() error {

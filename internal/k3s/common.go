@@ -16,13 +16,17 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/bundle"
+	"github.com/weka/gohomecli/internal/utils"
 )
+
+var logger = utils.GetLogger("K3S")
 
 func k3sBinary() string {
 	return filepath.Join(bundle.BundleBinDir(), "k3s")
 }
 
 func serviceCmd(action string) *exec.Cmd {
+	logger.Info().Msgf("Running %s for k3s service", action)
 	var cmd *exec.Cmd
 	if hasSystemd() {
 		cmd = exec.Command("systemctl", action, "k3s")
@@ -38,7 +42,7 @@ func hasK3S() bool {
 		return true
 	}
 	if err != nil && !os.IsNotExist(err) {
-		fmt.Println("os.Stat: ", err)
+		logger.Err(err).Msg("os.Stat error")
 		// something very rare like file-system error: immediately exit
 		os.Exit(255)
 	}
@@ -97,7 +101,7 @@ func setupNetwork(iface string, nodeIP *string) error {
 		ip := ipnet.IP.To4()
 		// setup first ip as default one
 		if *nodeIP == "" {
-			fmt.Printf("IP not defined, using %q from %q as NodeIP\n", ip.String(), iface)
+			logger.Warn().Msgf("IP not defined, using %q from %q as NodeIP\n", ip.String(), iface)
 			*nodeIP = ip.String()
 		}
 		// check if provided node ip matched to interface

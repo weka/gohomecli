@@ -18,13 +18,13 @@ func executableDirectory() string {
 	// Get the absolute path of the executable
 	executablePath, err := os.Executable()
 	if err != nil {
-		panic(fmt.Sprintf("Failed determining executable path: %v\n", err))
+		logger.Fatal().Err(err).Msg("Failed determining executable path")
 	}
 
 	// Resolve the absolute path (eliminate any symbolic links)
 	absolutePath, err := filepath.EvalSymlinks(executablePath)
 	if err != nil {
-		panic(fmt.Sprintf("Failed determining executable path: %v\n", err))
+		logger.Fatal().Err(err).Msg("Failed determining executable path")
 	}
 
 	return filepath.Dir(absolutePath)

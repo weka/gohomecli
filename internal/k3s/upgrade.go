@@ -8,19 +8,25 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/bundle"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var ErrNotExist = errors.New("k3s not exists")
 
 type UpgradeConfig struct {
 	BundlePath string
-	Force      bool
+	Debug      bool
 }
 
 func Upgrade(ctx context.Context, c UpgradeConfig) error {
 	if !hasK3S() {
 		return ErrNotExist
 	}
+
+	if c.Debug {
+		logger.Level(utils.DebugLevel)
+	}
+
 	if c.BundlePath != "" {
 		err := bundle.SetBundlePath(c.BundlePath)
 		if err != nil {
@@ -38,20 +44,19 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return err
 	}
 
-	fmt.Printf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
+	logger.Info().Msgf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
 
-	if semver.Compare(manifest.K3S, curVersion) == -1 && !c.Force {
-		fmt.Println("Downgrading kubernetes cluster is not possible")
+	if semver.Compare(manifest.K3S, curVersion) == -1 && !c.Debug {
+		logger.Error().Msg("Downgrading kubernetes cluster is not possible")
 		return nil
 	}
 
-	fmt.Println("Starting K3S upgrade...")
-	fmt.Println("Stopping k3s service")
+	logger.Info().Msg("Starting K3S upgrade...")
 	if err := serviceCmd("stop").Run(); err != nil {
 		return fmt.Errorf("stop K3S service: %w", err)
 	}
 
-	fmt.Println("Copying new k3s image...")
+	logger.Info().Msg("Copying new k3s image...")
 	bundle := bundle.Tar(file)
 
 	err = errors.Join(
@@ -63,12 +68,11 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return err
 	}
 
-	fmt.Println("Starting new k3s service...")
 	if err := serviceCmd("start").Run(); err != nil {
 		return fmt.Errorf("start K3S service: %w", err)
 	}
 
-	fmt.Println("Upgrade completed successfully")
+	logger.Info().Msg("Upgrade completed successfully")
 
 	return nil
 }

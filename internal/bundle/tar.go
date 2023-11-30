@@ -21,6 +21,8 @@ type Tar string
 func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string) error {
 	var reader io.ReadCloser
 
+	logger.Debug().Msgf("opening %q", string(t))
+
 	f, err := os.Open(string(t))
 	if err != nil {
 		return fmt.Errorf("os open: %w", err)
@@ -29,6 +31,8 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 
 	reader = f
 	if t.isGZipped() {
+		logger.Debug().Msgf("%q is gzipped, using gunzip", string(t))
+
 		gz, err := gzip.NewReader(f)
 		if err != nil {
 			return fmt.Errorf("gzip: %w", err)
@@ -45,9 +49,10 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 		header, err := tarReader.Next()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				logger.Debug().Msgf("tar read: EOF")
 				break
 			}
-			fmt.Println("tar read: ", err.Error())
+			logger.Err(err).Msg("tar read file header error, skipping")
 			continue
 		}
 
@@ -58,6 +63,7 @@ func (t Tar) GetFiles(cb func(fs.FileInfo, io.Reader) error, fileNames ...string
 				return err
 			}
 			if match {
+				logger.Debug().Msgf("Found %q in archive matches %q", header.FileInfo().Name(), fileName)
 				break
 			}
 		}
