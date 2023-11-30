@@ -2,6 +2,7 @@ package chart
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -107,6 +108,9 @@ func InstallOrUpgrade(
 
 	_, err = client.InstallOrUpgradeChart(ctx, chartSpec, nil)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
 		return fmt.Errorf("failed installing/upgrading chart: %w", err)
 	}
 

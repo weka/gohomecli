@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/chart"
@@ -106,6 +108,10 @@ func buildChartInstallCmd() *cobra.Command {
 		Short: "Install Weka Home Helm chart",
 		Long:  `Install Weka Home Helm chart on already deployed Kubernetes cluster`,
 		Args:  cobra.NoArgs,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGHUP)
+			cmd.SetContext(ctx)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kubeConfig, err := readKubeConfig(cliOpts.kubeConfigPath)
 			if err != nil {
