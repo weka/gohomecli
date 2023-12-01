@@ -85,7 +85,7 @@ func createDefaultConfigFileAndExit(createDir bool) {
 	writeCLIConfig(&Config{
 		DefaultSite: DefaultSiteName,
 		Sites: map[string]*SiteConfig{
-			DefaultSiteName: &SiteConfig{
+			DefaultSiteName: {
 				CloudURL: DefaultCloudURL,
 			},
 		},
@@ -127,7 +127,7 @@ func writeCLIConfig(config *Config) {
 		logger.Panic().Err(e).Msg("Failed to marshal configuration values to TOML format")
 	}
 
-	e = ioutil.WriteFile(ConfigFilePath, data, os.ModeExclusive|0644)
+	e = ioutil.WriteFile(ConfigFilePath, data, os.ModeExclusive|0o644)
 	if e != nil {
 		logger.Fatal().
 			Str("file", ConfigFilePath).

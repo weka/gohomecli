@@ -17,16 +17,14 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const k3sImagesPath = "/var/lib/rancher/k3s/agent/images/"
-const defaultLocalStoragePath = "/opt/local-path-provisioner"
-
-var (
-	ErrExists = errors.New("k3s already installed")
+const (
+	k3sImagesPath           = "/var/lib/rancher/k3s/agent/images/"
+	defaultLocalStoragePath = "/opt/local-path-provisioner"
 )
 
-var (
-	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
-)
+var ErrExists = errors.New("k3s already installed")
+
+var k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
 
 type InstallConfig struct {
 	Iface       string   // interface for k3s network to work on, required
@@ -114,7 +112,7 @@ func copyK3S() bundle.TarCallback {
 		Callback: func(ctx context.Context, _ fs.FileInfo, r io.Reader) (err error) {
 			logger.Info().Msg("Copying k3s binary")
 
-			f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0755))
+			f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0o755))
 			if err != nil {
 				return err
 			}
@@ -139,10 +137,10 @@ func copyAirgapImages() bundle.TarCallback {
 		Callback: func(ctx context.Context, info fs.FileInfo, r io.Reader) (err error) {
 			logger.Info().Msg("Copying airgap images")
 
-			os.MkdirAll(k3sImagesPath, 0644)
+			os.MkdirAll(k3sImagesPath, 0o644)
 
 			var f *os.File
-			f, err = os.OpenFile(path.Join(k3sImagesPath, info.Name()), os.O_CREATE|os.O_WRONLY, fs.FileMode(0644))
+			f, err = os.OpenFile(path.Join(k3sImagesPath, info.Name()), os.O_CREATE|os.O_WRONLY, fs.FileMode(0o644))
 			if err != nil {
 				return err
 			}

@@ -6,9 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/weka/gohomecli/internal/env"
-	"github.com/weka/gohomecli/internal/utils"
-	"golang.org/x/sync/semaphore"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +13,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
+	"golang.org/x/sync/semaphore"
 )
 
 var logger = utils.GetLogger("API")
@@ -206,7 +207,7 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 	return nil
 }
 
-//TODO check if mage sense to use SendRequest
+// TODO check if mage sense to use SendRequest
 func (client *Client) Download(url string, fileName string, options *RequestOptions) error {
 	if options == nil {
 		options = &RequestOptions{}

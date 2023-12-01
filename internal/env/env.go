@@ -29,7 +29,7 @@ var validColors = map[string]bool{
 func init() {
 	fileInfo, _ := os.Stdout.Stat()
 	IsInteractiveTerminal = (fileInfo.Mode() & os.ModeCharDevice) != 0
-	//IsColorOutputSupported = IsInteractiveTerminal
+	// IsColorOutputSupported = IsInteractiveTerminal
 }
 
 func IsValidColorMode() bool {

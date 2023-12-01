@@ -7,8 +7,10 @@ import (
 	"regexp"
 )
 
-const k3sResolvConfPath = "/etc/k3s-resolv.conf"
-const fakeNameserver = "nameserver 127.0.0.1:9999"
+const (
+	k3sResolvConfPath = "/etc/k3s-resolv.conf"
+	fakeNameserver    = "nameserver 127.0.0.1:9999"
+)
 
 var resolvRegexp = regexp.MustCompile(`%s*nameserver.*`)
 
