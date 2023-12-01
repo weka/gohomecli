@@ -17,7 +17,7 @@ var usageReportCmdArgs = struct {
 }{}
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(usageReportCmd)
 		usageReportCmd.Flags().BoolVarP(&usageReportCmdArgs.allActiveClusters, "all-active", "a",
 			false, "get usage report for all active clusters")

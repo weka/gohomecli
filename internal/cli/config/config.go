@@ -6,15 +6,15 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app/options"
+	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var Cli options.Cli
+var Cli hooks.Cli
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(ConfigGroup)
 		appCmd.AddCommand(configCmd)
 

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		clusterAliasCmd.AddCommand(aliasListCmd)
 		clusterAliasCmd.AddCommand(aliasAddCmd)
 		clusterAliasCmd.AddCommand(aliasRemoveCmd)

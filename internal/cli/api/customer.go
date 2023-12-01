@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(customerCmd)
 		customerCmd.AddCommand(customerGetCmd)
 		customerCmd.AddCommand(customerListCmd)

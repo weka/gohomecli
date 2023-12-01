@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(integrationCmd)
 		integrationCmd.AddCommand(integrationGetCmd)
 		integrationCmd.AddCommand(integrationListCmd)

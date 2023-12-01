@@ -3,16 +3,16 @@ package k3s
 import (
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/bundle"
-	"github.com/weka/gohomecli/internal/cli/app/options"
+	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var Cli options.Cli
+var Cli hooks.Cli
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(K3SGroup)
 		appCmd.AddCommand(k3sCmd)
 

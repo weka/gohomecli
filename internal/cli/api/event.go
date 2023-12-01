@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Cli.AddOption(func(appCmd *cobra.Command) {
+	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(eventsCmd)
 		eventsCmd.Flags().BoolVar(&eventsCmdArgs.HideInternal, "hide-internal", false,
 			"do not show internal events")
