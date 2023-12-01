@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"errors"
+
 	"github.com/weka/gohomecli/internal/cli/api"
 	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/cli/chart"
@@ -20,6 +22,10 @@ func init() {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := app.Cmd().Execute(); err != nil {
+		if errors.Is(err, utils.ErrValidationFailed) {
+			app.Cmd().Usage()
+		}
+
 		utils.UserError(err.Error())
 	}
 }
