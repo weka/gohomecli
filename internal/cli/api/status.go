@@ -2,14 +2,15 @@ package api
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
-	app.AppCmd.AddCommand(serverVersionCmd)
-	app.AppCmd.AddCommand(dbStatusCmd)
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddCommand(serverVersionCmd)
+		appCmd.AddCommand(dbStatusCmd)
+	})
 }
 
 var serverVersionCmd = &cobra.Command{

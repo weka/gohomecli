@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
@@ -23,18 +22,20 @@ var diagsListCmdArgs = struct {
 }{}
 
 func init() {
-	app.AppCmd.AddCommand(diagsCmd)
-	diagsCmd.AddCommand(diagsListCmd)
-	diagsCmd.AddCommand(diagsDownloadCmd)
-	diagsCmd.AddCommand(diagsDownloadBacthCmd)
-	diagsDownloadBacthCmd.Flags().StringVar(&diagsDownloadBacthCmdArgs.topic, "topic", "diags",
-		"topic identifier")
-	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topicId, "topic-id", "",
-		"filter topic id")
-	diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topic, "topic", "",
-		"filter topic")
-	diagsListCmd.Flags().IntVar(&diagsListCmdArgs.Limit, "limit", 500,
-		"show at most this many files")
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddCommand(diagsCmd)
+		diagsCmd.AddCommand(diagsListCmd)
+		diagsCmd.AddCommand(diagsDownloadCmd)
+		diagsCmd.AddCommand(diagsDownloadBacthCmd)
+		diagsDownloadBacthCmd.Flags().StringVar(&diagsDownloadBacthCmdArgs.topic, "topic", "diags",
+			"topic identifier")
+		diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topicId, "topic-id", "",
+			"filter topic id")
+		diagsListCmd.Flags().StringVar(&diagsListCmdArgs.topic, "topic", "",
+			"filter topic")
+		diagsListCmd.Flags().IntVar(&diagsListCmdArgs.Limit, "limit", 500,
+			"show at most this many files")
+	})
 }
 
 var diagsCmd = &cobra.Command{
@@ -80,7 +81,7 @@ var diagsListCmd = &cobra.Command{
 			index++
 			row := utils.NewTableRow(len(headers))
 			row.Append(
-				FormatTime(diag.UploadTime),
+				utils.FormatTime(diag.UploadTime),
 				diag.FileName,
 				diag.HostName,
 				strconv.Itoa(diag.ID),

@@ -1,14 +1,12 @@
-package api
+package utils
 
 import (
 	"regexp"
 	"time"
-
-	"github.com/weka/gohomecli/internal/utils"
 )
 
 func FormatTime(t time.Time) string {
-	return utils.Colorize(utils.ColorCyan, t.Format(time.RFC3339))
+	return Colorize(ColorCyan, t.Format(time.RFC3339))
 }
 
 func ParseTime(text string) (time.Time, error) {
@@ -30,7 +28,7 @@ func FormatBoolean(b bool) string {
 }
 
 func FormatUUID(uuid string) string {
-	return utils.Colorize(utils.ColorYellow, uuid)
+	return Colorize(ColorYellow, uuid)
 }
 
 var nodeIDPattern = regexp.MustCompile(`^NodeId<(\d+)>$`)
@@ -44,23 +42,23 @@ func FormatNodeID(nodeID string) string {
 }
 
 func FormatEventType(eventType string) string {
-	return utils.Colorize(utils.ColorBlue, eventType)
+	return Colorize(ColorBlue, eventType)
 }
 
 func FormatEventSeverity(severity string) string {
 	switch severity {
 	case "DEBUG":
-		return utils.Colorize(utils.ColorDarkGrey, severity)
+		return Colorize(ColorDarkGrey, severity)
 	case "INFO":
 		return severity
 	case "WARNING":
-		return utils.Colorize(utils.ColorYellow, severity)
+		return Colorize(ColorYellow, severity)
 	case "MINOR":
-		return utils.Colorize(utils.ColorRed, severity)
+		return Colorize(ColorRed, severity)
 	case "MAJOR":
-		return utils.Colorize(utils.ColorRed, severity)
+		return Colorize(ColorRed, severity)
 	case "CRITICAL":
-		return utils.Colorize(utils.ColorBrightRed, severity)
+		return Colorize(ColorBrightRed, severity)
 	}
 	return severity
 }

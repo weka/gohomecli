@@ -2,79 +2,43 @@ package app
 
 import (
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/env"
-	"github.com/weka/gohomecli/internal/utils"
 )
 
-var cfgFile string
-var siteName string
-var verboseLogging bool
-var colorMode string
-
-func isValidColorMode(mode string) bool {
-	for _, m := range []string{"auto", "always", "never"} {
-		if mode == m {
-			return true
-		}
-	}
-	return false
-}
-
-// AppCmd represents the base command when called without any subcommands
-var AppCmd = &cobra.Command{
+// appCmd represents the base command when called without any subcommands
+var appCmd = &cobra.Command{
 	Use:   "homecli",
 	Short: "Weka Home Command Line Utility",
 	Long:  `Weka Home Command Line Utility`,
-	Args: func(cmd *cobra.Command, args []string) error {
-		if !isValidColorMode(colorMode) {
-			return fmt.Errorf("invalid color mode: %s", colorMode)
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGHUP)
+		cmd.SetContext(ctx)
+
+		if !env.IsValidColorMode() {
+			return fmt.Errorf("invalid color mode: %s", env.ColorMode)
 		}
 		return nil
 	},
+	SilenceErrors: true, // we're having custom UserError, so disabling integrated one
+	SilenceUsage:  true,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := AppCmd.Execute(); err != nil {
-		utils.UserError(err.Error())
-	}
+func Cmd() *cobra.Command {
+	return appCmd
 }
 
 func init() {
-	cobra.OnInitialize(initEnv)
-	cobra.OnInitialize(initLogging)
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(env.InitEnv)
 
-	AppCmd.PersistentFlags().StringVar(&siteName, "site", "",
+	appCmd.PersistentFlags().StringVar(&env.SiteName, "site", "",
 		"target Weka Home site")
-	AppCmd.PersistentFlags().BoolVarP(&verboseLogging, "verbose", "v", false,
+	appCmd.PersistentFlags().BoolVarP(&env.VerboseLogging, "verbose", "v", false,
 		"verbose output")
-	AppCmd.PersistentFlags().StringVar(&colorMode, "color", "auto",
+	appCmd.PersistentFlags().StringVar(&env.ColorMode, "color", "auto",
 		"colored output, even when stdout is not a terminal")
-}
-
-func initEnv() {
-	switch colorMode {
-	case "always":
-		utils.IsColorOutputSupported = true
-	case "never":
-		utils.IsColorOutputSupported = false
-	case "auto":
-		utils.IsColorOutputSupported = env.IsInteractiveTerminal
-	}
-}
-
-func initLogging() {
-	if verboseLogging {
-		utils.SetGlobalLoggingLevel(utils.DebugLevel)
-	}
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	env.InitConfig(siteName)
 }

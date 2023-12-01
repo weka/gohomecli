@@ -6,25 +6,32 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
+	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+var Cli hooks.Cli
+
 func init() {
-	app.AppCmd.AddCommand(configCmd)
-	app.AppCmd.AddGroup(&cobra.Group{ID: "Config", Title: "CLI Configuration"})
-	configCmd.AddCommand(configSiteCmd)
-	configCmd.AddCommand(configUpdateCmd)
-	configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.cloudURL, "cloud-url", "",
-		"set cloud URL")
-	configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.apiKey, "api-key", "",
-		"set API key")
-	configCmd.AddCommand(configDefaultSiteCmd)
-	configSiteCmd.AddCommand(configSiteListCmd)
-	configSiteCmd.AddCommand(configSiteAddCmd)
-	configSiteCmd.AddCommand(configSiteRemoveCmd)
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddGroup(ConfigGroup)
+		appCmd.AddCommand(configCmd)
+
+		configCmd.AddCommand(configSiteCmd)
+		configCmd.AddCommand(configUpdateCmd)
+		configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.cloudURL, "cloud-url", "",
+			"set cloud URL")
+		configUpdateCmd.Flags().StringVar(&configUpdateCmdArgs.apiKey, "api-key", "",
+			"set API key")
+		configCmd.AddCommand(configDefaultSiteCmd)
+		configSiteCmd.AddCommand(configSiteListCmd)
+		configSiteCmd.AddCommand(configSiteAddCmd)
+		configSiteCmd.AddCommand(configSiteRemoveCmd)
+	})
 }
+
+var ConfigGroup = &cobra.Group{ID: "Config", Title: "CLI Configuration"}
 
 var configCmd = &cobra.Command{
 	Use:     "config",

@@ -4,15 +4,16 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
 
 func init() {
-	app.AppCmd.AddCommand(customerCmd)
-	customerCmd.AddCommand(customerGetCmd)
-	customerCmd.AddCommand(customerListCmd)
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddCommand(customerCmd)
+		customerCmd.AddCommand(customerGetCmd)
+		customerCmd.AddCommand(customerListCmd)
+	})
 }
 
 var customerCmd = &cobra.Command{
@@ -36,7 +37,7 @@ var customerGetCmd = &cobra.Command{
 		utils.RenderTable([]string{"Attribute", "Value"}, func(table *tablewriter.Table) {
 			table.Append([]string{"ID", customer.ID})
 			table.Append([]string{"Name", customer.Name})
-			table.Append([]string{"Monitored", FormatBoolean(customer.Monitored)})
+			table.Append([]string{"Monitored", utils.FormatBoolean(customer.Monitored)})
 		})
 	},
 }
@@ -61,7 +62,7 @@ var customerListCmd = &cobra.Command{
 				if customer == nil {
 					return nil
 				}
-				return []string{customer.ID, customer.Name, FormatBoolean(customer.Monitored)}
+				return []string{customer.ID, customer.Name, utils.FormatBoolean(customer.Monitored)}
 			})
 	},
 }

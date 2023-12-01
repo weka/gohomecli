@@ -1,22 +1,25 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-
+	"github.com/weka/gohomecli/internal/cli/api"
 	"github.com/weka/gohomecli/internal/cli/app"
-
-	_ "github.com/weka/gohomecli/internal/chart/cli"
-	_ "github.com/weka/gohomecli/internal/cli/api"
-	_ "github.com/weka/gohomecli/internal/cli/config"
+	"github.com/weka/gohomecli/internal/cli/chart"
+	"github.com/weka/gohomecli/internal/cli/config"
+	"github.com/weka/gohomecli/internal/cli/k3s"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
-	app.AppCmd.AddGroup(&cobra.Group{
-		ID:    "API",
-		Title: "WekaHome API commands",
-	})
+	api.Cli.InitCobra(app.Cmd())
+	config.Cli.InitCobra(app.Cmd())
+	k3s.Cli.InitCobra(app.Cmd())
+	chart.Cli.InitCobra(app.Cmd())
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	app.Execute()
+	if err := app.Cmd().Execute(); err != nil {
+		utils.UserError(err.Error())
+	}
 }

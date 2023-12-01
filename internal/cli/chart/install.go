@@ -1,4 +1,4 @@
-package cli
+package chart
 
 import (
 	"encoding/json"

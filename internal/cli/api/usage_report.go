@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/cli/app"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
@@ -18,11 +17,13 @@ var usageReportCmdArgs = struct {
 }{}
 
 func init() {
-	app.AppCmd.AddCommand(usageReportCmd)
-	usageReportCmd.Flags().BoolVarP(&usageReportCmdArgs.allActiveClusters, "all-active", "a",
-		false, "get usage report for all active clusters")
-	usageReportCmd.Flags().StringVarP(&usageReportCmdArgs.clusterID, "cluster", "c",
-		"", "get usage report for this cluster")
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddCommand(usageReportCmd)
+		usageReportCmd.Flags().BoolVarP(&usageReportCmdArgs.allActiveClusters, "all-active", "a",
+			false, "get usage report for all active clusters")
+		usageReportCmd.Flags().StringVarP(&usageReportCmdArgs.clusterID, "cluster", "c",
+			"", "get usage report for this cluster")
+	})
 }
 
 var usageReportCmd = &cobra.Command{
