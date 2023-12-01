@@ -19,6 +19,8 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+const k3sInstallPath = "/usr/local/bin"
+
 var logger = utils.GetLogger("K3S")
 
 func setupLogger(debug bool) {
@@ -30,7 +32,7 @@ func setupLogger(debug bool) {
 }
 
 func k3sBinary() string {
-	return filepath.Join(bundle.BundleBinDir(), "k3s")
+	return filepath.Join(k3sInstallPath, "k3s")
 }
 
 func serviceCmd(action string) *exec.Cmd {
@@ -49,15 +51,17 @@ func hasK3S() bool {
 	if err == nil {
 		return true
 	}
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+
 		logger.Err(err).Msg("os.Stat error")
 		// something very rare like file-system error: immediately exit
 		os.Exit(255)
 	}
 
-	// check k3s in PATH
-	err = exec.Command("k3s").Run()
-	return err == nil
+	return true
 }
 
 func hasSystemd() bool {

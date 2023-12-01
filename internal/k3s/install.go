@@ -222,6 +222,7 @@ var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
 func logReader(r io.Reader, lvl zerolog.Level) {
 	b := bufio.NewScanner(r)
 	for b.Scan() {
+		// parse log level if present, otherwise log full line
 		matches := logRegexp.FindStringSubmatch(b.Text())
 		if matches == nil {
 			logger.WithLevel(lvl).Msg(b.Text())
