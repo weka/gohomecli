@@ -46,7 +46,6 @@ var analyticsCmd = &cobra.Command{
 		}
 		if clusterID != "" {
 			cluster, err := api.GetCluster(clusterID)
-
 			if err != nil {
 				utils.UserError(err.Error())
 			}

@@ -70,7 +70,7 @@ func hasSystemd() bool {
 }
 
 func Hostname() string {
-	var hostname = os.Getenv("HOSTNAME")
+	hostname := os.Getenv("HOSTNAME")
 	if hostname == "" {
 		f, _ := os.Open("/etc/hostname")
 		hostname, _ = bufio.NewReader(f).ReadString('\n')

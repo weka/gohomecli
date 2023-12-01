@@ -91,6 +91,7 @@ var diagsListCmd = &cobra.Command{
 		})
 	},
 }
+
 var diagsDownloadCmd = &cobra.Command{
 	Use:   "download <cluster-id> <filename>",
 	Short: "Download cluster diagnostics file",
@@ -106,7 +107,6 @@ var diagsDownloadCmd = &cobra.Command{
 		if err != nil {
 			utils.UserError(err.Error())
 		}
-
 	},
 }
 

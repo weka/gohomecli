@@ -44,7 +44,7 @@ func init() {
 			"show more information on events, specifically their params")
 		eventsCmd.Flags().BoolVar(&eventsCmdArgs.Json, "json", false,
 			"Use JSON output format")
-		//eventsCmd.Flags().StringVar(&eventsCmdArgs.Params, "param", "",
+		// eventsCmd.Flags().StringVar(&eventsCmdArgs.Params, "param", "",
 		//	"show events having these parameters")
 	})
 }
@@ -65,7 +65,7 @@ var eventsCmdArgs = struct {
 	EndTime            string
 	Wide               bool
 	Json               bool
-	//Params             string
+	// Params             string
 }{}
 
 var eventsCmd = &cobra.Command{
@@ -108,13 +108,13 @@ var eventsCmd = &cobra.Command{
 			EndTime:            endTime,
 			Limit:              eventsCmdArgs.Limit,
 			Wide:               eventsCmdArgs.Wide,
-			//Params:             eventsCmdArgs.Params,
+			// Params:             eventsCmdArgs.Params,
 		})
 		if err != nil {
 			utils.UserError(err.Error())
 			return
 		}
-		//query.Options.NoAutoFetchNextPage = false
+		// query.Options.NoAutoFetchNextPage = false
 		headers := []string{"Time", "Type", "Category"}
 		if eventsCmdArgs.ShowEventIDs {
 			headers = append(headers, "UUID")

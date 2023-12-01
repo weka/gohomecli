@@ -51,7 +51,7 @@ type EventQueryOptions struct {
 	EndTime            time.Time
 	Limit              int
 	Wide               bool
-	//Params             string
+	// Params             string
 }
 
 func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
