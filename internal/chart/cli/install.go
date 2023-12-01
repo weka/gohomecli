@@ -14,10 +14,6 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const (
-	defaultVersionSelected = "any"
-)
-
 var (
 	logger = utils.GetLogger("HelmChart")
 )
@@ -94,13 +90,13 @@ func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 	return flatConfig.ToChartConfiguration(), nil
 }
 
-// Note: there's an issue that -r/--remote-download can't accept values without =
 func buildChartInstallCmd() *cobra.Command {
 	cliOpts := struct {
 		kubeConfigPath string
 		localChart     string
 		jsonConfig     string
-		remoteDownload string
+		remoteDownload bool
+		remoteVersion  string
 	}{}
 
 	cmd := &cobra.Command{
@@ -113,6 +109,10 @@ func buildChartInstallCmd() *cobra.Command {
 			cmd.SetContext(ctx)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cliOpts.remoteVersion != "" && !cliOpts.remoteDownload {
+				return fmt.Errorf("--remote-version can only be used with --remote-download")
+			}
+
 			kubeConfig, err := readKubeConfig(cliOpts.kubeConfigPath)
 			if err != nil {
 				return err
@@ -124,14 +124,10 @@ func buildChartInstallCmd() *cobra.Command {
 			}
 
 			var chartLocation *chart.LocationOverride
-			if cliOpts.remoteDownload == defaultVersionSelected {
+			if cliOpts.remoteDownload {
 				chartLocation = &chart.LocationOverride{
 					RemoteDownload: true,
-				}
-			} else if cliOpts.remoteDownload != "" {
-				chartLocation = &chart.LocationOverride{
-					RemoteDownload: true,
-					Version:        cliOpts.remoteDownload,
+					Version:        cliOpts.remoteVersion,
 				}
 			}
 
@@ -154,9 +150,8 @@ func buildChartInstallCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&cliOpts.localChart, "local-chart", "l", "", "Path to local chart directory/archive")
 	cmd.Flags().StringVarP(&cliOpts.jsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
-	// --remote-download should be available without any options
-	cmd.Flags().StringVarP(&cliOpts.remoteDownload, "remote-download", "r", "", "Enable downloading chart from remote repository, optionally specify version")
-	cmd.Flags().Lookup("remote-download").NoOptDefVal = defaultVersionSelected
+	cmd.Flags().BoolVarP(&cliOpts.remoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
+	cmd.Flags().StringVar(&cliOpts.remoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 
 	cmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
 
