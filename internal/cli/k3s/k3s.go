@@ -3,13 +3,14 @@ package k3s
 import (
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/bundle"
+	"github.com/weka/gohomecli/internal/cli/app/options"
 	"github.com/weka/gohomecli/internal/k3s"
 )
 
-var inits []func()
+var Cli options.Cli
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(K3SGroup)
 		appCmd.AddCommand(k3sCmd)
 
@@ -35,8 +36,6 @@ func init() {
 		k3sCmd.AddCommand(k3sUpgradeCmd)
 	})
 }
-
-var appCmd *cobra.Command
 
 var (
 	k3sInstallConfig k3s.InstallConfig
@@ -68,11 +67,4 @@ var k3sUpgradeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return k3s.Upgrade(cmd.Context(), k3sUpgradeConfig)
 	},
-}
-
-func Init(app *cobra.Command) {
-	appCmd = app
-	for i := range inits {
-		inits[i]()
-	}
 }

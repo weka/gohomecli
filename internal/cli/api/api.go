@@ -1,11 +1,13 @@
 package api
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
 
-var inits []func()
+	"github.com/weka/gohomecli/internal/cli/app/options"
+)
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(&APIGroup)
 	})
 }
@@ -15,11 +17,4 @@ var APIGroup = cobra.Group{
 	Title: "WekaHome API commands",
 }
 
-var appCmd *cobra.Command
-
-func Init(cmd *cobra.Command) {
-	appCmd = cmd
-	for i := range inits {
-		inits[i]()
-	}
-}
+var Cli options.Cli

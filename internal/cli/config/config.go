@@ -6,14 +6,15 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
+	"github.com/weka/gohomecli/internal/cli/app/options"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var inits []func()
+var Cli options.Cli
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(ConfigGroup)
 		appCmd.AddCommand(configCmd)
 
@@ -29,8 +30,6 @@ func init() {
 		configSiteCmd.AddCommand(configSiteRemoveCmd)
 	})
 }
-
-var appCmd *cobra.Command
 
 var ConfigGroup = &cobra.Group{ID: "Config", Title: "CLI Configuration"}
 
@@ -150,11 +149,4 @@ var configSiteRemoveCmd = &cobra.Command{
 		})
 		utils.UserNote("Removed site configuration: \"%s\"", siteName)
 	},
-}
-
-func Init(cmd *cobra.Command) {
-	appCmd = cmd
-	for i := range inits {
-		inits[i]()
-	}
 }

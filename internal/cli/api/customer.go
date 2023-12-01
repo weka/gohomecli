@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(customerCmd)
 		customerCmd.AddCommand(customerGetCmd)
 		customerCmd.AddCommand(customerListCmd)

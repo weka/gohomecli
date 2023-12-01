@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(serverVersionCmd)
 		appCmd.AddCommand(dbStatusCmd)
 	})

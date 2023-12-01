@@ -22,7 +22,7 @@ var diagsListCmdArgs = struct {
 }{}
 
 func init() {
-	inits = append(inits, func() {
+	Cli.AddOption(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(diagsCmd)
 		diagsCmd.AddCommand(diagsListCmd)
 		diagsCmd.AddCommand(diagsDownloadCmd)
