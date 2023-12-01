@@ -67,7 +67,6 @@ func InstallOrUpgrade(
 		KubeContext: opts.KubeContext,
 		KubeConfig:  opts.KubeConfig,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed configuring helm client: %w", err)
 	}
