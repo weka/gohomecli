@@ -31,14 +31,18 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		}
 	}
 
+	logger.Debug().Msgf("Looking for bundle")
+
 	file, manifest, err := findBundle()
 	if err != nil {
-		return err
+		return fmt.Errorf("find bundle: %w", err)
 	}
+
+	logger.Debug().Msg("Parsing K3S version")
 
 	curVersion, err := getK3SVersion(k3sBinary())
 	if err != nil {
-		return err
+		return fmt.Errorf("get k3s version: %w", err)
 	}
 
 	logger.Info().Msgf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
@@ -58,7 +62,12 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 
 	err = bundle.GetFiles(ctx, copyK3S(), copyAirgapImages())
 	if err != nil {
-		return err
+		if errors.Is(err, context.Canceled) {
+			logger.Info().Msg("Upgrade was cancelled")
+			return nil
+		}
+
+		return fmt.Errorf("read bundle: %w", err)
 	}
 
 	if err := serviceCmd("start").Run(); err != nil {

@@ -27,7 +27,6 @@ func setupLogger(debug bool) {
 	} else {
 		utils.SetGlobalLoggingLevel(utils.InfoLevel)
 	}
-	bundle.SetLogger(logger)
 }
 
 func k3sBinary() string {
@@ -158,17 +157,21 @@ func getK3SVersion(binary string) (string, error) {
 		return "", err
 	}
 
-	go cmd.Wait()
-
 	var line string
 	for {
 		line, err = bufio.NewReader(rc).ReadString('\n')
 		if err != nil && !errors.Is(err, io.EOF) {
-			return "", err
+			logger.Error().Err(err).Msg("get k3s version")
+			break
 		}
 		if strings.HasPrefix(line, "k3s version") || errors.Is(err, io.EOF) {
 			break
 		}
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return "", err
 	}
 
 	version := strings.Split(line, " ")
