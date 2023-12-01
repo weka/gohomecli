@@ -2,7 +2,10 @@ package chart
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
+	"github.com/weka/gohomecli/internal/env"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var Cli hooks.Cli
@@ -19,6 +22,11 @@ func init() {
 			Short:   "Manage Weka Home Helm chart",
 			Long:    `Manage Weka Home Helm chart`,
 			GroupID: "chart",
+			PersistentPreRun: func(cmd *cobra.Command, args []string) {
+				if !env.VerboseLogging {
+					utils.SetGlobalLoggingLevel(utils.InfoLevel)
+				}
+			},
 		}
 
 		appCmd.AddCommand(chartCmd)

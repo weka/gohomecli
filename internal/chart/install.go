@@ -52,12 +52,22 @@ func InstallOrUpgrade(
 		Str("namespace", namespace).
 		Str("kubeContext", opts.KubeContext).
 		Msg("Configuring helm client")
+
 	// kubeContext override isn't working - https://github.com/mittwald/go-helm-client/issues/127
 	client, err := helmclient.NewClientFromKubeConf(&helmclient.KubeConfClientOptions{
-		Options:     &helmclient.Options{Namespace: namespace},
+		Options: &helmclient.Options{
+			Namespace: namespace,
+			DebugLog: func(format string, v ...interface{}) {
+				logger.Debug().Msgf(format, v...)
+			},
+			Output: utils.NewWriteScanner(func(b []byte) {
+				logger.Info().Msg(string(b))
+			}),
+		},
 		KubeContext: opts.KubeContext,
 		KubeConfig:  opts.KubeConfig,
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed configuring helm client: %w", err)
 	}
@@ -108,13 +118,16 @@ func InstallOrUpgrade(
 		Str("release", chartSpec.ReleaseName).
 		Msg("Installing/upgrading chart")
 
-	_, err = client.InstallOrUpgradeChart(ctx, chartSpec, nil)
+	release, err := client.InstallOrUpgradeChart(ctx, chartSpec, nil)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
+			logger.Info().Msg("Chart installation was cancelled")
 			return nil
 		}
 		return fmt.Errorf("failed installing/upgrading chart: %w", err)
 	}
+
+	logger.Info().Msg(release.Info.Notes)
 
 	return nil
 }
