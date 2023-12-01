@@ -22,6 +22,7 @@ var appCmd = &cobra.Command{
 		if !env.IsValidColorMode() {
 			return fmt.Errorf("invalid color mode: %s", env.ColorMode)
 		}
+
 		return nil
 	},
 	SilenceErrors: true, // we're having custom UserError, so disabling integrated one
@@ -34,6 +35,7 @@ func Cmd() *cobra.Command {
 
 func init() {
 	cobra.OnInitialize(env.InitEnv)
+	cobra.EnableTraverseRunHooks = true
 
 	appCmd.PersistentFlags().StringVar(&env.SiteName, "site", "",
 		"target Weka Home site")

@@ -1,7 +1,6 @@
 package k3s
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -201,8 +200,8 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 				return err
 			}
 
-			go logReader(stdout, utils.InfoLevel)
-			go logReader(stderr, utils.InfoLevel)
+			go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stdout)
+			go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stderr)
 
 			err = cmd.Wait()
 			if err != nil {
@@ -218,22 +217,21 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 
 var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
 
-// logReader parses log files from reader and uses our logging system
-func logReader(r io.Reader, lvl zerolog.Level) {
-	b := bufio.NewScanner(r)
-	for b.Scan() {
+// k3sLogParser parses log files and uses our logging system
+func k3sLogParser(lvl zerolog.Level) func(line []byte) {
+	return func(line []byte) {
 		// parse log level if present, otherwise log full line
-		matches := logRegexp.FindStringSubmatch(b.Text())
+		matches := logRegexp.FindSubmatch(line)
 		if matches == nil {
-			logger.WithLevel(lvl).Msg(b.Text())
-			continue
+			logger.WithLevel(lvl).Msg(string(line))
+			return
 		}
 
-		parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(matches[2]))
+		parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(string(matches[2])))
 		if parsedLvl != zerolog.NoLevel {
 			lvl = parsedLvl
 		}
 
-		logger.WithLevel(lvl).Msg(matches[3])
+		logger.WithLevel(lvl).Msg(string(matches[3]))
 	}
 }

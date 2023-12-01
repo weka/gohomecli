@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"time"
 
@@ -30,4 +32,30 @@ func SetGlobalLoggingLevel(level zerolog.Level) {
 // GetLogger returns a new logger instance with the specified component
 func GetLogger(component string) zerolog.Logger {
 	return log.With().Str("component", component).Logger()
+}
+
+type WriteScanner struct {
+	io.Writer
+	io.Closer
+	ErrCloser interface {
+		CloseWithError(err error) error
+	}
+}
+
+func NewWriteScanner(readers ...func([]byte)) WriteScanner {
+	reader, writer := io.Pipe()
+	go func() {
+		scan := bufio.NewScanner(reader)
+		for scan.Scan() {
+			for _, cb := range readers {
+				cb(scan.Bytes())
+			}
+		}
+	}()
+
+	return WriteScanner{
+		Writer:    writer,
+		Closer:    writer,
+		ErrCloser: writer,
+	}
 }
