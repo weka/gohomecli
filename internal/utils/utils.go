@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -35,6 +36,8 @@ const (
 	ColorWarning = ColorBrightYellow
 	ColorError   = ColorBrightRed
 )
+
+var ErrValidationFailed = errors.New("validation error")
 
 var IsColorOutputSupported bool
 
