@@ -14,37 +14,17 @@ import (
 
 var logger = utils.GetLogger("HelmChart")
 
-func normPath(path string) string {
+func normPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to get user home directory")
-			os.Exit(255)
+			return "", fmt.Errorf("unable to expand home directory: %w", err)
 		}
 
 		path = filepath.Join(homeDir, path[2:])
 	}
 
-	return filepath.Clean(path)
-}
-
-func readKubeConfig(kubeConfigPath string) ([]byte, error) {
-	if kubeConfigPath == "" {
-		kubeConfigPath = os.Getenv("KUBECONFIG")
-		if kubeConfigPath == "" {
-			kubeConfigPath = "~/.kube/config"
-		}
-	}
-	kubeConfigPath = normPath(kubeConfigPath)
-
-	logger.Debug().Str("kubeConfigPath", kubeConfigPath).Msg("Reading kubeconfig")
-	kubeConfig, err := os.ReadFile(kubeConfigPath)
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to read kubeconfig")
-		return nil, fmt.Errorf("failed to read kubeconfig: %w", err)
-	}
-
-	return kubeConfig, nil
+	return filepath.Clean(path), nil
 }
 
 func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
@@ -81,7 +61,15 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 	}
 
-	kubeConfig, err := readKubeConfig(installCmdOpts.kubeConfigPath)
+	var err error
+	if installCmdOpts.kubeConfigPath != "" {
+		installCmdOpts.kubeConfigPath, err = normPath(installCmdOpts.kubeConfigPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	kubeConfig, err := chart.ReadKubeConfig(installCmdOpts.kubeConfigPath)
 	if err != nil {
 		return err
 	}
