@@ -26,8 +26,6 @@ var logger = utils.GetLogger("K3S")
 func setupLogger(debug bool) {
 	if debug {
 		utils.SetGlobalLoggingLevel(utils.DebugLevel)
-	} else {
-		utils.SetGlobalLoggingLevel(utils.InfoLevel)
 	}
 }
 

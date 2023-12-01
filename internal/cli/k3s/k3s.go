@@ -4,7 +4,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/cli/app/options"
+	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/k3s"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var Cli options.Cli
@@ -51,6 +53,11 @@ var k3sCmd = &cobra.Command{
 	Use:     "k3s",
 	Short:   "k3s management commands",
 	GroupID: "k3s",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if !env.VerboseLogging {
+			utils.SetGlobalLoggingLevel(utils.InfoLevel)
+		}
+	},
 }
 
 var k3sInstallCmd = &cobra.Command{
