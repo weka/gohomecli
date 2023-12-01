@@ -178,7 +178,7 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			if overriden {
 				os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 			}
-			os.Setenv("INSTALL_K3S_BIN_DIR", bundle.BundleBinDir())
+			os.Setenv("INSTALL_K3S_BIN_DIR", k3sInstallPath)
 			os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
