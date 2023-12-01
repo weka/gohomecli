@@ -35,6 +35,7 @@ func Cmd() *cobra.Command {
 
 func init() {
 	cobra.OnInitialize(env.InitEnv)
+	cobra.EnableTraverseRunHooks = true
 
 	appCmd.PersistentFlags().StringVar(&env.SiteName, "site", "",
 		"target Weka Home site")
