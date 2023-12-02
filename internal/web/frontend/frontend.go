@@ -1,3 +1,5 @@
+//go:build web
+
 package frontend
 
 import (
@@ -10,13 +12,11 @@ import (
 //go:embed build
 var webBuild embed.FS
 
-var ServeFrontend http.Handler
-
-func init() {
+func Router() http.Handler {
 	serverRoot, err := fs.Sub(webBuild, "build")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ServeFrontend = http.FileServer(http.FS(serverRoot))
+	return http.FileServer(http.FS(serverRoot))
 }
