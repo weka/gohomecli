@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"net/http"
@@ -14,8 +14,4 @@ func ListenAndServe(addr string) error {
 	})
 
 	return http.ListenAndServe(addr, router)
-}
-
-func main() {
-	ListenAndServe(":8080")
 }
