@@ -26,16 +26,16 @@ var ErrUnableToFindChart = fmt.Errorf("unable to determine chart location")
 var logger = utils.GetLogger("HelmChart")
 
 type LocationOverride struct {
-	Path           string
-	RemoteDownload bool
-	Version        string
+	Path           string // path to chart package
+	RemoteDownload bool   // download from remote repository
+	Version        string // version of the chart to download from remote repository
 }
 
 type HelmOptions struct {
-	KubeConfig        []byte
-	Override          *LocationOverride
-	KubeContext       string
-	NamespaceOverride string
+	KubeConfig        []byte            // path or content of kubeconfig file
+	Override          *LocationOverride // override chart package location
+	KubeContext       string            // kubeconfig context to use
+	NamespaceOverride string            // override namespace for release
 }
 
 func InstallOrUpgrade(
@@ -67,7 +67,6 @@ func InstallOrUpgrade(
 		KubeContext: opts.KubeContext,
 		KubeConfig:  opts.KubeConfig,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed configuring helm client: %w", err)
 	}
