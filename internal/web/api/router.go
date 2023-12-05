@@ -6,12 +6,12 @@ import (
 
 func Router() http.Handler {
 	router := http.NewServeMux()
-	router.HandleFunc("/v1/health", allowedMethods(getHealth, http.MethodGet))
-	router.HandleFunc("/v1/features", allowedMethods(getFeatures, http.MethodGet))
-	router.HandleFunc("/v1/chart/install", allowedMethods(postChartInstall, http.MethodPost))
-	router.HandleFunc("/v1/k3s/install", allowedMethods(postK3sInstall, http.MethodPost))
-	router.HandleFunc("/v1/k3s/upgrade", allowedMethods(postK3sUpgrade, http.MethodPost))
-	router.HandleFunc("/v1/k3s/import-images", allowedMethods(postImportImages, http.MethodPost))
+	router.HandleFunc("/api/v1/health", allowedMethods(getHealth, http.MethodGet))
+	router.HandleFunc("/api/v1/features", allowedMethods(getFeatures, http.MethodGet))
+	router.HandleFunc("/api/v1/chart/install", allowedMethods(postChartInstall, http.MethodPost))
+	router.HandleFunc("/api/v1/k3s/install", allowedMethods(postK3sInstall, http.MethodPost))
+	router.HandleFunc("/api/v1/k3s/upgrade", allowedMethods(postK3sUpgrade, http.MethodPost))
+	router.HandleFunc("/api/v1/k3s/import-images", allowedMethods(postImportImages, http.MethodPost))
 
 	return router
 }
