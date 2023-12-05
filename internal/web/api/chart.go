@@ -1,9 +1,10 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/chart"
-	"net/http"
 )
 
 // TODO: could be used without bundle using the remote download option

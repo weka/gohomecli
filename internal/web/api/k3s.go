@@ -1,9 +1,10 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/k3s"
-	"net/http"
 )
 
 func isK3sEnabled() bool {
@@ -35,7 +36,6 @@ func postK3sInstall(w http.ResponseWriter, r *http.Request) {
 		NodeIP:      installRequest.NodeIP,
 		ExternalIPs: installRequest.ExternalIPs,
 	})
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -49,7 +49,6 @@ func postK3sUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := k3s.Upgrade(r.Context(), k3s.UpgradeConfig{})
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
