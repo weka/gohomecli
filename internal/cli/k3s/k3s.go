@@ -75,3 +75,11 @@ var k3sUpgradeCmd = &cobra.Command{
 		return k3s.Upgrade(cmd.Context(), k3sUpgradeConfig)
 	},
 }
+
+var k3sImageImportCmd = &cobra.Command{
+	Use:   "import-images",
+	Short: "import images from bundle",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return k3s.ImportImages(cmd.Context(), k3sInstallConfig.BundlePath)
+	},
+}
