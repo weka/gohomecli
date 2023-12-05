@@ -17,7 +17,7 @@ type ChartInstallRequest struct {
 	config         chart.Configuration
 }
 
-func postChartInstall(w http.ResponseWriter, r *http.Request) {
+func installChart(w http.ResponseWriter, r *http.Request) {
 	if !isChartEnabled() {
 		disabledResponse(w, r)
 		return

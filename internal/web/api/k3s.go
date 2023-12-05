@@ -18,7 +18,7 @@ type K3sInstallRequest struct {
 	ExternalIPs []string `json:"external_ips"`
 }
 
-func postK3sInstall(w http.ResponseWriter, r *http.Request) {
+func installK3s(w http.ResponseWriter, r *http.Request) {
 	if !isK3sEnabled() {
 		disabledResponse(w, r)
 		return
@@ -42,7 +42,7 @@ func postK3sInstall(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postK3sUpgrade(w http.ResponseWriter, r *http.Request) {
+func k3sUpgrade(w http.ResponseWriter, r *http.Request) {
 	if !isK3sEnabled() {
 		disabledResponse(w, r)
 		return
@@ -55,7 +55,7 @@ func postK3sUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postImportImages(w http.ResponseWriter, r *http.Request) {
+func k3sImportImages(w http.ResponseWriter, r *http.Request) {
 	if !isK3sEnabled() {
 		disabledResponse(w, r)
 		return
