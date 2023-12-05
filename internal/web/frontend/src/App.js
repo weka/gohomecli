@@ -6,11 +6,11 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/calculate');
+        const response = await fetch('/api/v1/features');
 
         if (response.ok) {
-          const data = await response.text();
-          console.log('Response from /api/calculate:', data);
+          const data = await response.json();
+          console.log('Response from /api/v1/features:', data);
           setFetchedData(data); // Set the fetched data in state
         } else {
           console.error('Failed to fetch data:', response.statusText);
