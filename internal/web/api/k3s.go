@@ -61,5 +61,11 @@ func k3sImportImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	panic("not implemented")
+	err := k3s.ImportBundleImages(r.Context(), "", true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
