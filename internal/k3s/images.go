@@ -3,13 +3,23 @@ package k3s
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
+
+	"github.com/rs/zerolog"
+	"github.com/weka/gohomecli/internal/bundle"
+	"github.com/weka/gohomecli/internal/utils"
 )
+
+func getCurrentPlatform() string {
+	return fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+}
 
 func unzippedData(imagePath string) ([]byte, error) {
 	file, err := os.Open(imagePath)
@@ -31,7 +41,6 @@ func unzippedData(imagePath string) ([]byte, error) {
 	}
 
 	mime := http.DetectContentType(buffer)
-	fmt.Println(mime)
 	if mime == "application/x-gzip" {
 		reader, err := gzip.NewReader(file)
 		if err != nil {
@@ -39,21 +48,38 @@ func unzippedData(imagePath string) ([]byte, error) {
 		}
 
 		return io.ReadAll(reader)
-	} else if mime == "application/x-tar" {
-		return io.ReadAll(file)
 	}
 
-	return nil, fmt.Errorf("unknown file type (%s)", mime)
+	return io.ReadAll(file)
 }
 
-func ImportDockerImages(imagePaths []string, failFast bool) error {
+func plainLogWriter(level zerolog.Level) io.WriteCloser {
+	return utils.NewWriteScanner(func(b []byte) {
+		logger.WithLevel(level).Msg(string(b))
+	})
+}
+
+func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error {
 	var importErrors []error
 	for _, imagePath := range imagePaths {
+		logger := logger.With().Str("imagePath", imagePath).Logger()
+		if ctx.Err() != nil {
+			if errors.Is(ctx.Err(), context.Canceled) {
+				logger.Info().Msg("Context canceled")
+				return ctx.Err()
+			} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				logger.Info().Msg("Context deadline exceeded")
+				return ctx.Err()
+			} else {
+				logger.Warn().Msg("Context error")
+				return ctx.Err()
+			}
+		}
+
 		data, err := unzippedData(imagePath)
 		if err != nil {
 			logger.Warn().
 				Err(err).
-				Str("imagePath", imagePath).
 				Msg("Failed to read image data")
 
 			if failFast {
@@ -65,44 +91,46 @@ func ImportDockerImages(imagePaths []string, failFast bool) error {
 		}
 
 		reader := bytes.NewBuffer(data)
-		cmd := exec.Command("ctr", "image", "import", "--digests", "sha256", "--", "-")
+		cmd := exec.Command(
+			"k3s", "ctr", "image", "import",
+			"--platform", getCurrentPlatform(),
+			"--", "-",
+		)
 		cmd.Stdin = reader
 
-		// stderr, err := cmd.StderrPipe()
-		// if err != nil {
-		// 	logger.Warn().
-		// 		Err(err).
-		// 		Str("imagePath", imagePath).
-		// 		Msg("Failed to capture import command output")
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			logger.Warn().
+				Err(err).
+				Msg("Failed to capture import command output")
 
-		// 	if failFast {
-		// 		return err
-		// 	} else {
-		// 		importErrors = append(importErrors, err)
-		// 		continue
-		// 	}
-		// }
+			if failFast {
+				return err
+			} else {
+				importErrors = append(importErrors, err)
+				continue
+			}
+		}
 
-		// stdout, err := cmd.StdoutPipe()
-		// if err != nil {
-		// 	logger.Warn().
-		// 		Err(err).
-		// 		Str("imagePath", imagePath).
-		// 		Msg("Failed to capture import command output")
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			logger.Warn().
+				Err(err).
+				Msg("Failed to capture import command output")
 
-		// 	if failFast {
-		// 		return err
-		// 	} else {
-		// 		importErrors = append(importErrors, err)
-		// 		continue
-		// 	}
-		// }
+			if failFast {
+				return err
+			} else {
+				importErrors = append(importErrors, err)
+				continue
+			}
+		}
 
+		logger.Debug().Strs("command", cmd.Args).Msg("Running import command")
 		err = cmd.Start()
 		if err != nil {
 			logger.Warn().
 				Err(err).
-				Str("imagePath", imagePath).
 				Msg("Failed run import command")
 
 			if failFast {
@@ -113,14 +141,13 @@ func ImportDockerImages(imagePaths []string, failFast bool) error {
 			}
 		}
 
-		// go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stdout)
-		// go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stderr)
+		go io.Copy(plainLogWriter(zerolog.InfoLevel), stdout)
+		go io.Copy(plainLogWriter(zerolog.ErrorLevel), stderr)
 
 		err = cmd.Wait()
 		if err != nil {
 			logger.Warn().
 				Err(err).
-				Str("imagePath", imagePath).
 				Msg("Failed to import image")
 
 			if failFast {
@@ -137,4 +164,28 @@ func ImportDockerImages(imagePaths []string, failFast bool) error {
 	}
 
 	return nil
+}
+
+func ImportBundleImages(ctx context.Context, bundlePath string, failFast bool) error {
+	if err := bundle.SetBundlePath(bundlePath); err != nil {
+		return err
+	}
+
+	imagePaths := []string{}
+	err := bundle.Walk("images", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			imagePaths = append(imagePaths, path)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return ImportImages(ctx, imagePaths, failFast)
 }
