@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/weka/gohomecli/internal/install/bundle"
+
 	helmclient "github.com/mittwald/go-helm-client"
-	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/repo"

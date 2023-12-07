@@ -13,9 +13,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/weka/gohomecli/internal/install/bundle"
+
 	"golang.org/x/mod/semver"
 
-	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
 

@@ -3,10 +3,12 @@ package chart
 import (
 	"encoding/json"
 	"fmt"
-	chart2 "github.com/weka/gohomecli/internal/install/chart"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/install/chart"
 
 	"github.com/spf13/cobra"
 	"github.com/weka/gohomecli/internal/utils"
@@ -27,9 +29,9 @@ func normPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-func readConfiguration(jsonConfig string) (*chart2.Configuration, error) {
+func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 	if jsonConfig == "" {
-		return &chart2.Configuration{}, nil
+		return &chart.Configuration{}, nil
 	}
 
 	var jsonConfigBytes []byte
@@ -46,7 +48,7 @@ func readConfiguration(jsonConfig string) (*chart2.Configuration, error) {
 	}
 
 	logger.Debug().Msg("Parsing JSON config")
-	config := &chart2.Configuration{}
+	config := &chart.Configuration{}
 	err := json.Unmarshal(jsonConfigBytes, &config)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse JSON config")
@@ -61,6 +63,13 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 	}
 
+	if bundlePathOverride != "" {
+		err := bundle.SetBundlePath(bundlePathOverride)
+		if err != nil {
+			return err
+		}
+	}
+
 	var err error
 	if installCmdOpts.kubeConfigPath != "" {
 		installCmdOpts.kubeConfigPath, err = normPath(installCmdOpts.kubeConfigPath)
@@ -69,7 +78,7 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	kubeConfig, err := chart2.ReadKubeConfig(installCmdOpts.kubeConfigPath)
+	kubeConfig, err := chart.ReadKubeConfig(installCmdOpts.kubeConfigPath)
 	if err != nil {
 		return err
 	}
@@ -79,24 +88,24 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var chartLocation *chart2.LocationOverride
+	var chartLocation *chart.LocationOverride
 	if installCmdOpts.remoteDownload {
-		chartLocation = &chart2.LocationOverride{
+		chartLocation = &chart.LocationOverride{
 			RemoteDownload: true,
 			Version:        installCmdOpts.remoteVersion,
 		}
 	}
 
 	if installCmdOpts.localChart != "" {
-		chartLocation = &chart2.LocationOverride{
+		chartLocation = &chart.LocationOverride{
 			Path: installCmdOpts.localChart,
 		}
 	}
 
-	helmOptions := &chart2.HelmOptions{
+	helmOptions := &chart.HelmOptions{
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
 	}
 
-	return chart2.InstallOrUpgrade(cmd.Context(), chartConfig, helmOptions)
+	return chart.InstallOrUpgrade(cmd.Context(), chartConfig, helmOptions)
 }
