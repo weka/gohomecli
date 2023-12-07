@@ -2,12 +2,12 @@ package k3s
 
 import (
 	"fmt"
+	"github.com/weka/gohomecli/internal/install/bundle"
+	k3s2 "github.com/weka/gohomecli/internal/install/k3s"
 
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/bundle"
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/env"
-	"github.com/weka/gohomecli/internal/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -19,7 +19,7 @@ func init() {
 		appCmd.AddCommand(k3sCmd)
 
 		k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Iface, "iface", "i", "", "interface for k3s network")
-		k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Hostname, "hostname", "n", k3s.Hostname(), "hostname for cluster")
+		k3sInstallCmd.Flags().StringVarP(&k3sInstallConfig.Hostname, "hostname", "n", k3s2.Hostname(), "hostname for cluster")
 		k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		k3sInstallCmd.Flags().StringSliceVar(&k3sInstallConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
 		k3sInstallCmd.Flags().StringVar(&k3sInstallConfig.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
@@ -49,8 +49,8 @@ func init() {
 }
 
 var (
-	k3sInstallConfig k3s.InstallConfig
-	k3sUpgradeConfig k3s.UpgradeConfig
+	k3sInstallConfig k3s2.InstallConfig
+	k3sUpgradeConfig k3s2.UpgradeConfig
 	k3sImportConfig  struct {
 		BundlePath string
 		FromBundle bool
@@ -79,7 +79,7 @@ var k3sInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "install cluster from scratch",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return k3s.Install(cmd.Context(), k3sInstallConfig)
+		return k3s2.Install(cmd.Context(), k3sInstallConfig)
 	},
 }
 
@@ -87,7 +87,7 @@ var k3sUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "upgrade cluster to bundled version",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return k3s.Upgrade(cmd.Context(), k3sUpgradeConfig)
+		return k3s2.Upgrade(cmd.Context(), k3sUpgradeConfig)
 	},
 }
 
@@ -100,9 +100,9 @@ var k3sImageImportCmd = &cobra.Command{
 		}
 
 		if k3sImportConfig.FromBundle {
-			return k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.BundlePath, k3sImportConfig.FailFast)
+			return k3s2.ImportBundleImages(cmd.Context(), k3sImportConfig.BundlePath, k3sImportConfig.FailFast)
 		}
 
-		return k3s.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
+		return k3s2.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
 	},
 }

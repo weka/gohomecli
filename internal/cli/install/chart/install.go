@@ -3,12 +3,12 @@ package chart
 import (
 	"encoding/json"
 	"fmt"
+	chart2 "github.com/weka/gohomecli/internal/install/chart"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/chart"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -27,9 +27,9 @@ func normPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
+func readConfiguration(jsonConfig string) (*chart2.Configuration, error) {
 	if jsonConfig == "" {
-		return &chart.Configuration{}, nil
+		return &chart2.Configuration{}, nil
 	}
 
 	var jsonConfigBytes []byte
@@ -46,7 +46,7 @@ func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 	}
 
 	logger.Debug().Msg("Parsing JSON config")
-	config := &chart.Configuration{}
+	config := &chart2.Configuration{}
 	err := json.Unmarshal(jsonConfigBytes, &config)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse JSON config")
@@ -69,7 +69,7 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	kubeConfig, err := chart.ReadKubeConfig(installCmdOpts.kubeConfigPath)
+	kubeConfig, err := chart2.ReadKubeConfig(installCmdOpts.kubeConfigPath)
 	if err != nil {
 		return err
 	}
@@ -79,24 +79,24 @@ func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var chartLocation *chart.LocationOverride
+	var chartLocation *chart2.LocationOverride
 	if installCmdOpts.remoteDownload {
-		chartLocation = &chart.LocationOverride{
+		chartLocation = &chart2.LocationOverride{
 			RemoteDownload: true,
 			Version:        installCmdOpts.remoteVersion,
 		}
 	}
 
 	if installCmdOpts.localChart != "" {
-		chartLocation = &chart.LocationOverride{
+		chartLocation = &chart2.LocationOverride{
 			Path: installCmdOpts.localChart,
 		}
 	}
 
-	helmOptions := &chart.HelmOptions{
+	helmOptions := &chart2.HelmOptions{
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
 	}
 
-	return chart.InstallOrUpgrade(cmd.Context(), chartConfig, helmOptions)
+	return chart2.InstallOrUpgrade(cmd.Context(), chartConfig, helmOptions)
 }

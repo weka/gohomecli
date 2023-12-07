@@ -1,10 +1,9 @@
 package api
 
 import (
+	"github.com/weka/gohomecli/internal/install/bundle"
+	chart2 "github.com/weka/gohomecli/internal/install/chart"
 	"net/http"
-
-	"github.com/weka/gohomecli/internal/bundle"
-	"github.com/weka/gohomecli/internal/chart"
 )
 
 // TODO: could be used without bundle using the remote download option
@@ -14,7 +13,7 @@ func isChartEnabled() bool {
 
 type ChartInstallRequest struct {
 	kubeConfigPath string
-	config         chart.Configuration
+	config         chart2.Configuration
 }
 
 func installChart(w http.ResponseWriter, r *http.Request) {
@@ -29,16 +28,16 @@ func installChart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kubeConfig, err := chart.ReadKubeConfig(installRequest.kubeConfigPath)
+	kubeConfig, err := chart2.ReadKubeConfig(installRequest.kubeConfigPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = chart.InstallOrUpgrade(
+	err = chart2.InstallOrUpgrade(
 		r.Context(),
 		&installRequest.config,
-		&chart.HelmOptions{KubeConfig: kubeConfig},
+		&chart2.HelmOptions{KubeConfig: kubeConfig},
 	)
 
 	if err != nil {

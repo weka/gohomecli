@@ -1,10 +1,9 @@
 package api
 
 import (
+	"github.com/weka/gohomecli/internal/install/bundle"
+	k3s2 "github.com/weka/gohomecli/internal/install/k3s"
 	"net/http"
-
-	"github.com/weka/gohomecli/internal/bundle"
-	"github.com/weka/gohomecli/internal/k3s"
 )
 
 func isK3sEnabled() bool {
@@ -30,7 +29,7 @@ func installK3s(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.Install(r.Context(), k3s.InstallConfig{
+	err := k3s2.Install(r.Context(), k3s2.InstallConfig{
 		Iface:       installRequest.Interface,
 		Hostname:    installRequest.Hostname,
 		NodeIP:      installRequest.NodeIP,
@@ -48,7 +47,7 @@ func k3sUpgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.Upgrade(r.Context(), k3s.UpgradeConfig{})
+	err := k3s2.Upgrade(r.Context(), k3s2.UpgradeConfig{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -61,7 +60,7 @@ func k3sImportImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.ImportBundleImages(r.Context(), "", true)
+	err := k3s2.ImportBundleImages(r.Context(), "", true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
