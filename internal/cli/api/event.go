@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"

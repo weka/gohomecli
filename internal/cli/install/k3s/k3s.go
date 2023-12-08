@@ -5,6 +5,7 @@ import (
 	"github.com/weka/gohomecli/internal/install/k3s"
 
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 )
 

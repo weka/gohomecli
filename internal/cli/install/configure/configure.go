@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/install/web"
 	"github.com/weka/gohomecli/internal/utils"

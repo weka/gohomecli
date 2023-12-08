@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/utils"
 	"github.com/weka/gohomecli/pkg/client"
 )
