@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/weka/gohomecli/internal/install/bundle"
@@ -132,6 +134,36 @@ func InstallOrUpgrade(
 	return nil
 }
 
+func findBundledChart() (string, error) {
+	path := ""
+
+	err := bundle.Walk("", func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if path != "" {
+			return nil
+		}
+
+		matched, err := filepath.Match("wekahome-*.tgz", info.Name())
+		if err != nil {
+			return err
+		}
+
+		if matched {
+			path = name
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to find wekahome chart in bundle")
+	}
+
+	return path, nil
+}
+
 func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
 	var chartLocation string
 
@@ -153,7 +185,7 @@ func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, erro
 	}
 
 	if bundle.IsBundled() {
-		return bundle.GetPath("chart.tgz"), nil
+		return findBundledChart()
 	}
 
 	return "", ErrUnableToFindChart
