@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/install/chart"
+
 	"github.com/spf13/cobra"
-	"github.com/weka/gohomecli/internal/chart"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -59,6 +61,13 @@ func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
 	if installCmdOpts.remoteVersion != "" && !installCmdOpts.remoteDownload {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
+	}
+
+	if bundlePathOverride != "" {
+		err := bundle.SetBundlePath(bundlePathOverride)
+		if err != nil {
+			return err
+		}
 	}
 
 	var err error

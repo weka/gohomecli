@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"golang.org/x/mod/semver"
+	"github.com/weka/gohomecli/internal/install/bundle"
 
-	"github.com/weka/gohomecli/internal/bundle"
+	"golang.org/x/mod/semver"
 )
 
 var ErrNotExist = errors.New("k3s not exists")

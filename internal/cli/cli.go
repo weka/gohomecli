@@ -5,17 +5,15 @@ import (
 
 	"github.com/weka/gohomecli/internal/cli/api"
 	"github.com/weka/gohomecli/internal/cli/app"
-	"github.com/weka/gohomecli/internal/cli/chart"
 	"github.com/weka/gohomecli/internal/cli/config"
-	"github.com/weka/gohomecli/internal/cli/k3s"
+	"github.com/weka/gohomecli/internal/cli/install"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
 func init() {
 	api.Cli.InitCobra(app.Cmd())
 	config.Cli.InitCobra(app.Cmd())
-	k3s.Cli.InitCobra(app.Cmd())
-	chart.Cli.InitCobra(app.Cmd())
+	install.Cli.InitCobra(app.Cmd())
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

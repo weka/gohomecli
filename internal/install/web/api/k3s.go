@@ -3,15 +3,15 @@ package api
 import (
 	"net/http"
 
-	"github.com/weka/gohomecli/internal/bundle"
-	"github.com/weka/gohomecli/internal/k3s"
+	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/install/k3s"
 )
 
 func isK3sEnabled() bool {
 	return bundle.IsBundled()
 }
 
-type K3sInstallRequest struct {
+type k3sInstallRequest struct {
 	Interface   string   `json:"interface"`
 	Hostname    string   `json:"hostname"`
 	NodeIP      string   `json:"node_ip"`
@@ -24,7 +24,7 @@ func installK3s(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var installRequest K3sInstallRequest
+	var installRequest k3sInstallRequest
 	if err := parseJSONRequest(r, &installRequest); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
