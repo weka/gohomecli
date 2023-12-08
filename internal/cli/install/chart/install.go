@@ -11,6 +11,7 @@ import (
 	"github.com/weka/gohomecli/internal/install/chart"
 
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/utils"
 )
 

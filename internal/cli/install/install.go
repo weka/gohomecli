@@ -2,6 +2,7 @@ package install
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/cli/install/chart"
 	"github.com/weka/gohomecli/internal/cli/install/configure"

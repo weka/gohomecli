@@ -14,9 +14,10 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
-	"golang.org/x/sync/semaphore"
 )
 
 var logger = utils.GetLogger("API")

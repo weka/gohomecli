@@ -15,6 +15,7 @@ import (
 	"github.com/weka/gohomecli/internal/install/bundle"
 
 	"github.com/rs/zerolog"
+
 	"github.com/weka/gohomecli/internal/utils"
 )
 
