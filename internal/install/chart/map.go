@@ -9,6 +9,14 @@ var errConflictingKeys = fmt.Errorf("conflicting value overrides for key")
 
 type yamlMap = map[string]interface{}
 
+func writeMapEntryIfSet[T any](source yamlMap, key string, value *T) error {
+	if value == nil {
+		return nil
+	}
+
+	return writeMapEntry(source, key, value)
+}
+
 func writeMapEntry(source yamlMap, key string, value interface{}) error {
 	tokens := strings.Split(key, ".")
 	currentMap := source
