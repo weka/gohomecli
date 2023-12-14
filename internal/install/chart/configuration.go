@@ -18,6 +18,15 @@ type Configuration struct {
 	DiagnosticsRetentionDays *int `json:"diagnosticsRetentionDays"` // diagnostics retention days
 	EventsRetentionDays      *int `json:"eventsRetentionDays"`      // events retention days
 
+	ForwardingEnabled                   bool    `json:"forwardingEnabled"`                   // forwarding enabled
+	ForwardingUrl                       *string `json:"forwardingUrl"`                       // forwarding url override
+	ForwardingEnableEvents              *bool   `json:"forwardingEnableEvents"`              // forwarding enable events
+	ForwardingEnableUsageReports        *bool   `json:"forwardingEnableUsageReports"`        // forwarding enable usage reports
+	ForwardingEnableAnalytics           *bool   `json:"forwardingEnableAnalytics"`           // forwarding enable analytics
+	ForwardingEnableDiagnostics         *bool   `json:"forwardingEnableDiagnostics"`         // forwarding enable diagnostics
+	ForwardingEnableStats               *bool   `json:"forwardingEnableStats"`               // forwarding enable stats
+	ForwardingEnableClusterRegistration *bool   `json:"forwardingEnableClusterRegistration"` // forwarding enable cluster registration
+
 	Autoscaling     bool `json:"autoscaling"`        // enable services autoscaling
 	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
 }

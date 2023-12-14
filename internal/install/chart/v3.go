@@ -10,11 +10,11 @@ var valuesGeneratorV3 *yamlGenerator
 func configureIngress(configuration *Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntryIfSet(cfg, "ingress.host", configuration.Host),
-		writeMapEntryIfSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
-		writeMapEntryIfSet(cfg, "ingress.tls.enabled", configuration.TLS),
-		writeMapEntryIfSet(cfg, "ingress.tls.cert", configuration.TLSCert),
-		writeMapEntryIfSet(cfg, "ingress.tls.key", configuration.TLSKey),
+		writeMapEntryIfPtrSet(cfg, "ingress.host", configuration.Host),
+		writeMapEntryIfPtrSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.enabled", configuration.TLS),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.cert", configuration.TLSCert),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.key", configuration.TLSKey),
 	)
 
 	if err != nil {
@@ -27,13 +27,13 @@ func configureIngress(configuration *Configuration) (yamlMap, error) {
 func configureSMTP(configuration *Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntryIfSet(cfg, "smtp.connection.host", configuration.SMTPHost),
-		writeMapEntryIfSet(cfg, "smtp.connection.port", configuration.SMTPPort),
-		writeMapEntryIfSet(cfg, "smtp.connection.username", configuration.SMTPUser),
-		writeMapEntryIfSet(cfg, "smtp.connection.password", configuration.SMTPPassword),
-		writeMapEntryIfSet(cfg, "smtp.connection.insecure", configuration.SMTPInsecure),
-		writeMapEntryIfSet(cfg, "smtp.senderEmailName", configuration.SMTPSender),
-		writeMapEntryIfSet(cfg, "smtp.senderEmail", configuration.SMTPSenderEmail),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.host", configuration.SMTPHost),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.port", configuration.SMTPPort),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.username", configuration.SMTPUser),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.password", configuration.SMTPPassword),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.insecure", configuration.SMTPInsecure),
+		writeMapEntryIfPtrSet(cfg, "smtp.senderEmailName", configuration.SMTPSender),
+		writeMapEntryIfPtrSet(cfg, "smtp.senderEmail", configuration.SMTPSenderEmail),
 	)
 
 	if err != nil {
@@ -144,6 +144,30 @@ func configureResources(configuration *Configuration) (yamlMap, error) {
 	return cfg, nil
 }
 
+func configureForwarding(configuration *Configuration) (yamlMap, error) {
+	if !configuration.ForwardingEnabled {
+		return yamlMap{}, nil
+	}
+
+	cfg := make(yamlMap)
+	err := errors.Join(
+		writeMapEntry(cfg, "forwarding.enabled", true),
+		writeMapEntryIfPtrSet(cfg, "forwarding.url", configuration.ForwardingUrl),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableEvents", configuration.ForwardingEnableEvents),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableUsageReports", configuration.ForwardingEnableUsageReports),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableAnalytics", configuration.ForwardingEnableAnalytics),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableDiagnostics", configuration.ForwardingEnableDiagnostics),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableStats", configuration.ForwardingEnableStats),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.ForwardingEnableClusterRegistration),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
 func init() {
 	valuesGeneratorV3 = &yamlGenerator{
 		visitors: map[string]configVisitor{},
@@ -153,6 +177,7 @@ func init() {
 	valuesGeneratorV3.AddVisitor("smtp", configureSMTP)
 	valuesGeneratorV3.AddVisitor("retention", configureRetention)
 	valuesGeneratorV3.AddVisitor("resources", configureResources)
+	valuesGeneratorV3.AddVisitor("forwarding", configureForwarding)
 }
 
 func generateValuesV3(configuration *Configuration) (map[string]interface{}, error) {
