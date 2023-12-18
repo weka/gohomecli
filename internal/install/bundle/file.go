@@ -35,12 +35,17 @@ var bundlePath string
 // by default homecli is located in /opt/wekahome/{release}/bin
 // and bundle in /opt/wekahome/{release}/
 func BundlePath() string {
-	if bundlePath != "" {
-		return bundlePath
+	if bundlePath == "" {
+		bundlePath = filepath.Join(executableDirectory(), "..")
 	}
 
-	bundlePath = filepath.Clean(filepath.Join(executableDirectory(), ".."))
-	return bundlePath
+	realPath, err := filepath.EvalSymlinks(bundlePath)
+	if err != nil {
+		fmt.Printf("Bad bundle path %q", realPath)
+		os.Exit(1)
+	}
+
+	return realPath
 }
 
 func BundleBinDir() string {

@@ -16,6 +16,7 @@ var logger = utils.GetLogger("setup")
 var config struct {
 	Web         bool
 	WebBindAddr string
+	BundlePath  string
 	K3S         k3s.InstallConfig
 	Chart       struct {
 		kubeConfigPath string
@@ -26,10 +27,7 @@ var config struct {
 	}
 }
 
-var bundlePathOverride string
-
 var k3sImportConfig struct {
-	BundlePath string
 	ImagePaths []string
 	FailFast   bool
 }
@@ -50,11 +48,12 @@ func init() {
 			setupCmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 		}
 
+		setupCmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
+
 		setupCmd.Flags().StringVarP(&config.K3S.Iface, "iface", "i", "", "interface for k3s network")
 		setupCmd.Flags().StringVarP(&config.K3S.Hostname, "hostname", "n", k3s.Hostname(), "hostname for cluster")
 		setupCmd.Flags().StringVar(&config.K3S.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		setupCmd.Flags().StringSliceVar(&config.K3S.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
-		setupCmd.Flags().StringVar(&config.K3S.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
 		setupCmd.Flags().BoolVar(&config.K3S.Debug, "debug", false, "enable debug mode")
 
 		setupCmd.MarkFlagRequired("iface")

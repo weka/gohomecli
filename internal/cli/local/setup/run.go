@@ -61,6 +61,12 @@ func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 }
 
 func runSetup(cmd *cobra.Command, args []string) error {
+	if config.BundlePath != bundle.BundlePath() {
+		if err := bundle.SetBundlePath(config.BundlePath); err != nil {
+			return err
+		}
+	}
+
 	if config.Web {
 		logger.Info().Str("bindAddr", config.WebBindAddr).Msg("Starting web server")
 		err := web.ServeConfigurer(cmd.Context(), config.WebBindAddr)
@@ -76,7 +82,7 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(k3sImportConfig.ImagePaths) == 0 {
-		err = k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.BundlePath, k3sImportConfig.FailFast)
+		err = k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.FailFast)
 	} else {
 		err = k3s.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
 	}
@@ -87,13 +93,6 @@ func runSetup(cmd *cobra.Command, args []string) error {
 
 	if config.Chart.remoteVersion != "" && !config.Chart.remoteDownload {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
-	}
-
-	if bundlePathOverride != "" {
-		err := bundle.SetBundlePath(bundlePathOverride)
-		if err != nil {
-			return err
-		}
 	}
 
 	if config.Chart.kubeConfigPath != "" {

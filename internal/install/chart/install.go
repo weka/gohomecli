@@ -158,7 +158,8 @@ func findBundledChart() (string, error) {
 
 		return nil
 	})
-	if err != nil {
+
+	if err != nil || path == "" {
 		return "", fmt.Errorf("unable to find wekahome chart in bundle")
 	}
 
