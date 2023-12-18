@@ -4,10 +4,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
-	"github.com/weka/gohomecli/internal/cli/install/chart"
-	"github.com/weka/gohomecli/internal/cli/install/configure"
-	"github.com/weka/gohomecli/internal/cli/install/k3s"
 	"github.com/weka/gohomecli/internal/cli/local/dump"
+	"github.com/weka/gohomecli/internal/cli/local/setup"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -37,8 +35,6 @@ func init() {
 		appCmd.AddCommand(localCmd)
 
 		dump.Cli.InitCobra(localCmd)
-		k3s.Cli.InitCobra(localCmd)
-		chart.Cli.InitCobra(localCmd)
-		configure.Cli.InitCobra(localCmd)
+		setup.Cli.InitCobra(localCmd)
 	})
 }
