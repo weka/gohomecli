@@ -13,8 +13,7 @@ import (
 var ErrNotExist = errors.New("k3s not exists")
 
 type UpgradeConfig struct {
-	BundlePath string
-	Debug      bool
+	Debug bool
 }
 
 func Upgrade(ctx context.Context, c UpgradeConfig) error {
@@ -22,13 +21,6 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 
 	if !hasK3S() {
 		return ErrNotExist
-	}
-
-	if c.BundlePath != "" {
-		err := bundle.SetBundlePath(c.BundlePath)
-		if err != nil {
-			return err
-		}
 	}
 
 	logger.Debug().Msgf("Looking for bundle")

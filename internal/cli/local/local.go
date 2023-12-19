@@ -6,6 +6,7 @@ import (
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/cli/local/dump"
 	"github.com/weka/gohomecli/internal/cli/local/setup"
+	"github.com/weka/gohomecli/internal/cli/local/upgrade"
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -36,5 +37,6 @@ func init() {
 
 		dump.Cli.InitCobra(localCmd)
 		setup.Cli.InitCobra(localCmd)
+		upgrade.Cli.InitCobra(localCmd)
 	})
 }
