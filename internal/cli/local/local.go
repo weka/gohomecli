@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
+	"github.com/weka/gohomecli/internal/cli/local/cleanup"
 	"github.com/weka/gohomecli/internal/cli/local/dump"
 	"github.com/weka/gohomecli/internal/cli/local/setup"
 	"github.com/weka/gohomecli/internal/cli/local/upgrade"
@@ -38,5 +39,6 @@ func init() {
 		dump.Cli.InitCobra(localCmd)
 		setup.Cli.InitCobra(localCmd)
 		upgrade.Cli.InitCobra(localCmd)
+		cleanup.Cli.InitCobra(localCmd)
 	})
 }
