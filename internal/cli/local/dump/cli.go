@@ -28,7 +28,7 @@ func init() {
 		appCmd.AddCommand(dumpCmd)
 
 		dumpCmd.Flags().BoolVarP(&config.Verbose, "verbose", "v", false, "Increase verbosity to display debug information during collection phase.")
-		dumpCmd.Flags().BoolVar(&config.InclideSensitive, "include-sensitive", false, "Include sensitive data in the archive (e.g., values overrides). Use with caution.")
+		dumpCmd.Flags().BoolVar(&config.IncludeSensitive, "include-sensitive", false, "Include sensitive data in the archive (e.g., values overrides). Use with caution.")
 		dumpCmd.Flags().BoolVar(&config.FullDiskScan, "full-disk-scan", false, "Perform a full disk scan and include the detailed disk usage information in the archive.")
 	})
 }

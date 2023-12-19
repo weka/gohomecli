@@ -16,7 +16,7 @@ var script []byte
 
 type Config struct {
 	Output           string
-	InclideSensitive bool
+	IncludeSensitive bool
 	FullDiskScan     bool
 	Verbose          bool
 }
@@ -24,7 +24,7 @@ type Config struct {
 func (c Config) toArgs() []string {
 	opts := []string{c.Output}
 
-	if c.InclideSensitive {
+	if c.IncludeSensitive {
 		opts = append(opts, "--include-sensitive")
 	}
 	if c.FullDiskScan {
