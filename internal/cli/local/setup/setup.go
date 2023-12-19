@@ -10,8 +10,10 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var Cli hooks.Cli
-var logger = utils.GetLogger("setup")
+var (
+	Cli    hooks.Cli
+	logger = utils.GetLogger("setup")
+)
 
 var config struct {
 	Web         bool
@@ -70,6 +72,5 @@ func init() {
 		setupCmd.Flags().BoolVarP(&config.Chart.remoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
 		setupCmd.Flags().StringVar(&config.Chart.remoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 		setupCmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
-
 	})
 }
