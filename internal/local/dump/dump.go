@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"fmt"
 	"io"
 	"os/exec"
 
@@ -13,6 +12,8 @@ import (
 
 //go:embed dump.sh
 var script []byte
+
+var logger = utils.GetLogger("dump")
 
 type Config struct {
 	Output           string
@@ -52,10 +53,10 @@ func Dump(ctx context.Context, config Config) error {
 	}
 
 	infoLogWriter := utils.NewWriteScanner(func(b []byte) {
-		fmt.Println(string(b))
+		logger.WithLevel(utils.InfoLevel).Msg(string(b))
 	})
 	errorLogWriter := utils.NewWriteScanner(func(b []byte) {
-		fmt.Println(string(b))
+		logger.WithLevel(utils.WarnLevel).Msg(string(b))
 	})
 
 	go io.Copy(infoLogWriter, stdout)
