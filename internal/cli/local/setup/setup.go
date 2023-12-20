@@ -57,6 +57,8 @@ func init() {
 		setupCmd.Flags().StringVar(&config.K3S.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		setupCmd.Flags().StringSliceVar(&config.K3S.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
 		setupCmd.Flags().BoolVar(&config.K3S.Debug, "debug", false, "enable debug mode")
+		setupCmd.Flags().StringVar(&config.K3S.TLS.CertFile, "cert", "", "TLS certificate")
+		setupCmd.Flags().StringVar(&config.K3S.TLS.KeyFile, "key", "", "TLS secret key")
 
 		setupCmd.MarkFlagRequired("iface")
 		setupCmd.Flags().MarkHidden("bundle")

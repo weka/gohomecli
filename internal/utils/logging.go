@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -58,4 +59,22 @@ func NewWriteScanner(readers ...func([]byte)) WriteScanner {
 		Closer:    writer,
 		ErrCloser: writer,
 	}
+}
+
+func LineLogger(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func([]byte) {
+	return func(b []byte) {
+		event := logger.WithLevel(level)
+		for _, c := range cb {
+			c(event)
+		}
+		event.Msg(string(b))
+	}
+}
+
+var WithStdoutLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*exec.Cmd) error {
+	return WithStdoutReader(LineLogger(logger, level, cb...))
+}
+
+var WithStderrLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*exec.Cmd) error {
+	return WithStderrReader(LineLogger(logger, level, cb...))
 }
