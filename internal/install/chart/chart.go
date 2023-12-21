@@ -1,5 +1,39 @@
 package chart
 
+import (
+	"fmt"
+	"time"
+
+	helmclient "github.com/mittwald/go-helm-client"
+	"github.com/weka/gohomecli/internal/utils"
+	"gopkg.in/yaml.v2"
+)
+
+const (
+	ReleaseName      = "wekahome"
+	ReleaseNamespace = "home-weka-io"
+	RepositoryURL    = "https://weka.github.io/gohome"
+	RepositoryName   = "wekahome"
+	ChartName        = "wekahome"
+)
+
+var ErrUnableToFindChart = fmt.Errorf("unable to determine chart location")
+
+var logger = utils.GetLogger("HelmChart")
+
+type LocationOverride struct {
+	Path           string // path to chart package
+	RemoteDownload bool   // download from remote repository
+	Version        string // version of the chart to download from remote repository
+}
+
+type HelmOptions struct {
+	KubeConfig        []byte            // path or content of kubeconfig file
+	Override          *LocationOverride // override chart package location
+	KubeContext       string            // kubeconfig context to use
+	NamespaceOverride string            // override namespace for release
+}
+
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
 	Host    *string `json:"host"`    // ingress host
@@ -29,4 +63,51 @@ type Configuration struct {
 
 	Autoscaling     bool `json:"autoscaling"`        // enable services autoscaling
 	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
+}
+
+func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) (*helmclient.ChartSpec, error) {
+	namespace := ReleaseNamespace
+	if opts.NamespaceOverride != "" {
+		namespace = opts.NamespaceOverride
+	}
+
+	logger.Debug().
+		Interface("locationOverride", opts.Override).
+		Msg("Determining chart location")
+	chartLocation, err := getChartLocation(client, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Debug().
+		Interface("configuration", cfg).
+		Msg("Generating chart values")
+
+	values, err := generateValuesV3(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	valuesYaml, err := yaml.Marshal(values)
+	if err != nil {
+		return nil, fmt.Errorf("failed serializing values yaml: %w", err)
+	}
+	logger.Debug().Msgf("Generated values:\n %s", string(valuesYaml))
+
+	chartVersion := "" // any available
+	if opts.Override != nil {
+		chartVersion = opts.Override.Version
+	}
+	return &helmclient.ChartSpec{
+		ReleaseName:     ReleaseName,
+		ChartName:       chartLocation,
+		Version:         chartVersion,
+		Namespace:       namespace,
+		ValuesYaml:      string(valuesYaml),
+		CreateNamespace: true,
+		ResetValues:     true,
+		Wait:            true,
+		WaitForJobs:     true,
+		Timeout:         time.Minute * 5,
+	}, nil
 }

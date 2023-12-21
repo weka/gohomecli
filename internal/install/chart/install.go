@@ -6,47 +6,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/weka/gohomecli/internal/install/bundle"
 
 	helmclient "github.com/mittwald/go-helm-client"
-	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/repo"
 
+	"github.com/weka/gohomecli/internal/install/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const (
-	ReleaseName      = "wekahome"
-	ReleaseNamespace = "home-weka-io"
-	RepositoryURL    = "https://weka.github.io/gohome"
-	RepositoryName   = "wekahome"
-	ChartName        = "wekahome"
-)
-
-var ErrUnableToFindChart = fmt.Errorf("unable to determine chart location")
-
-var logger = utils.GetLogger("HelmChart")
-
-type LocationOverride struct {
-	Path           string // path to chart package
-	RemoteDownload bool   // download from remote repository
-	Version        string // version of the chart to download from remote repository
-}
-
-type HelmOptions struct {
-	KubeConfig        []byte            // path or content of kubeconfig file
-	Override          *LocationOverride // override chart package location
-	KubeContext       string            // kubeconfig context to use
-	NamespaceOverride string            // override namespace for release
-}
-
-func InstallOrUpgrade(
-	ctx context.Context,
-	cfg *Configuration,
-	opts *HelmOptions,
-) error {
+func Install(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -75,59 +43,24 @@ func InstallOrUpgrade(
 		return fmt.Errorf("failed configuring helm client: %w", err)
 	}
 
-	logger.Debug().
-		Interface("locationOverride", opts.Override).
-		Msg("Determining chart location")
-	chartLocation, err := getChartLocation(client, opts)
+	spec, err := chartSpec(client, cfg, opts)
 	if err != nil {
-		return err
-	}
-
-	logger.Debug().
-		Interface("configuration", cfg).
-		Msg("Generating chart values")
-
-	values, err := generateValuesV3(cfg)
-	if err != nil {
-		return err
-	}
-
-	valuesYaml, err := yaml.Marshal(values)
-	if err != nil {
-		return fmt.Errorf("failed serializing values yaml: %w", err)
-	}
-	logger.Debug().Msgf("Generated values:\n %s", string(valuesYaml))
-
-	chartVersion := "" // any available
-	if opts.Override != nil {
-		chartVersion = opts.Override.Version
-	}
-	chartSpec := &helmclient.ChartSpec{
-		ReleaseName:     ReleaseName,
-		ChartName:       chartLocation,
-		Version:         chartVersion,
-		Namespace:       namespace,
-		ValuesYaml:      string(valuesYaml),
-		CreateNamespace: true,
-		ResetValues:     true,
-		Wait:            true,
-		WaitForJobs:     true,
-		Timeout:         time.Minute * 5,
+		return fmt.Errorf("failed to prepare chart spec: %w", err)
 	}
 
 	logger.Info().
-		Str("namespace", namespace).
-		Str("chart", chartSpec.ChartName).
-		Str("release", chartSpec.ReleaseName).
-		Msg("Installing/upgrading chart")
+		Str("namespace", spec.Namespace).
+		Str("chart", spec.ChartName).
+		Str("release", spec.ReleaseName).
+		Msg("Installing chart")
 
-	release, err := client.InstallOrUpgradeChart(ctx, chartSpec, nil)
+	release, err := client.InstallChart(ctx, spec, nil)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Info().Msg("Chart installation was cancelled")
 			return nil
 		}
-		return fmt.Errorf("failed installing/upgrading chart: %w", err)
+		return fmt.Errorf("failed installing chart: %w", err)
 	}
 
 	logger.Info().Msg(release.Info.Notes)
