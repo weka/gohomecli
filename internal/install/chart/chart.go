@@ -7,10 +7,11 @@ import (
 	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
-	"github.com/weka/gohomecli/internal/install/bundle"
-	"github.com/weka/gohomecli/internal/utils"
 	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/repo"
+
+	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 const (
