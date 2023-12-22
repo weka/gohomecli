@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -64,15 +65,18 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err := k3s.Upgrade(cmd.Context(), config.K3S)
+	err := k3s.Upgrade(cmd.Context(), k3s.UpgradeConfig{Debug: config.Debug})
 	if err != nil {
 		return err
 	}
 
-	if len(k3sImportConfig.ImagePaths) == 0 {
-		err = k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.FailFast)
+	time.Sleep(5 * time.Second) // wait for k3s to be ready
+
+	// in debug mode we don't do fail-fast
+	if len(config.Images.ImportPaths) == 0 {
+		err = k3s.ImportBundleImages(cmd.Context(), !config.Debug)
 	} else {
-		err = k3s.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
+		err = k3s.ImportImages(cmd.Context(), config.Images.ImportPaths, !config.Debug)
 	}
 
 	if err != nil {
