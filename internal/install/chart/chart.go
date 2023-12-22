@@ -2,11 +2,15 @@ package chart
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
+	"github.com/weka/gohomecli/internal/install/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 	"gopkg.in/yaml.v2"
+	"helm.sh/helm/v3/pkg/repo"
 )
 
 const (
@@ -63,6 +67,8 @@ type Configuration struct {
 
 	Autoscaling     bool `json:"autoscaling"`        // enable services autoscaling
 	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
+
+	Debug bool
 }
 
 func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) (*helmclient.ChartSpec, error) {
@@ -109,5 +115,64 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 		Wait:            true,
 		WaitForJobs:     true,
 		Timeout:         time.Minute * 5,
+		CleanupOnFail:   !cfg.Debug,
 	}, nil
+}
+
+func findBundledChart() (string, error) {
+	path := ""
+
+	err := bundle.Walk("", func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if path != "" {
+			return nil
+		}
+
+		matched, err := filepath.Match("wekahome-*.tgz", info.Name())
+		if err != nil {
+			return err
+		}
+
+		if matched {
+			path = name
+		}
+
+		return nil
+	})
+
+	if err != nil || path == "" {
+		return "", fmt.Errorf("unable to find wekahome chart in bundle")
+	}
+
+	return path, nil
+}
+
+func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
+	var chartLocation string
+
+	if opts.Override != nil && opts.Override.RemoteDownload {
+		err := client.AddOrUpdateChartRepo(repo.Entry{
+			Name: RepositoryName,
+			URL:  RepositoryURL,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed adding chart repo: %w", err)
+		}
+
+		chartLocation = fmt.Sprintf("%s/%s", RepositoryName, ChartName)
+		return chartLocation, nil
+	}
+
+	if opts.Override != nil && opts.Override.Path != "" {
+		return opts.Override.Path, nil
+	}
+
+	if bundle.IsBundled() {
+		return findBundledChart()
+	}
+
+	return "", ErrUnableToFindChart
 }
