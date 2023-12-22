@@ -30,7 +30,6 @@ var k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
 
 type InstallConfig struct {
 	Iface       string   // interface for k3s network to work on, required
-	BundlePath  string   // path to bundle with k3s and images
 	Hostname    string   // host name of the cluster, optional, default from env
 	NodeIP      string   // node ip to bind on as primary internal ip
 	ExternalIPs []string // list of external ip addresses, optional
@@ -61,13 +60,6 @@ func Install(ctx context.Context, c InstallConfig) error {
 
 	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
 		return err
-	}
-
-	if c.BundlePath != "" {
-		err := bundle.SetBundlePath(c.BundlePath)
-		if err != nil {
-			return err
-		}
 	}
 
 	name, manifest, err := findBundle()

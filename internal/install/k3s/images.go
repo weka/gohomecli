@@ -168,13 +168,7 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 	return nil
 }
 
-func ImportBundleImages(ctx context.Context, bundlePathOverride string, failFast bool) error {
-	if bundlePathOverride != "" {
-		if err := bundle.SetBundlePath(bundlePathOverride); err != nil {
-			return err
-		}
-	}
-
+func ImportBundleImages(ctx context.Context, failFast bool) error {
 	imagePaths := []string{}
 	err := bundle.Walk("images", func(path string, info os.FileInfo, err error) error {
 		if err != nil {

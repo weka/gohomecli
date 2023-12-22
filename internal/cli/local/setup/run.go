@@ -1,21 +1,22 @@
-package chart
+package setup
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
-	"github.com/weka/gohomecli/internal/install/chart"
-
 	"github.com/spf13/cobra"
 
+	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/install/chart"
+	"github.com/weka/gohomecli/internal/install/k3s"
+	"github.com/weka/gohomecli/internal/install/web"
 	"github.com/weka/gohomecli/internal/utils"
 )
-
-var logger = utils.GetLogger("HelmChart")
 
 func normPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
@@ -59,47 +60,69 @@ func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
 	return config, nil
 }
 
-func runInstallOrUpgrade(cmd *cobra.Command, args []string) error {
-	if installCmdOpts.remoteVersion != "" && !installCmdOpts.remoteDownload {
-		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
-	}
-
-	if bundlePathOverride != "" {
-		err := bundle.SetBundlePath(bundlePathOverride)
-		if err != nil {
+func runSetup(cmd *cobra.Command, args []string) error {
+	if config.BundlePath != bundle.BundlePath() {
+		if err := bundle.SetBundlePath(config.BundlePath); err != nil {
 			return err
 		}
 	}
 
-	var err error
-	if installCmdOpts.kubeConfigPath != "" {
-		installCmdOpts.kubeConfigPath, err = normPath(installCmdOpts.kubeConfigPath)
-		if err != nil {
+	if config.Web {
+		logger.Info().Str("bindAddr", config.WebBindAddr).Msg("Starting web server")
+		err := web.ServeConfigurer(cmd.Context(), config.WebBindAddr)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
+		return nil
 	}
 
-	kubeConfig, err := chart.ReadKubeConfig(installCmdOpts.kubeConfigPath)
+	err := k3s.Install(cmd.Context(), config.K3S)
 	if err != nil {
 		return err
 	}
 
-	chartConfig, err := readConfiguration(installCmdOpts.jsonConfig)
+	if len(k3sImportConfig.ImagePaths) == 0 {
+		err = k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.FailFast)
+	} else {
+		err = k3s.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if config.Chart.remoteVersion != "" && !config.Chart.remoteDownload {
+		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
+	}
+
+	if config.Chart.kubeConfigPath != "" {
+		config.Chart.kubeConfigPath, err = normPath(config.Chart.kubeConfigPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	kubeConfig, err := chart.ReadKubeConfig(config.Chart.kubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	chartConfig, err := readConfiguration(config.Chart.jsonConfig)
 	if err != nil {
 		return err
 	}
 
 	var chartLocation *chart.LocationOverride
-	if installCmdOpts.remoteDownload {
+	if config.Chart.remoteDownload {
 		chartLocation = &chart.LocationOverride{
 			RemoteDownload: true,
-			Version:        installCmdOpts.remoteVersion,
+			Version:        config.Chart.remoteVersion,
 		}
 	}
 
-	if installCmdOpts.localChart != "" {
+	if config.Chart.localChart != "" {
 		chartLocation = &chart.LocationOverride{
-			Path: installCmdOpts.localChart,
+			Path: config.Chart.localChart,
 		}
 	}
 

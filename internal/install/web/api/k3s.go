@@ -61,7 +61,7 @@ func k3sImportImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.ImportBundleImages(r.Context(), "", true)
+	err := k3s.ImportBundleImages(r.Context(), true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
