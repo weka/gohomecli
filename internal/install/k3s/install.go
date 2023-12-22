@@ -13,9 +13,6 @@ import (
 	"strings"
 
 	"github.com/weka/gohomecli/internal/install/bundle"
-
-	"github.com/rs/zerolog"
-
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -33,6 +30,7 @@ type InstallConfig struct {
 	Hostname    string   // host name of the cluster, optional, default from env
 	NodeIP      string   // node ip to bind on as primary internal ip
 	ExternalIPs []string // list of external ip addresses, optional
+	TLS         TLSConfig
 	Debug       bool
 }
 
@@ -79,6 +77,12 @@ func Install(ctx context.Context, c InstallConfig) error {
 			return nil
 		}
 
+		cleanup(c.Debug)
+		return err
+	}
+
+	err = setupTLS(ctx, c.TLS)
+	if err != nil && !errors.Is(err, ErrNoTLS) {
 		cleanup(c.Debug)
 		return err
 	}
@@ -175,28 +179,16 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
 			os.Setenv("INSTALL_K3S_EXEC", c.k3sInstallArgs())
 
-			cmd := exec.CommandContext(ctx, "sh", "-")
-			cmd.Stdin = r
-
-			stdout, err := cmd.StdoutPipe()
-			if err != nil {
-				return err
-			}
-			stderr, err := cmd.StderrPipe()
-			if err != nil {
-				return err
-			}
-
-			err = cmd.Start()
+			cmd, err := utils.ExecCommand(ctx, "bash", []string{"-"},
+				utils.WithStdin(r),
+				utils.WithStdoutReader(k3sLogParser(utils.InfoLevel)),
+				utils.WithStderrReader(k3sLogParser(utils.InfoLevel)),
+			)
 			if err != nil {
 				return err
 			}
 
-			go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stdout)
-			go io.Copy(utils.NewWriteScanner(k3sLogParser(utils.InfoLevel)), stderr)
-
-			err = cmd.Wait()
-			if err != nil {
+			if err = cmd.Wait(); err != nil {
 				return fmt.Errorf("install.sh: %w", errors.Join(err, ctx.Err()))
 			}
 
@@ -204,26 +196,5 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 
 			return nil
 		},
-	}
-}
-
-var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
-
-// k3sLogParser parses log files and uses our logging system
-func k3sLogParser(lvl zerolog.Level) func(line []byte) {
-	return func(line []byte) {
-		// parse log level if present, otherwise log full line
-		matches := logRegexp.FindSubmatch(line)
-		if matches == nil {
-			logger.WithLevel(lvl).Msg(string(line))
-			return
-		}
-
-		parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(string(matches[2])))
-		if parsedLvl != zerolog.NoLevel {
-			lvl = parsedLvl
-		}
-
-		logger.WithLevel(lvl).Msg(string(matches[3]))
 	}
 }

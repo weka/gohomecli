@@ -9,13 +9,9 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 
 	"github.com/weka/gohomecli/internal/install/bundle"
-
-	"github.com/rs/zerolog"
-
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -55,27 +51,16 @@ func unzippedData(imagePath string) ([]byte, error) {
 	return io.ReadAll(file)
 }
 
-func plainLogWriter(level zerolog.Level) io.WriteCloser {
-	return utils.NewWriteScanner(func(b []byte) {
-		logger.WithLevel(level).Msg(string(b))
-	})
-}
-
 func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error {
 	var importErrors []error
 	for _, imagePath := range imagePaths {
 		logger := logger.With().Str("imagePath", imagePath).Logger()
-		if ctx.Err() != nil {
-			if errors.Is(ctx.Err(), context.Canceled) {
-				logger.Info().Msg("Context canceled")
-				return ctx.Err()
-			} else if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				logger.Info().Msg("Context deadline exceeded")
-				return ctx.Err()
-			} else {
-				logger.Warn().Msg("Context error")
-				return ctx.Err()
-			}
+
+		// check if cancelled
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
 		data, err := unzippedData(imagePath)
@@ -92,48 +77,18 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 			}
 		}
 
-		reader := bytes.NewBuffer(data)
-		cmd := exec.Command(
-			"k3s", "ctr", "image", "import",
+		cmd, err := utils.ExecCommand(ctx, "k3s", []string{
+			"ctr", "image", "import",
 			"--platform", getCurrentPlatform(),
-			"--", "-",
+			"--", "-"},
+			utils.WithStdin(bytes.NewBuffer(data)),
+			utils.WithStdoutLogger(logger, utils.InfoLevel),
+			utils.WithStderrLogger(logger, utils.WarnLevel),
 		)
-		cmd.Stdin = reader
-
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Failed to capture import command output")
-
-			if failFast {
-				return err
-			} else {
-				importErrors = append(importErrors, err)
-				continue
-			}
-		}
-
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Failed to capture import command output")
-
-			if failFast {
-				return err
-			} else {
-				importErrors = append(importErrors, err)
-				continue
-			}
-		}
-
 		logger.Debug().Strs("command", cmd.Args).Msg("Running import command")
-		err = cmd.Start()
+
 		if err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Failed run import command")
+			logger.Warn().Err(err).Msg("Failed run import command")
 
 			if failFast {
 				return err
@@ -142,15 +97,10 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 				continue
 			}
 		}
-
-		go io.Copy(plainLogWriter(zerolog.InfoLevel), stdout)
-		go io.Copy(plainLogWriter(zerolog.ErrorLevel), stderr)
 
 		err = cmd.Wait()
 		if err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Failed to import image")
+			logger.Warn().Err(err).Msg("Failed to import image")
 
 			if failFast {
 				return err
