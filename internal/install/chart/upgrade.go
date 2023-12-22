@@ -51,17 +51,18 @@ func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
 	upgradeOpts := &helmclient.GenericHelmOptions{
 		RollBack: client,
 	}
+	// in debug mode we don't do rollback
 	if !cfg.Debug {
 		upgradeOpts = nil
 	}
 
 	release, err := client.UpgradeChart(ctx, spec, upgradeOpts)
-	// in debug mode we just return an error
-	if cfg.Debug && err != nil {
+	if err != nil {
 		logger.Error().Err(err).Msg("Upgrade failed")
 		return err
 	}
 
 	logger.Info().Msg(release.Info.Notes)
+
 	return nil
 }
