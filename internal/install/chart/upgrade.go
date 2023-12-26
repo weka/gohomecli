@@ -8,7 +8,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
+func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions, debug bool) error {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -48,16 +48,14 @@ func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
 		Str("release", spec.ReleaseName).
 		Msg("Upgrading chart")
 
-	upgradeOpts := &helmclient.GenericHelmOptions{
-		RollBack: client,
-	}
-	// in debug mode we don't do rollback
-	if !cfg.Debug {
-		upgradeOpts = nil
-	}
-
-	release, err := client.UpgradeChart(ctx, spec, upgradeOpts)
+	release, err := client.UpgradeChart(ctx, spec, nil)
 	if err != nil {
+		if !debug {
+			if err := client.RollbackRelease(spec); err != nil {
+				logger.Error().Err(err).Msg("Rollback failed")
+			}
+		}
+
 		logger.Error().Err(err).Msg("Upgrade failed")
 		return err
 	}

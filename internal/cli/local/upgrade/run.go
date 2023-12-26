@@ -123,5 +123,5 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		Override:   chartLocation,
 	}
 
-	return chart.Upgrade(cmd.Context(), chartConfig, helmOptions)
+	return chart.Upgrade(cmd.Context(), chartConfig, helmOptions, config.Debug)
 }

@@ -68,8 +68,6 @@ type Configuration struct {
 
 	Autoscaling     bool `json:"autoscaling"`        // enable services autoscaling
 	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
-
-	Debug bool
 }
 
 func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) (*helmclient.ChartSpec, error) {
@@ -116,7 +114,6 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 		Wait:            true,
 		WaitForJobs:     true,
 		Timeout:         time.Minute * 5,
-		CleanupOnFail:   !cfg.Debug,
 	}, nil
 }
 
