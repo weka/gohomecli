@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/local/bundle"
 )
 
 var ErrNotExist = errors.New("k3s not exists")

@@ -6,11 +6,9 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/weka/gohomecli/internal/local/web/api"
+	"github.com/weka/gohomecli/internal/local/web/frontend"
 	"github.com/weka/gohomecli/internal/utils"
-
-	"github.com/weka/gohomecli/internal/install/web/api"
-
-	"github.com/weka/gohomecli/internal/install/web/frontend"
 )
 
 var logger = utils.GetLogger("Configurer")

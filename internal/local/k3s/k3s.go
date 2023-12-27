@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/mod/semver"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
