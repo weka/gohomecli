@@ -25,6 +25,7 @@ var config struct {
 		kubeConfigPath string
 		localChart     string
 		jsonConfig     string
+		valuesFile     string
 		remoteDownload bool
 		remoteVersion  string
 	}

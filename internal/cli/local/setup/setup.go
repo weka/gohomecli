@@ -24,6 +24,7 @@ var config struct {
 		kubeConfigPath string
 		localChart     string
 		jsonConfig     string
+		valuesFile     string
 		remoteDownload bool
 		remoteVersion  string
 	}
@@ -71,8 +72,10 @@ func init() {
 		setupCmd.Flags().StringVarP(&config.Chart.kubeConfigPath, "kube-config", "k", "/etc/rancher/k3s/k3s.yaml", "Path to kubeconfig file")
 		setupCmd.Flags().StringVarP(&config.Chart.localChart, "local-chart", "l", "", "Path to local chart directory/archive")
 		setupCmd.Flags().StringVarP(&config.Chart.jsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
+		setupCmd.Flags().StringVar(&config.Chart.valuesFile, "values", "", "Path to values.yaml (optional)")
 		setupCmd.Flags().BoolVarP(&config.Chart.remoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
 		setupCmd.Flags().StringVar(&config.Chart.remoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 		setupCmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
+		setupCmd.MarkFlagsMutuallyExclusive("json-config", "values")
 	})
 }
