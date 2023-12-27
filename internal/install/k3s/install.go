@@ -16,10 +16,11 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+const k3sImagesPath = "/var/lib/rancher/k3s/agent/images/"
+
 var (
-	ErrExists               = errors.New("k3s already installed")
-	defaultLocalStoragePath = "/opt/local-path-provisioner"
-	k3sBundleRegexp         = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
+	ErrExists       = errors.New("k3s already installed")
+	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
 )
 
 type InstallConfig struct {

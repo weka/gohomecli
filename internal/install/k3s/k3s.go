@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	k3sImagesPath  = "/var/lib/rancher/k3s/agent/images/"
-	k3sInstallPath = "/usr/local/bin"
+	k3sInstallPath          = "/usr/local/bin"
+	defaultLocalStoragePath = "/opt/local-path-provisioner"
 )
 
 var logger = utils.GetLogger("K3S")
