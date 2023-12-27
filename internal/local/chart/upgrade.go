@@ -8,7 +8,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions, debug bool) error {
+func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -37,7 +37,7 @@ func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions, debug b
 		return fmt.Errorf("failed configuring helm client: %w", err)
 	}
 
-	spec, err := chartSpec(client, cfg, opts)
+	spec, err := chartSpec(client, opts)
 	if err != nil {
 		return fmt.Errorf("failed to prepare chart spec: %w", err)
 	}

@@ -37,14 +37,19 @@ type HelmOptions struct {
 	Override          *LocationOverride // override chart package location
 	KubeContext       string            // kubeconfig context to use
 	NamespaceOverride string            // override namespace for release
+	Values            []byte            // raw values.yaml
+	Config            *Configuration    // json config
 }
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Host    *string `json:"host"`    // ingress host
-	TLS     *bool   `json:"tls"`     // ingress tls enabled
-	TLSCert *string `json:"tlsCert"` // ingress tls cert
-	TLSKey  *string `json:"tlsKey"`  // ingress tls key
+	Host *string `json:"host"` // ingress host
+
+	TLS struct {
+		Enabled *bool   `json:"enabled"` // ingress tls enabled
+		Cert    *string `json:"tlsCert"` // ingress tls cert
+		Key     *string `json:"tlsKey"`  // ingress tls key
+	} `json:"tls"`
 
 	SMTP struct {
 		Host        *string `json:"host"`        // smtp server host
@@ -76,7 +81,7 @@ type Configuration struct {
 	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
 }
 
-func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) (*helmclient.ChartSpec, error) {
+func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSpec, error) {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -90,20 +95,22 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 		return nil, err
 	}
 
-	logger.Debug().
-		Interface("configuration", cfg).
-		Msg("Generating chart values")
+	if len(opts.Values) == 0 {
+		logger.Debug().
+			Interface("configuration", opts.Config).
+			Msg("Generating chart values")
 
-	values, err := generateValuesV3(cfg)
-	if err != nil {
-		return nil, err
+		values, err := generateValuesV3(opts.Config)
+		if err != nil {
+			return nil, err
+		}
+		opts.Values, err = yaml.Marshal(values)
+		if err != nil {
+			return nil, fmt.Errorf("failed serializing values yaml: %w", err)
+		}
 	}
 
-	valuesYaml, err := yaml.Marshal(values)
-	if err != nil {
-		return nil, fmt.Errorf("failed serializing values yaml: %w", err)
-	}
-	logger.Debug().Msgf("Generated values:\n %s", string(valuesYaml))
+	logger.Debug().Msgf("Helm values.yaml:\n %s", string(opts.Values))
 
 	chartVersion := "" // any available
 	if opts.Override != nil {
@@ -114,7 +121,7 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 		ChartName:       chartLocation,
 		Version:         chartVersion,
 		Namespace:       namespace,
-		ValuesYaml:      string(valuesYaml),
+		ValuesYaml:      string(opts.Values),
 		CreateNamespace: true,
 		ResetValues:     true,
 		Wait:            true,

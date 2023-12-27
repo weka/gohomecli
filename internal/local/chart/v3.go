@@ -12,9 +12,9 @@ func configureIngress(configuration *Configuration) (yamlMap, error) {
 	err := errors.Join(
 		writeMapEntryIfPtrSet(cfg, "ingress.host", configuration.Host),
 		writeMapEntryIfPtrSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.enabled", configuration.TLS),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.cert", configuration.TLSCert),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.key", configuration.TLSKey),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.enabled", configuration.TLS.Enabled),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.cert", configuration.TLS.Cert),
+		writeMapEntryIfPtrSet(cfg, "ingress.tls.key", configuration.TLS.Key),
 	)
 
 	if err != nil {

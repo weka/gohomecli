@@ -104,6 +104,14 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var values []byte
+	if config.Chart.valuesFile != "" {
+		values, err = os.ReadFile(config.Chart.valuesFile)
+		if err != nil {
+			return fmt.Errorf("reading values.yaml: %w", err)
+		}
+	}
+
 	var chartLocation *chart.LocationOverride
 	if config.Chart.remoteDownload {
 		chartLocation = &chart.LocationOverride{
@@ -121,7 +129,9 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	helmOptions := &chart.HelmOptions{
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
+		Config:     chartConfig,
+		Values:     values,
 	}
 
-	return chart.Upgrade(cmd.Context(), chartConfig, helmOptions, config.Debug)
+	return chart.Upgrade(cmd.Context(), helmOptions, config.Debug)
 }
