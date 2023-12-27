@@ -7,7 +7,7 @@ import (
 	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/repo"
 
 	"github.com/weka/gohomecli/internal/install/bundle"
