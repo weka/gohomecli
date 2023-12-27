@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/docker/docker/daemon/logger"
 	"github.com/weka/gohomecli/internal/install/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
