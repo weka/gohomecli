@@ -27,13 +27,13 @@ func configureIngress(configuration *Configuration) (yamlMap, error) {
 func configureSMTP(configuration *Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.host", configuration.SMTPHost),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.port", configuration.SMTPPort),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.username", configuration.SMTPUser),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.password", configuration.SMTPPassword),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.insecure", configuration.SMTPInsecure),
-		writeMapEntryIfPtrSet(cfg, "smtp.senderEmailName", configuration.SMTPSender),
-		writeMapEntryIfPtrSet(cfg, "smtp.senderEmail", configuration.SMTPSenderEmail),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.host", configuration.SMTP.Host),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.port", configuration.SMTP.Port),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.username", configuration.SMTP.User),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.password", configuration.SMTP.Password),
+		writeMapEntryIfPtrSet(cfg, "smtp.connection.insecure", configuration.SMTP.Insecure),
+		writeMapEntryIfPtrSet(cfg, "smtp.senderEmailName", configuration.SMTP.Sender),
+		writeMapEntryIfPtrSet(cfg, "smtp.senderEmail", configuration.SMTP.SenderEmail),
 	)
 
 	if err != nil {
@@ -45,15 +45,15 @@ func configureSMTP(configuration *Configuration) (yamlMap, error) {
 
 func configureRetention(configuration *Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
-	if configuration.DiagnosticsRetentionDays != nil {
-		retention := fmt.Sprintf("%dd", *configuration.DiagnosticsRetentionDays)
+	if configuration.RetentionDays.Diagnostics != nil {
+		retention := fmt.Sprintf("%dd", *configuration.RetentionDays.Diagnostics)
 		if err := writeMapEntry(cfg, "jobs.garbageCollector.diagnostics.maxAge", retention); err != nil {
 			return nil, err
 		}
 	}
 
-	if configuration.EventsRetentionDays != nil {
-		retention := fmt.Sprintf("%dd", *configuration.EventsRetentionDays)
+	if configuration.RetentionDays.Events != nil {
+		retention := fmt.Sprintf("%dd", *configuration.RetentionDays.Events)
 		if err := writeMapEntry(cfg, "jobs.garbageCollector.events.maxAge", retention); err != nil {
 			return nil, err
 		}
@@ -145,20 +145,20 @@ func configureResources(configuration *Configuration) (yamlMap, error) {
 }
 
 func configureForwarding(configuration *Configuration) (yamlMap, error) {
-	if !configuration.ForwardingEnabled {
+	if !configuration.Forwarding.Enabled {
 		return yamlMap{}, nil
 	}
 
 	cfg := make(yamlMap)
 	err := errors.Join(
 		writeMapEntry(cfg, "forwarding.enabled", true),
-		writeMapEntryIfPtrSet(cfg, "forwarding.url", configuration.ForwardingUrl),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableEvents", configuration.ForwardingEnableEvents),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableUsageReports", configuration.ForwardingEnableUsageReports),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableAnalytics", configuration.ForwardingEnableAnalytics),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableDiagnostics", configuration.ForwardingEnableDiagnostics),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableStats", configuration.ForwardingEnableStats),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.ForwardingEnableClusterRegistration),
+		writeMapEntryIfPtrSet(cfg, "forwarding.url", configuration.Forwarding.Url),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
+		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
 	)
 
 	if err != nil {
