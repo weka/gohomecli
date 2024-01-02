@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -24,12 +25,10 @@ var (
 )
 
 type InstallConfig struct {
-	Iface       string   // interface for k3s network to work on, required
-	Hostname    string   // host name of the cluster, optional, default from env
-	NodeIP      string   // node ip to bind on as primary internal ip
-	ExternalIPs []string // list of external ip addresses, optional
-	TLS         TLSConfig
-	Debug       bool
+	config_v1.Configuration
+
+	Iface string // interface for k3s network to work on, required
+	Debug bool
 }
 
 func (c InstallConfig) k3sInstallArgs() string {
@@ -79,10 +78,12 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	err = setupTLS(ctx, c.TLS)
-	if err != nil && !errors.Is(err, ErrNoTLS) {
-		cleanup(c.Debug)
-		return err
+	if c.TLS.Enabled != nil && *c.TLS.Enabled {
+		err = setupTLS(ctx, TLSConfig{CertFile: *c.TLS.Cert, KeyFile: *c.TLS.Key})
+		if err != nil {
+			cleanup(c.Debug)
+			return err
+		}
 	}
 
 	return nil
@@ -160,9 +161,9 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 		Callback: func(ctx context.Context, fi fs.FileInfo, r io.Reader) error {
 			logger.Info().Msg("Starting k3s install")
 
-			if c.Hostname != "" {
-				os.Setenv("K3S_HOSTNAME", c.Hostname)
-				os.Setenv("K3S_NODE_NAME", c.Hostname)
+			if c.Host != nil && *c.Host != "" {
+				os.Setenv("K3S_HOSTNAME", *c.Host)
+				os.Setenv("K3S_NODE_NAME", *c.Host)
 			}
 			overriden, err := resolvConfOverriden()
 			if err != nil {

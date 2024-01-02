@@ -5,6 +5,7 @@ import (
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
@@ -15,16 +16,20 @@ var (
 	logger = utils.GetLogger("setup")
 )
 
-var config struct {
+var setupConfig struct {
+	config_v1.Configuration
+
 	Web         bool
 	WebBindAddr string
 	BundlePath  string
-	K3S         k3s.InstallConfig
-	Chart       struct {
+	JsonConfig  string
+	ValuesFile  string
+	Iface       string
+	Debug       bool
+
+	Chart struct {
 		kubeConfigPath string
 		localChart     string
-		jsonConfig     string
-		valuesFile     string
 		remoteDownload bool
 		remoteVersion  string
 	}
@@ -46,20 +51,24 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(setupCmd)
 
+		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
+		setupCmd.Flags().StringVar(&setupConfig.ValuesFile, "values", "", "Path to values.yaml (optional)")
+		setupCmd.MarkFlagsMutuallyExclusive("json-config", "values")
+
 		if web.IsEnabled() {
-			setupCmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
-			setupCmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
+			setupCmd.Flags().BoolVar(&setupConfig.Web, "web", false, "start web installer")
+			setupCmd.Flags().StringVarP(&setupConfig.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 		}
 
-		setupCmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
+		setupCmd.Flags().StringVar(&setupConfig.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
 
-		setupCmd.Flags().StringVarP(&config.K3S.Iface, "iface", "i", "", "interface for k3s network")
-		setupCmd.Flags().StringVarP(&config.K3S.Hostname, "hostname", "n", k3s.Hostname(), "hostname for cluster")
-		setupCmd.Flags().StringVar(&config.K3S.NodeIP, "ip", "", "primary IP internal address for wekahome API")
-		setupCmd.Flags().StringSliceVar(&config.K3S.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
-		setupCmd.Flags().BoolVar(&config.K3S.Debug, "debug", false, "enable debug mode")
-		setupCmd.Flags().StringVar(&config.K3S.TLS.CertFile, "cert", "", "TLS certificate")
-		setupCmd.Flags().StringVar(&config.K3S.TLS.KeyFile, "key", "", "TLS secret key")
+		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network")
+		setupCmd.Flags().StringVarP(setupConfig.Host, "hostname", "n", k3s.Hostname(), "hostname for cluster")
+		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
+		setupCmd.Flags().StringSliceVar(&setupConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
+		setupCmd.Flags().BoolVar(&setupConfig.Debug, "debug", false, "enable debug mode")
+		setupCmd.Flags().StringVar(setupConfig.TLS.Cert, "cert", "", "TLS certificate")
+		setupCmd.Flags().StringVar(setupConfig.TLS.Key, "key", "", "TLS secret key")
 
 		setupCmd.MarkFlagRequired("iface")
 		setupCmd.Flags().MarkHidden("bundle")
@@ -69,13 +78,10 @@ func init() {
 		setupCmd.Flags().BoolVar(&k3sImportConfig.FailFast, "fail-fast", false, "fail on first error")
 		setupCmd.Flags().StringSliceVarP(&k3sImportConfig.ImagePaths, "image-path", "f", nil, "images to import (if specified, bundle images are ignored)")
 
-		setupCmd.Flags().StringVarP(&config.Chart.kubeConfigPath, "kube-config", "k", "/etc/rancher/k3s/k3s.yaml", "Path to kubeconfig file")
-		setupCmd.Flags().StringVarP(&config.Chart.localChart, "local-chart", "l", "", "Path to local chart directory/archive")
-		setupCmd.Flags().StringVarP(&config.Chart.jsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
-		setupCmd.Flags().StringVar(&config.Chart.valuesFile, "values", "", "Path to values.yaml (optional)")
-		setupCmd.Flags().BoolVarP(&config.Chart.remoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
-		setupCmd.Flags().StringVar(&config.Chart.remoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
+		setupCmd.Flags().StringVarP(&setupConfig.Chart.kubeConfigPath, "kube-config", "k", "/etc/rancher/k3s/k3s.yaml", "Path to kubeconfig file")
+		setupCmd.Flags().StringVarP(&setupConfig.Chart.localChart, "local-chart", "l", "", "Path to local chart directory/archive")
+		setupCmd.Flags().BoolVarP(&setupConfig.Chart.remoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
+		setupCmd.Flags().StringVar(&setupConfig.Chart.remoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 		setupCmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
-		setupCmd.MarkFlagsMutuallyExclusive("json-config", "values")
 	})
 }

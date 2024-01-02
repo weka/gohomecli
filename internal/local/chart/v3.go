@@ -3,11 +3,13 @@ package chart
 import (
 	"errors"
 	"fmt"
+
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 )
 
 var valuesGeneratorV3 *yamlGenerator
 
-func configureIngress(configuration *Configuration) (yamlMap, error) {
+func configureIngress(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
 		writeMapEntryIfPtrSet(cfg, "ingress.host", configuration.Host),
@@ -24,7 +26,7 @@ func configureIngress(configuration *Configuration) (yamlMap, error) {
 	return cfg, nil
 }
 
-func configureSMTP(configuration *Configuration) (yamlMap, error) {
+func configureSMTP(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
 		writeMapEntryIfPtrSet(cfg, "smtp.connection.host", configuration.SMTP.Host),
@@ -43,7 +45,7 @@ func configureSMTP(configuration *Configuration) (yamlMap, error) {
 	return cfg, nil
 }
 
-func configureRetention(configuration *Configuration) (yamlMap, error) {
+func configureRetention(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	if configuration.RetentionDays.Diagnostics != nil {
 		retention := fmt.Sprintf("%dd", *configuration.RetentionDays.Diagnostics)
@@ -93,7 +95,7 @@ var resourcePresets []appPreset = []appPreset{
 	},
 }
 
-func configureResources(configuration *Configuration) (yamlMap, error) {
+func configureResources(configuration *config_v1.Configuration) (yamlMap, error) {
 	if configuration.WekaNodesServed == nil {
 		return yamlMap{}, nil
 	}
@@ -144,7 +146,7 @@ func configureResources(configuration *Configuration) (yamlMap, error) {
 	return cfg, nil
 }
 
-func configureForwarding(configuration *Configuration) (yamlMap, error) {
+func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error) {
 	if !configuration.Forwarding.Enabled {
 		return yamlMap{}, nil
 	}
@@ -180,6 +182,6 @@ func init() {
 	valuesGeneratorV3.AddVisitor("forwarding", configureForwarding)
 }
 
-func generateValuesV3(configuration *Configuration) (map[string]interface{}, error) {
+func generateValuesV3(configuration *config_v1.Configuration) (map[string]interface{}, error) {
 	return valuesGeneratorV3.Generate(configuration)
 }

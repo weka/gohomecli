@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
+	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
@@ -31,52 +31,32 @@ func normPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-func readConfiguration(jsonConfig string) (*chart.Configuration, error) {
-	if jsonConfig == "" {
-		return &chart.Configuration{}, nil
-	}
-
-	var jsonConfigBytes []byte
-	if _, err := os.Stat(jsonConfig); err == nil {
-		logger.Debug().Str("path", jsonConfig).Msg("Reading JSON config from file")
-		jsonConfigBytes, err = os.ReadFile(jsonConfig)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to read JSON config from file")
-			return nil, fmt.Errorf("failed to read JSON config from file: %w", err)
-		}
-	} else {
-		logger.Debug().Msg("Using JSON object from command line")
-		jsonConfigBytes = []byte(jsonConfig)
-	}
-
-	logger.Debug().Msg("Parsing JSON config")
-	config := &chart.Configuration{}
-	err := json.Unmarshal(jsonConfigBytes, &config)
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to parse JSON config")
-		return nil, fmt.Errorf("failed to parse JSON config: %w", err)
-	}
-
-	return config, nil
-}
-
 func runSetup(cmd *cobra.Command, args []string) error {
-	if config.BundlePath != bundle.BundlePath() {
-		if err := bundle.SetBundlePath(config.BundlePath); err != nil {
+	if setupConfig.BundlePath != bundle.BundlePath() {
+		if err := bundle.SetBundlePath(setupConfig.BundlePath); err != nil {
 			return err
 		}
 	}
 
-	if config.Web {
-		logger.Info().Str("bindAddr", config.WebBindAddr).Msg("Starting web server")
-		err := web.ServeConfigurer(cmd.Context(), config.WebBindAddr)
+	if setupConfig.Web {
+		logger.Info().Str("bindAddr", setupConfig.WebBindAddr).Msg("Starting web server")
+		err := web.ServeConfigurer(cmd.Context(), setupConfig.WebBindAddr)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil
 	}
 
-	err := k3s.Install(cmd.Context(), config.K3S)
+	err := config.ReadV1(setupConfig.JsonConfig, &setupConfig.Configuration)
+	if err != nil {
+		return err
+	}
+
+	err = k3s.Install(cmd.Context(), k3s.InstallConfig{
+		Configuration: setupConfig.Configuration,
+		Iface:         setupConfig.Iface,
+		Debug:         setupConfig.Debug,
+	})
 	if err != nil {
 		return err
 	}
@@ -91,46 +71,41 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if config.Chart.remoteVersion != "" && !config.Chart.remoteDownload {
+	if setupConfig.Chart.remoteVersion != "" && !setupConfig.Chart.remoteDownload {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 	}
 
-	if config.Chart.kubeConfigPath != "" {
-		config.Chart.kubeConfigPath, err = normPath(config.Chart.kubeConfigPath)
+	if setupConfig.Chart.kubeConfigPath != "" {
+		setupConfig.Chart.kubeConfigPath, err = normPath(setupConfig.Chart.kubeConfigPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	kubeConfig, err := chart.ReadKubeConfig(config.Chart.kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	chartConfig, err := readConfiguration(config.Chart.jsonConfig)
+	kubeConfig, err := chart.ReadKubeConfig(setupConfig.Chart.kubeConfigPath)
 	if err != nil {
 		return err
 	}
 
 	var values []byte
-	if config.Chart.valuesFile != "" {
-		values, err = os.ReadFile(config.Chart.valuesFile)
+	if setupConfig.ValuesFile != "" {
+		values, err = os.ReadFile(setupConfig.ValuesFile)
 		if err != nil {
 			return fmt.Errorf("reading values.yaml: %w", err)
 		}
 	}
 
 	var chartLocation *chart.LocationOverride
-	if config.Chart.remoteDownload {
+	if setupConfig.Chart.remoteDownload {
 		chartLocation = &chart.LocationOverride{
 			RemoteDownload: true,
-			Version:        config.Chart.remoteVersion,
+			Version:        setupConfig.Chart.remoteVersion,
 		}
 	}
 
-	if config.Chart.localChart != "" {
+	if setupConfig.Chart.localChart != "" {
 		chartLocation = &chart.LocationOverride{
-			Path: config.Chart.localChart,
+			Path: setupConfig.Chart.localChart,
 		}
 	}
 
@@ -138,7 +113,7 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
 		Values:     values,
-		Config:     chartConfig,
+		Config:     &setupConfig.Configuration,
 	}
 
 	return chart.Install(cmd.Context(), helmOptions)

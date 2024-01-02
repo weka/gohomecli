@@ -8,10 +8,8 @@ func Router() http.Handler {
 	router := http.NewServeMux()
 	router.HandleFunc("/api/v1/health", allowedMethods(getHealth, http.MethodGet))
 	router.HandleFunc("/api/v1/features", allowedMethods(getFeatures, http.MethodGet))
-	router.HandleFunc("/api/v1/chart/install", allowedMethods(installChart, http.MethodPost))
-	router.HandleFunc("/api/v1/k3s/install", allowedMethods(installK3s, http.MethodPost))
-	router.HandleFunc("/api/v1/k3s/upgrade", allowedMethods(k3sUpgrade, http.MethodPost))
-	router.HandleFunc("/api/v1/k3s/import-images", allowedMethods(k3sImportImages, http.MethodPost))
+	router.HandleFunc("/api/v1/setup", allowedMethods(setup, http.MethodPost))
+	router.HandleFunc("/api/v1/upgrade", allowedMethods(upgrade, http.MethodPost))
 
 	return router
 }
