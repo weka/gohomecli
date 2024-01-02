@@ -13,10 +13,13 @@ import (
 	"github.com/weka/gohomecli/internal/local/config"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/web"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var (
 	Cli hooks.Cli
+
+	logger = utils.GetLogger("upgrade")
 )
 
 var upgradeConfig struct {
@@ -76,7 +79,7 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(upgradeCmd)
 
-		upgradeCmd.Flags().StringVarP(&upgradeConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
+		upgradeCmd.Flags().StringVarP(&upgradeConfig.JsonConfig, "json-config", "c", config.LHWConfig, "Configuration in JSON format (file or JSON string)")
 		upgradeCmd.Flags().StringVar(&upgradeConfig.ValuesFile, "values", "", "Path to values.yaml (optional)")
 		upgradeCmd.MarkFlagsMutuallyExclusive("json-config", "values")
 

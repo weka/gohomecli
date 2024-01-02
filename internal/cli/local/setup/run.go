@@ -12,6 +12,7 @@ import (
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
+	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
@@ -102,5 +103,10 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		Config:     &setupConfig.Configuration,
 	}
 
-	return chart.Install(cmd.Context(), helmOptions)
+	err = chart.Install(cmd.Context(), helmOptions)
+	if err != nil {
+		return fmt.Errorf("chart install: %w", err)
+	}
+
+	return config.SaveV1(config.LHWConfig, setupConfig.Configuration)
 }

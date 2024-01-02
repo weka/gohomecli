@@ -9,6 +9,8 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+const LHWConfig = "/etc/lwh.json"
+
 var logger = utils.GetLogger("configuration")
 
 func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
@@ -37,4 +39,15 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 	}
 
 	return nil
+}
+
+func SaveV1(path string, c config_v1.Configuration) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0750))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	return enc.Encode(c)
 }
