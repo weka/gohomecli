@@ -12,11 +12,11 @@ var valuesGeneratorV3 *yamlGenerator
 func configureIngress(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntryIfPtrSet(cfg, "ingress.host", configuration.Host),
-		writeMapEntryIfPtrSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.enabled", configuration.TLS.Enabled),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.cert", configuration.TLS.Cert),
-		writeMapEntryIfPtrSet(cfg, "ingress.tls.key", configuration.TLS.Key),
+		writeMapEntryIfSet(cfg, "ingress.host", configuration.Host),
+		writeMapEntryIfSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
+		writeMapEntryIfSet(cfg, "ingress.tls.enabled", configuration.TLS.Enabled),
+		writeMapEntryIfSet(cfg, "ingress.tls.cert", configuration.TLS.Cert),
+		writeMapEntryIfSet(cfg, "ingress.tls.key", configuration.TLS.Key),
 	)
 
 	if err != nil {
@@ -29,13 +29,13 @@ func configureIngress(configuration *config_v1.Configuration) (yamlMap, error) {
 func configureSMTP(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.host", configuration.SMTP.Host),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.port", configuration.SMTP.Port),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.username", configuration.SMTP.User),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.password", configuration.SMTP.Password),
-		writeMapEntryIfPtrSet(cfg, "smtp.connection.insecure", configuration.SMTP.Insecure),
-		writeMapEntryIfPtrSet(cfg, "smtp.senderEmailName", configuration.SMTP.Sender),
-		writeMapEntryIfPtrSet(cfg, "smtp.senderEmail", configuration.SMTP.SenderEmail),
+		writeMapEntryIfSet(cfg, "smtp.connection.host", configuration.SMTP.Host),
+		writeMapEntryIfSet(cfg, "smtp.connection.port", configuration.SMTP.Port),
+		writeMapEntryIfSet(cfg, "smtp.connection.username", configuration.SMTP.User),
+		writeMapEntryIfSet(cfg, "smtp.connection.password", configuration.SMTP.Password),
+		writeMapEntryIfSet(cfg, "smtp.connection.insecure", configuration.SMTP.Insecure),
+		writeMapEntryIfSet(cfg, "smtp.senderEmailName", configuration.SMTP.Sender),
+		writeMapEntryIfSet(cfg, "smtp.senderEmail", configuration.SMTP.SenderEmail),
 	)
 
 	if err != nil {
@@ -47,15 +47,15 @@ func configureSMTP(configuration *config_v1.Configuration) (yamlMap, error) {
 
 func configureRetention(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
-	if configuration.RetentionDays.Diagnostics != nil {
-		retention := fmt.Sprintf("%dd", *configuration.RetentionDays.Diagnostics)
+	if configuration.RetentionDays.Diagnostics != 0 {
+		retention := fmt.Sprintf("%dd", configuration.RetentionDays.Diagnostics)
 		if err := writeMapEntry(cfg, "jobs.garbageCollector.diagnostics.maxAge", retention); err != nil {
 			return nil, err
 		}
 	}
 
-	if configuration.RetentionDays.Events != nil {
-		retention := fmt.Sprintf("%dd", *configuration.RetentionDays.Events)
+	if configuration.RetentionDays.Events != 0 {
+		retention := fmt.Sprintf("%dd", configuration.RetentionDays.Events)
 		if err := writeMapEntry(cfg, "jobs.garbageCollector.events.maxAge", retention); err != nil {
 			return nil, err
 		}
@@ -96,13 +96,13 @@ var resourcePresets []appPreset = []appPreset{
 }
 
 func configureResources(configuration *config_v1.Configuration) (yamlMap, error) {
-	if configuration.WekaNodesServed == nil {
+	if configuration.WekaNodesServed == 0 {
 		return yamlMap{}, nil
 	}
 
 	var preset *appPreset
 	for i := range resourcePresets {
-		if *configuration.WekaNodesServed >= resourcePresets[i].NodesThreshold {
+		if configuration.WekaNodesServed >= resourcePresets[i].NodesThreshold {
 			preset = &resourcePresets[i]
 			break
 		}
@@ -154,13 +154,13 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 	cfg := make(yamlMap)
 	err := errors.Join(
 		writeMapEntry(cfg, "forwarding.enabled", true),
-		writeMapEntryIfPtrSet(cfg, "forwarding.url", configuration.Forwarding.Url),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
-		writeMapEntryIfPtrSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
+		writeMapEntryIfSet(cfg, "forwarding.url", configuration.Forwarding.Url),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
+		writeMapEntryIfSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
 	)
 
 	if err != nil {

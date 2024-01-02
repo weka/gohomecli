@@ -1,10 +1,16 @@
 package upgrade
 
 import (
+	"errors"
+	"fmt"
+	"os"
+
+	"dario.cat/mergo"
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/local/bundle"
+	"github.com/weka/gohomecli/internal/local/config"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/web"
 )
@@ -31,6 +37,7 @@ var upgradeConfig struct {
 		localChart     string
 		remoteDownload bool
 		remoteVersion  string
+		values         []byte
 	}
 	Debug bool
 }
@@ -39,7 +46,30 @@ var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade Local Weka Home",
 	Long:  `Upgrade Weka Home with K3S bundle`,
-	RunE:  runUpgrade,
+	PreRunE: func(cmd *cobra.Command, args []string) (err error) {
+		if upgradeConfig.JsonConfig != "" {
+			// Use cli configuration over config json passed for overwrite
+			var c config_v1.Configuration
+
+			err := errors.Join(
+				config.ReadV1(upgradeConfig.JsonConfig, &c),
+				mergo.Merge(&upgradeConfig.Configuration, c),
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		if upgradeConfig.ValuesFile != "" {
+			upgradeConfig.Chart.values, err = os.ReadFile(upgradeConfig.ValuesFile)
+			if err != nil {
+				return fmt.Errorf("reading values.yaml: %w", err)
+			}
+		}
+
+		return nil
+	},
+	RunE: runUpgrade,
 }
 
 func init() {

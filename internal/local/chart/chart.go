@@ -71,7 +71,7 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 		}
 	}
 
-	logger.Debug().Msgf("Helm values.yaml:\n %s", string(opts.Values))
+	logger.Debug().Msgf("Helm values.yaml:\n%s", string(opts.Values))
 
 	chartVersion := "" // any available
 	if opts.Override != nil {

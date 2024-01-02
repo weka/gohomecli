@@ -78,8 +78,8 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	if c.TLS.Enabled != nil && *c.TLS.Enabled {
-		err = setupTLS(ctx, TLSConfig{CertFile: *c.TLS.Cert, KeyFile: *c.TLS.Key})
+	if c.TLS.Enabled {
+		err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
 		if err != nil {
 			cleanup(c.Debug)
 			return err
@@ -161,9 +161,9 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 		Callback: func(ctx context.Context, fi fs.FileInfo, r io.Reader) error {
 			logger.Info().Msg("Starting k3s install")
 
-			if c.Host != nil && *c.Host != "" {
-				os.Setenv("K3S_HOSTNAME", *c.Host)
-				os.Setenv("K3S_NODE_NAME", *c.Host)
+			if c.Host != "" {
+				os.Setenv("K3S_HOSTNAME", c.Host)
+				os.Setenv("K3S_NODE_NAME", c.Host)
 			}
 			overriden, err := resolvConfOverriden()
 			if err != nil {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
-	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -70,19 +69,6 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = config.ReadV1(upgradeConfig.JsonConfig, &upgradeConfig.Configuration)
-	if err != nil {
-		return err
-	}
-
-	var values []byte
-	if upgradeConfig.ValuesFile != "" {
-		values, err = os.ReadFile(upgradeConfig.ValuesFile)
-		if err != nil {
-			return fmt.Errorf("reading values.yaml: %w", err)
-		}
-	}
-
 	var chartLocation *chart.LocationOverride
 	if upgradeConfig.Chart.remoteDownload {
 		chartLocation = &chart.LocationOverride{
@@ -101,7 +87,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
 		Config:     &upgradeConfig.Configuration,
-		Values:     values,
+		Values:     upgradeConfig.Chart.values,
 	}
 
 	return chart.Upgrade(cmd.Context(), helmOptions, upgradeConfig.Debug)

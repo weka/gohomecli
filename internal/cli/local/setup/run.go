@@ -12,7 +12,6 @@ import (
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
-	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
@@ -47,12 +46,7 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err := config.ReadV1(setupConfig.JsonConfig, &setupConfig.Configuration)
-	if err != nil {
-		return err
-	}
-
-	err = k3s.Install(cmd.Context(), k3s.InstallConfig{
+	err := k3s.Install(cmd.Context(), k3s.InstallConfig{
 		Configuration: setupConfig.Configuration,
 		Iface:         setupConfig.Iface,
 		Debug:         setupConfig.Debug,
@@ -87,14 +81,6 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var values []byte
-	if setupConfig.ValuesFile != "" {
-		values, err = os.ReadFile(setupConfig.ValuesFile)
-		if err != nil {
-			return fmt.Errorf("reading values.yaml: %w", err)
-		}
-	}
-
 	var chartLocation *chart.LocationOverride
 	if setupConfig.Chart.remoteDownload {
 		chartLocation = &chart.LocationOverride{
@@ -112,7 +98,7 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	helmOptions := &chart.HelmOptions{
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
-		Values:     values,
+		Values:     setupConfig.Chart.values,
 		Config:     &setupConfig.Configuration,
 	}
 
