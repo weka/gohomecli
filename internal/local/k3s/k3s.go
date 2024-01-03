@@ -87,7 +87,7 @@ func Hostname() string {
 
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
-func setupNetwork(iface string, nodeIP *string) error {
+func setupNetwork(iface string, nodeIP *string) (err error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return err

@@ -9,7 +9,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const LHWConfig = "/etc/lwh.json"
+const CLIConfig = "/etc/wekahome/homecli.json"
 
 var logger = utils.GetLogger("configuration")
 

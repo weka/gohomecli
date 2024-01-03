@@ -40,6 +40,7 @@ func (c InstallConfig) k3sInstallArgs() string {
 
 	if len(c.ExternalIPs) > 0 {
 		k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", strings.Join(c.ExternalIPs, ",")))
+		k3sArgs = append(k3sArgs, fmt.Sprintf("--tls-san=%s", strings.Join(c.ExternalIPs, ",")))
 	}
 
 	return strings.Join(k3sArgs, " ")
@@ -53,16 +54,16 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return ErrExists
 	}
 
-	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
-		return err
-	}
-
 	name, manifest, err := findBundle()
 	if err != nil {
 		return err
 	}
 
 	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
+
+	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
+		return err
+	}
 
 	bundle := bundle.Tar(name)
 
@@ -78,12 +79,10 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	if utils.IsSetP(c.TLS.Enabled) {
-		err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
-		if err != nil {
-			cleanup(c.Debug)
-			return err
-		}
+	err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
+	if err != nil && !errors.Is(err, ErrNoTLS) {
+		cleanup(c.Debug)
+		return err
 	}
 
 	return nil

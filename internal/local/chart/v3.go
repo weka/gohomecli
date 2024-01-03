@@ -15,16 +15,17 @@ func configureIngress(configuration *config_v1.Configuration) (yamlMap, error) {
 	err := errors.Join(
 		writeMapEntryIfSet(cfg, "ingress.host", configuration.Host),
 		writeMapEntryIfSet(cfg, "workers.alertsDispatcher.emailLinkDomainName", configuration.Host),
-		writeMapEntryIfSet(cfg, "ingress.tls.enabled", configuration.TLS.Enabled),
-		writeMapEntryIfSet(cfg, "ingress.tls.cert", configuration.TLS.Cert),
-		writeMapEntryIfSet(cfg, "ingress.tls.key", configuration.TLS.Key),
 	)
 
-	if err != nil {
-		return nil, err
+	if configuration.TLS.Cert != "" {
+		err = errors.Join(err,
+			writeMapEntryIfSet(cfg, "ingress.tls.enabled", true),
+			writeMapEntryIfSet(cfg, "ingress.tls.cert", configuration.TLS.Cert),
+			writeMapEntryIfSet(cfg, "ingress.tls.key", configuration.TLS.Key),
+		)
 	}
 
-	return cfg, nil
+	return cfg, err
 }
 
 func configureSMTP(configuration *config_v1.Configuration) (yamlMap, error) {
@@ -39,30 +40,28 @@ func configureSMTP(configuration *config_v1.Configuration) (yamlMap, error) {
 		writeMapEntryIfSet(cfg, "smtp.senderEmail", configuration.SMTP.SenderEmail),
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return cfg, err
 }
 
 func configureRetention(configuration *config_v1.Configuration) (yamlMap, error) {
 	cfg := make(yamlMap)
+	var err error
+
 	if configuration.RetentionDays.Diagnostics != 0 {
 		retention := fmt.Sprintf("%dd", configuration.RetentionDays.Diagnostics)
-		if err := writeMapEntry(cfg, "jobs.garbageCollector.diagnostics.maxAge", retention); err != nil {
-			return nil, err
-		}
+		err = errors.Join(err,
+			writeMapEntry(cfg, "jobs.garbageCollector.diagnostics.maxAge", retention),
+		)
 	}
 
 	if configuration.RetentionDays.Events != 0 {
 		retention := fmt.Sprintf("%dd", configuration.RetentionDays.Events)
-		if err := writeMapEntry(cfg, "jobs.garbageCollector.events.maxAge", retention); err != nil {
-			return nil, err
-		}
+		err = errors.Join(err,
+			writeMapEntry(cfg, "jobs.garbageCollector.events.maxAge", retention),
+		)
 	}
 
-	return cfg, nil
+	return cfg, err
 }
 
 type replicasPreset struct {
@@ -140,11 +139,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 		)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return cfg, err
 }
 
 func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error) {
@@ -164,11 +159,7 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 		writeMapEntryIfSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+	return cfg, err
 }
 
 func init() {

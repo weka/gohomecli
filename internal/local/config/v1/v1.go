@@ -1,9 +1,10 @@
 package config_v1
 
+import "fmt"
+
 type TLSConfig struct {
-	Enabled *bool  `json:"enabled,omitempty"` // ingress tls enabled
-	Cert    string `json:"cert,omitempty"`    // ingress tls cert
-	Key     string `json:"key,omitempty"`     // ingress tls key
+	Cert string `json:"cert,omitempty"` // ingress tls cert
+	Key  string `json:"key,omitempty"`  // ingress tls key
 }
 
 type SMTPConfig struct {
@@ -38,11 +39,19 @@ type Configuration struct {
 	NodeIP      string   `json:"node_ip,omitempty"`      // node ip to bind on as primary internal ip
 	ExternalIPs []string `json:"external_ips,omitempty"` // list of external ip addresses, optional
 
-	TLS           TLSConfig        `json:"tls"`
-	SMTP          SMTPConfig       `json:"smtp"`
-	RetentionDays RetentionConfig  `json:"retentionDays"`
-	Forwarding    ForwardingConfig `json:"forwarding"`
+	TLS           TLSConfig        `json:"tls,omitempty"`
+	SMTP          SMTPConfig       `json:"smtp,omitempty"`
+	RetentionDays RetentionConfig  `json:"retentionDays,omitempty"`
+	Forwarding    ForwardingConfig `json:"forwarding,omitempty"`
 
 	Autoscaling     *bool `json:"autoscaling,omitempty"`        // enable services autoscaling
 	WekaNodesServed int   `json:"wekaNodesMonitored,omitempty"` // number of weka nodes to monitor, controls load preset
+}
+
+func (c Configuration) Validate() error {
+	if c.Host == "" {
+		return fmt.Errorf("host name is required")
+	}
+
+	return nil
 }

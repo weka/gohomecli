@@ -78,5 +78,5 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("chart install: %w", err)
 	}
 
-	return config.SaveV1(config.LHWConfig, setupConfig.Configuration)
+	return config.SaveV1(config.CLIConfig, setupConfig.Configuration)
 }

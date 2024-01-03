@@ -2,7 +2,6 @@ package setup
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/imdario/mergo"
 	"github.com/spf13/cobra"
@@ -11,21 +10,25 @@ import (
 	setup_flags "github.com/weka/gohomecli/internal/cli/local/setup/flags"
 	"github.com/weka/gohomecli/internal/local/config"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
-	"github.com/weka/gohomecli/internal/utils"
 )
 
 var (
 	Cli hooks.Cli
 )
 
-var setupConfig struct {
+type setup struct {
 	config_v1.Configuration
-
 	setup_flags.Flags
 
 	Iface      string
 	JsonConfig string
 }
+
+func (s setup) Validate() error {
+	return errors.Join(s.Configuration.Validate(), s.Flags.Validate())
+}
+
+var setupConfig setup
 
 var setupCmd = &cobra.Command{
 	Use:   "setup",
@@ -45,17 +48,7 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
-		if setupConfig.Chart.RemoteVersion != "" && !setupConfig.Chart.RemoteDownload {
-			return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
-		}
-
-		// if was specified from args
-		if setupConfig.TLS.Cert != "" {
-			var b = true
-			setupConfig.TLS.Enabled = &b
-		}
-
-		return nil
+		return setupConfig.Validate()
 	},
 	RunE: runSetup,
 }
@@ -67,8 +60,9 @@ func init() {
 		setup_flags.Use(setupCmd, &setupConfig.Flags)
 		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
-		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network")
-		setupCmd.Flags().StringVarP(&setupConfig.Host, "hostname", "n", "", "hostname for cluster")
+		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network (required)")
+		setupCmd.Flags().StringVarP(&setupConfig.Host, "hostname", "n", "", "hostname for cluster (required)")
+
 		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		setupCmd.Flags().StringSliceVar(&setupConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
 		setupCmd.Flags().StringVar(&setupConfig.TLS.Cert, "cert", "", "TLS certificate")

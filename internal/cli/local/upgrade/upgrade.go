@@ -1,6 +1,8 @@
 package upgrade
 
 import (
+	"errors"
+
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
@@ -13,21 +15,27 @@ var (
 	Cli hooks.Cli
 )
 
-var upgradeConfig struct {
+type upgrade struct {
 	config_v1.Configuration
-
 	setup_flags.Flags
 }
+
+func (c upgrade) Validate() error {
+	return errors.Join(c.Configuration.Validate(), c.Flags.Validate())
+}
+
+var upgradeConfig upgrade
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade Local Weka Home",
 	Long:  `Upgrade Weka Home with K3S bundle`,
 	PreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		if err := upgradeConfig.Validate(); err != nil {
+		if err := config.ReadV1(config.CLIConfig, &upgradeConfig.Configuration); err != nil {
 			return err
 		}
-		return config.ReadV1(config.LHWConfig, &upgradeConfig.Configuration)
+
+		return upgradeConfig.Validate()
 	},
 	RunE: runUpgrade,
 }
