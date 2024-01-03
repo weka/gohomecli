@@ -5,7 +5,6 @@ import (
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 	"github.com/weka/gohomecli/internal/install/bundle"
-	"github.com/weka/gohomecli/internal/install/k3s"
 	"github.com/weka/gohomecli/internal/install/web"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -19,19 +18,17 @@ var config struct {
 	Web         bool
 	WebBindAddr string
 	BundlePath  string
-	K3S         k3s.UpgradeConfig
-	Chart       struct {
+	Images      struct {
+		ImportPaths []string
+	}
+	Chart struct {
 		kubeConfigPath string
 		localChart     string
 		jsonConfig     string
 		remoteDownload bool
 		remoteVersion  string
 	}
-}
-
-var k3sImportConfig struct {
-	ImagePaths []string
-	FailFast   bool
+	Debug bool
 }
 
 var upgradeCmd = &cobra.Command{
@@ -51,13 +48,12 @@ func init() {
 		}
 
 		upgradeCmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
-		upgradeCmd.Flags().BoolVar(&config.K3S.Debug, "debug", false, "enable debug mode")
+		upgradeCmd.Flags().BoolVar(&config.Debug, "debug", false, "enable debug mode")
 
 		upgradeCmd.Flags().MarkHidden("bundle")
 		upgradeCmd.Flags().MarkHidden("debug")
 
-		upgradeCmd.Flags().BoolVar(&k3sImportConfig.FailFast, "fail-fast", false, "fail on first error")
-		upgradeCmd.Flags().StringSliceVarP(&k3sImportConfig.ImagePaths, "image-path", "f", nil, "images to import (if specified, bundle images are ignored)")
+		upgradeCmd.Flags().StringSliceVarP(&config.Images.ImportPaths, "image-path", "f", nil, "images to import (if specified, bundle images are ignored)")
 
 		upgradeCmd.Flags().StringVarP(&config.Chart.kubeConfigPath, "kube-config", "k", "/etc/rancher/k3s/k3s.yaml", "Path to kubeconfig file")
 		upgradeCmd.Flags().StringVarP(&config.Chart.localChart, "local-chart", "l", "", "Path to local chart directory/archive")

@@ -2,15 +2,13 @@ package chart
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	helmclient "github.com/mittwald/go-helm-client"
-
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-func Install(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
+func Upgrade(ctx context.Context, cfg *Configuration, opts *HelmOptions, debug bool) error {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -48,15 +46,18 @@ func Install(ctx context.Context, cfg *Configuration, opts *HelmOptions) error {
 		Str("namespace", spec.Namespace).
 		Str("chart", spec.ChartName).
 		Str("release", spec.ReleaseName).
-		Msg("Installing chart")
+		Msg("Upgrading chart")
 
-	release, err := client.InstallChart(ctx, spec, nil)
+	release, err := client.UpgradeChart(ctx, spec, nil)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			logger.Info().Msg("Chart installation was cancelled")
-			return nil
+		if !debug {
+			if err := client.RollbackRelease(spec); err != nil {
+				logger.Error().Err(err).Msg("Rollback failed")
+			}
 		}
-		return fmt.Errorf("failed installing chart: %w", err)
+
+		logger.Error().Err(err).Msg("Upgrade failed")
+		return err
 	}
 
 	logger.Info().Msg(release.Info.Notes)

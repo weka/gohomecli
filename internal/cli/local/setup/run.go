@@ -131,5 +131,5 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		Override:   chartLocation,
 	}
 
-	return chart.InstallOrUpgrade(cmd.Context(), chartConfig, helmOptions)
+	return chart.Install(cmd.Context(), chartConfig, helmOptions)
 }

@@ -16,7 +16,7 @@ type UpgradeConfig struct {
 	Debug bool
 }
 
-func Upgrade(ctx context.Context, c UpgradeConfig) error {
+func Upgrade(ctx context.Context, c UpgradeConfig) (retErr error) {
 	setupLogger(c.Debug)
 
 	if !hasK3S() {
@@ -31,14 +31,12 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 	}
 
 	logger.Debug().Msg("Parsing K3S version")
-
 	curVersion, err := getK3SVersion(k3sBinary())
 	if err != nil {
 		return fmt.Errorf("get k3s version: %w", err)
 	}
 
 	logger.Info().Msgf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
-
 	if semver.Compare(manifest.K3S, curVersion) == -1 && !c.Debug {
 		logger.Error().Msg("Downgrading kubernetes cluster is not possible")
 		return nil
@@ -49,21 +47,30 @@ func Upgrade(ctx context.Context, c UpgradeConfig) error {
 		return fmt.Errorf("stop K3S service: %w", err)
 	}
 
-	logger.Info().Msg("Copying new k3s image...")
-	bundle := bundle.Tar(file)
+	backupFiles, err := backupK3S()
+	if err != nil {
+		if !c.Debug {
+			return fmt.Errorf("backup k3s: %w", err)
+		}
+		logger.Warn().Err(err).Msg("Backing up old K3S failed, doing upgrade anyway...")
+	}
+	defer func() {
+		if retErr != nil && len(backupFiles) > 0 && !c.Debug {
+			retErr = errors.Join(retErr, restore(backupFiles))
+		}
+		if err := serviceCmd("start").Run(); err != nil {
+			retErr = errors.Join(retErr, fmt.Errorf("start K3S service: %w", err))
+		}
+	}()
 
-	err = bundle.GetFiles(ctx, copyK3S(), copyAirgapImages())
+	logger.Info().Msg("Copying new k3s image...")
+	err = bundle.Tar(file).GetFiles(ctx, copyK3S(), copyAirgapImages())
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			logger.Info().Msg("Upgrade was cancelled")
-			return nil
+			logger.Warn().Msg("Upgrade was cancelled")
+			return err
 		}
-
 		return fmt.Errorf("read bundle: %w", err)
-	}
-
-	if err := serviceCmd("start").Run(); err != nil {
-		return fmt.Errorf("start K3S service: %w", err)
 	}
 
 	logger.Info().Msg("Upgrade completed")

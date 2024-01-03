@@ -1,7 +1,6 @@
 package k3s
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -19,36 +18,36 @@ func getCurrentPlatform() string {
 	return fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
-func unzippedData(imagePath string) ([]byte, error) {
+func imageReader(imagePath string) (r io.Reader, close func() error, err error) {
 	file, err := os.Open(imagePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	defer file.Close()
 
 	buffer := make([]byte, 512)
 	_, err = file.Read(buffer)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	_, err = file.Seek(0, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	mime := http.DetectContentType(buffer)
 	if mime == "application/x-gzip" {
 		reader, err := gzip.NewReader(file)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return io.ReadAll(reader)
+		return reader, func() error {
+			return errors.Join(reader.Close(), file.Close())
+		}, nil
 	}
 
-	return io.ReadAll(file)
+	return file, file.Close, nil
 }
 
 func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error {
@@ -63,7 +62,7 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 		default:
 		}
 
-		data, err := unzippedData(imagePath)
+		reader, closeFn, err := imageReader(imagePath)
 		if err != nil {
 			logger.Warn().
 				Err(err).
@@ -77,11 +76,15 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 			}
 		}
 
+		if closeFn != nil {
+			defer closeFn()
+		}
+
 		cmd, err := utils.ExecCommand(ctx, "k3s", []string{
 			"ctr", "image", "import",
 			"--platform", getCurrentPlatform(),
 			"--", "-"},
-			utils.WithStdin(bytes.NewBuffer(data)),
+			utils.WithStdin(reader),
 			utils.WithStdoutLogger(logger, utils.InfoLevel),
 			utils.WithStderrLogger(logger, utils.WarnLevel),
 		)

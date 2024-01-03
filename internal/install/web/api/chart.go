@@ -35,7 +35,7 @@ func installChart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = chart.InstallOrUpgrade(
+	err = chart.Install(
 		r.Context(),
 		&installRequest.config,
 		&chart.HelmOptions{KubeConfig: kubeConfig},

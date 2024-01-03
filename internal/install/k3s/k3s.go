@@ -21,7 +21,10 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const k3sInstallPath = "/usr/local/bin"
+const (
+	k3sInstallPath          = "/usr/local/bin"
+	defaultLocalStoragePath = "/opt/local-path-provisioner"
+)
 
 var logger = utils.GetLogger("K3S")
 
