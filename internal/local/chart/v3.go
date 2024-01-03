@@ -174,7 +174,7 @@ func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error)
 		err = errors.Join(err, writeMapEntry(cfg, key, v))
 	}
 
-	return cfg, nil
+	return cfg, err
 }
 
 func init() {
