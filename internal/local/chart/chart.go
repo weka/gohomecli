@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/repo"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
+	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/utils"
 )
 

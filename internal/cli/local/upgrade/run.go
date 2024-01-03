@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
-	"github.com/weka/gohomecli/internal/install/chart"
-	"github.com/weka/gohomecli/internal/install/k3s"
+	"github.com/weka/gohomecli/internal/local/bundle"
+	"github.com/weka/gohomecli/internal/local/chart"
+	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
 

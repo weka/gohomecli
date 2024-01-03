@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/weka/gohomecli/internal/install/bundle"
-	"github.com/weka/gohomecli/internal/install/k3s"
+	"github.com/weka/gohomecli/internal/local/bundle"
+	"github.com/weka/gohomecli/internal/local/k3s"
 )
 
 func isK3sEnabled() bool {
