@@ -22,7 +22,7 @@ var (
 var setupConfig struct {
 	config_v1.Configuration
 
-	setup_flags.Config
+	setup_flags.Flags
 
 	Iface      string
 	JsonConfig string
@@ -50,6 +50,12 @@ var setupCmd = &cobra.Command{
 			return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 		}
 
+		// if was specified from args
+		if setupConfig.TLS.Cert != "" {
+			var b = true
+			setupConfig.TLS.Enabled = &b
+		}
+
 		return nil
 	},
 	RunE: runSetup,
@@ -59,8 +65,7 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(setupCmd)
 
-		setup_flags.Use(setupCmd, &setupConfig.Config)
-
+		setup_flags.Use(setupCmd, &setupConfig.Flags)
 		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
 		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network")

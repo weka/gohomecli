@@ -16,7 +16,7 @@ var (
 var upgradeConfig struct {
 	config_v1.Configuration
 
-	setup_flags.Config
+	setup_flags.Flags
 }
 
 var upgradeCmd = &cobra.Command{
@@ -36,6 +36,6 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(upgradeCmd)
 
-		setup_flags.Use(upgradeCmd, &upgradeConfig.Config)
+		setup_flags.Use(upgradeCmd, &upgradeConfig.Flags)
 	})
 }

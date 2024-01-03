@@ -9,7 +9,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-type Config struct {
+type Flags struct {
 	Web         bool
 	WebBindAddr string
 	BundlePath  string
@@ -23,14 +23,14 @@ type Config struct {
 	Debug bool
 }
 
-func (c Config) Validate() error {
+func (c Flags) Validate() error {
 	if c.Chart.RemoteVersion != "" && !c.Chart.RemoteDownload {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 	}
 	return nil
 }
 
-func Use(cmd *cobra.Command, config *Config) {
+func Use(cmd *cobra.Command, config *Flags) {
 	if web.IsEnabled() {
 		cmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
 		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
