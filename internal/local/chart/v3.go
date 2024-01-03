@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var valuesGeneratorV3 *yamlGenerator
@@ -115,7 +116,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 
 	cfg := make(yamlMap)
 	var err error
-	if !configuration.Autoscaling.ValueOrZero() {
+	if utils.IsSetP(configuration.Autoscaling) {
 		err = errors.Join(
 			writeMapEntry(cfg, "api.main.replicas", preset.MainApi.Replicas),
 			writeMapEntry(cfg, "api.stats.replicas", preset.StatsApi.Replicas),
@@ -147,7 +148,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 }
 
 func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error) {
-	if !configuration.Forwarding.Enabled.ValueOrZero() {
+	if utils.IsSetP(configuration.Forwarding.Enabled) {
 		return yamlMap{}, nil
 	}
 
