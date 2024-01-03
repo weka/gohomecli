@@ -71,26 +71,22 @@ func Install(ctx context.Context, c InstallConfig) error {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Info().Msg("Setup was cancelled")
-			cleanup(false)
 			return nil
 		}
-
-		cleanup(c.Debug)
 		return err
 	}
 
 	err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
 	if err != nil && !errors.Is(err, ErrNoTLS) {
-		cleanup(c.Debug)
 		return err
 	}
 
 	return nil
 }
 
-// cleanup runs k3s-uninstall and removes copied files
+// Cleanup runs k3s-uninstall and removes copied files
 // if debug flag is not enabled
-func cleanup(debug bool) {
+func Cleanup(debug bool) {
 	if !debug {
 		logger.Info().Msg("Cleaning up installation")
 
