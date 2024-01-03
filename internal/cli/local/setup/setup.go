@@ -11,7 +11,6 @@ import (
 	setup_flags "github.com/weka/gohomecli/internal/cli/local/setup/flags"
 	"github.com/weka/gohomecli/internal/local/config"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
-	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -69,7 +68,7 @@ func init() {
 		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
 		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network")
-		setupCmd.Flags().StringVarP(&setupConfig.Host, "hostname", "n", k3s.Hostname(), "hostname for cluster")
+		setupCmd.Flags().StringVarP(&setupConfig.Host, "hostname", "n", "", "hostname for cluster")
 		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		setupCmd.Flags().StringSliceVar(&setupConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
 		setupCmd.Flags().StringVar(&setupConfig.TLS.Cert, "cert", "", "TLS certificate")
