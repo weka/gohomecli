@@ -1,4 +1,4 @@
-package dump
+package debug
 
 import (
 	"github.com/spf13/cobra"
@@ -8,7 +8,7 @@ import (
 )
 
 var dumpCmd = &cobra.Command{
-	Use:       "dump [flags] OUTPUT_ARCHIVE",
+	Use:       "collect-debug-info [flags] OUTPUT_ARCHIVE",
 	Short:     "Dump cluster information for debugging and save it into OUTPUT_ARCHIVE",
 	Args:      cobra.ExactArgs(1),
 	ValidArgs: []string{"OUTPUT_ARCHIVE"},
