@@ -2,7 +2,6 @@ package chart
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	helmclient "github.com/mittwald/go-helm-client"
@@ -52,10 +51,6 @@ func Install(ctx context.Context, opts *HelmOptions) error {
 
 	release, err := client.InstallChart(ctx, spec, nil)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			logger.Info().Msg("Chart installation was cancelled")
-			return nil
-		}
 		return fmt.Errorf("failed installing chart: %w", err)
 	}
 
