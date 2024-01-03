@@ -17,7 +17,7 @@ import (
 
 var logger = utils.GetLogger("setup")
 
-func runSetup(cmd *cobra.Command, args []string) error {
+func runSetup(cmd *cobra.Command, args []string) (err error) {
 	if setupConfig.BundlePath != bundle.BundlePath() {
 		if err := bundle.SetBundlePath(setupConfig.BundlePath); err != nil {
 			return err
@@ -33,7 +33,14 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err := k3s.Install(cmd.Context(), k3s.InstallConfig{
+	// cleanup on any error during installing
+	defer func() {
+		if err != nil && !errors.Is(err, k3s.ErrExists) {
+			k3s.Cleanup(setupConfig.Debug)
+		}
+	}()
+
+	err = k3s.Install(cmd.Context(), k3s.InstallConfig{
 		Configuration: setupConfig.Configuration,
 		Iface:         setupConfig.Iface,
 		Debug:         setupConfig.Debug,
