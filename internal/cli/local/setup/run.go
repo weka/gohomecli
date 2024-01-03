@@ -42,6 +42,9 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// wait before continue
+	k3s.Wait(cmd.Context())
+
 	// in debug mode we don't do fail-fast
 	err = k3s.ImportBundleImages(cmd.Context(), !setupConfig.Debug)
 	if err != nil {
