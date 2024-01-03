@@ -115,7 +115,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 
 	cfg := make(yamlMap)
 	var err error
-	if !configuration.Autoscaling {
+	if !configuration.Autoscaling.ValueOrZero() {
 		err = errors.Join(
 			writeMapEntry(cfg, "api.main.replicas", preset.MainApi.Replicas),
 			writeMapEntry(cfg, "api.stats.replicas", preset.StatsApi.Replicas),
@@ -147,7 +147,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 }
 
 func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error) {
-	if !configuration.Forwarding.Enabled {
+	if !configuration.Forwarding.Enabled.ValueOrZero() {
 		return yamlMap{}, nil
 	}
 

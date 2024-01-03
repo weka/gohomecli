@@ -30,22 +30,20 @@ func (c Config) Validate() error {
 	return nil
 }
 
-func AddFlags(config *Config) func(*cobra.Command) {
-	return func(cmd *cobra.Command) {
-		if web.IsEnabled() {
-			cmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
-			cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
-		}
-
-		cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
-		cmd.Flags().BoolVar(&config.Debug, "debug", false, "enable debug mode")
-
-		cmd.Flags().MarkHidden("bundle")
-		cmd.Flags().MarkHidden("debug")
-
-		cmd.Flags().StringVarP(&config.Chart.LocalChart, "local-chart", "l", "", "Path to local chart directory/archive")
-		cmd.Flags().BoolVarP(&config.Chart.RemoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
-		cmd.Flags().StringVar(&config.Chart.RemoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
-		cmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
+func Use(cmd *cobra.Command, config *Config) {
+	if web.IsEnabled() {
+		cmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
+		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
+
+	cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
+	cmd.Flags().BoolVar(&config.Debug, "debug", false, "enable debug mode")
+
+	cmd.Flags().MarkHidden("bundle")
+	cmd.Flags().MarkHidden("debug")
+
+	cmd.Flags().StringVarP(&config.Chart.LocalChart, "local-chart", "l", "", "Path to local chart directory/archive")
+	cmd.Flags().BoolVarP(&config.Chart.RemoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
+	cmd.Flags().StringVar(&config.Chart.RemoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
+	cmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
 }

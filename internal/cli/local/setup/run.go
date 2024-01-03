@@ -12,7 +12,10 @@ import (
 	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
+	"github.com/weka/gohomecli/internal/utils"
 )
+
+var logger = utils.GetLogger("setup")
 
 func runSetup(cmd *cobra.Command, args []string) error {
 	if setupConfig.BundlePath != bundle.BundlePath() {

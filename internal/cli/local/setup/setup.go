@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	Cli    hooks.Cli
-	logger = utils.GetLogger("setup")
+	Cli hooks.Cli
 )
 
 var setupConfig struct {
@@ -60,7 +59,7 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(setupCmd)
 
-		setup_flags.AddFlags(&setupConfig.Config)
+		setup_flags.Use(setupCmd, &setupConfig.Config)
 
 		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 

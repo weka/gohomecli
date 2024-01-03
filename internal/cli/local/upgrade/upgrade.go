@@ -36,6 +36,6 @@ func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(upgradeCmd)
 
-		setup_flags.AddFlags(&upgradeConfig.Config)
+		setup_flags.Use(upgradeCmd, &upgradeConfig.Config)
 	})
 }
