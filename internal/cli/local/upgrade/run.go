@@ -1,8 +1,6 @@
 package upgrade
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
@@ -22,7 +20,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	time.Sleep(5 * time.Second) // wait for k3s to be ready
+	k3s.Wait(cmd.Context())
 
 	// in debug mode we don't do fail-fast
 	err = k3s.ImportBundleImages(cmd.Context(), !upgradeConfig.Debug)

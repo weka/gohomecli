@@ -2,6 +2,7 @@ package k3s
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +33,23 @@ func setupLogger(debug bool) {
 	if debug {
 		utils.SetGlobalLoggingLevel(utils.DebugLevel)
 	}
+}
+
+// Wait waits for k3s to be up
+func Wait(ctx context.Context) error {
+	waitScript := `until [[ $(k3s ctr info) ]]; do sleep 5; done`
+
+	cmd, err := utils.ExecCommand(ctx, "bash", []string{"-"},
+		utils.WithStdin(strings.NewReader(waitScript)),
+		utils.WithStderrLogger(logger, utils.DebugLevel))
+	if err != nil {
+		return err
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return fmt.Errorf("kubectl wait: %w", err)
+	}
+	return nil
 }
 
 func k3sBinary() string {
