@@ -162,6 +162,21 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 	return cfg, err
 }
 
+func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error) {
+	if len(configuration.HelmOverrides) == 0 {
+		return yamlMap{}, nil
+	}
+
+	cfg := make(yamlMap)
+
+	var err error
+	for key, v := range configuration.HelmOverrides {
+		err = errors.Join(err, writeMapEntry(cfg, key, v))
+	}
+
+	return cfg, err
+}
+
 func init() {
 	valuesGeneratorV3 = &yamlGenerator{
 		visitors: map[string]configVisitor{},
@@ -172,6 +187,7 @@ func init() {
 	valuesGeneratorV3.AddVisitor("retention", configureRetention)
 	valuesGeneratorV3.AddVisitor("resources", configureResources)
 	valuesGeneratorV3.AddVisitor("forwarding", configureForwarding)
+	valuesGeneratorV3.AddVisitor("overrides", configureOverrides)
 }
 
 func generateValuesV3(configuration *config_v1.Configuration) (map[string]interface{}, error) {

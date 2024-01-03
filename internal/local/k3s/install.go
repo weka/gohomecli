@@ -43,6 +43,8 @@ func (c InstallConfig) k3sInstallArgs() string {
 		k3sArgs = append(k3sArgs, fmt.Sprintf("--tls-san=%s", strings.Join(c.ExternalIPs, ",")))
 	}
 
+	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
+
 	return strings.Join(k3sArgs, " ")
 }
 
