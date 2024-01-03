@@ -6,7 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/weka/gohomecli/internal/local/bundle"
 )
+
+// TODO: could be used without bundle using the remote download option
+func isChartEnabled() bool {
+	return bundle.IsBundled()
+}
 
 func allowedMethods(h http.HandlerFunc, methods ...string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

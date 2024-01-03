@@ -3,6 +3,8 @@ package chart
 import (
 	"errors"
 	"fmt"
+
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 )
 
 var (
@@ -11,7 +13,7 @@ var (
 )
 
 type (
-	configVisitor = func(configuration *Configuration) (yamlMap, error)
+	configVisitor = func(configuration *config_v1.Configuration) (yamlMap, error)
 	yamlGenerator struct {
 		visitors map[string]configVisitor
 	}
@@ -25,7 +27,7 @@ func (g *yamlGenerator) AddVisitor(name string, visitor configVisitor) {
 	g.visitors[name] = visitor
 }
 
-func (g *yamlGenerator) Generate(configuration *Configuration) (yamlMap, error) {
+func (g *yamlGenerator) Generate(configuration *config_v1.Configuration) (yamlMap, error) {
 	result := yamlMap{}
 
 	for name, visitor := range g.visitors {

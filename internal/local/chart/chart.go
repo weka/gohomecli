@@ -11,6 +11,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -33,44 +34,15 @@ type LocationOverride struct {
 }
 
 type HelmOptions struct {
-	KubeConfig        []byte            // path or content of kubeconfig file
-	Override          *LocationOverride // override chart package location
-	KubeContext       string            // kubeconfig context to use
-	NamespaceOverride string            // override namespace for release
+	KubeConfig        []byte                   // path or content of kubeconfig file
+	Override          *LocationOverride        // override chart package location
+	KubeContext       string                   // kubeconfig context to use
+	NamespaceOverride string                   // override namespace for release
+	Values            []byte                   // raw values.yaml
+	Config            *config_v1.Configuration // json config
 }
 
-// Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
-type Configuration struct {
-	Host    *string `json:"host"`    // ingress host
-	TLS     *bool   `json:"tls"`     // ingress tls enabled
-	TLSCert *string `json:"tlsCert"` // ingress tls cert
-	TLSKey  *string `json:"tlsKey"`  // ingress tls key
-
-	SMTPHost        *string `json:"smtpHost"`        // smtp server host
-	SMTPPort        *int    `json:"smtpPort"`        // smtp server port
-	SMTPUser        *string `json:"smtpUser"`        // smtp server user
-	SMTPPassword    *string `json:"smtpPassword"`    // smtp server password
-	SMTPInsecure    *bool   `json:"smtpInsecure"`    // smtp insecure connection
-	SMTPSender      *string `json:"smtpSender"`      // smtp sender name
-	SMTPSenderEmail *string `json:"smtpSenderEmail"` // smtp sender email
-
-	DiagnosticsRetentionDays *int `json:"diagnosticsRetentionDays"` // diagnostics retention days
-	EventsRetentionDays      *int `json:"eventsRetentionDays"`      // events retention days
-
-	ForwardingEnabled                   bool    `json:"forwardingEnabled"`                   // forwarding enabled
-	ForwardingUrl                       *string `json:"forwardingUrl"`                       // forwarding url override
-	ForwardingEnableEvents              *bool   `json:"forwardingEnableEvents"`              // forwarding enable events
-	ForwardingEnableUsageReports        *bool   `json:"forwardingEnableUsageReports"`        // forwarding enable usage reports
-	ForwardingEnableAnalytics           *bool   `json:"forwardingEnableAnalytics"`           // forwarding enable analytics
-	ForwardingEnableDiagnostics         *bool   `json:"forwardingEnableDiagnostics"`         // forwarding enable diagnostics
-	ForwardingEnableStats               *bool   `json:"forwardingEnableStats"`               // forwarding enable stats
-	ForwardingEnableClusterRegistration *bool   `json:"forwardingEnableClusterRegistration"` // forwarding enable cluster registration
-
-	Autoscaling     bool `json:"autoscaling"`        // enable services autoscaling
-	WekaNodesServed *int `json:"wekaNodesMonitored"` // number of weka nodes to monitor, controls load preset
-}
-
-func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) (*helmclient.ChartSpec, error) {
+func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSpec, error) {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
 		namespace = opts.NamespaceOverride
@@ -85,19 +57,19 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 	}
 
 	logger.Debug().
-		Interface("configuration", cfg).
+		Interface("configuration", opts.Config).
 		Msg("Generating chart values")
 
-	values, err := generateValuesV3(cfg)
+	values, err := generateValuesV3(opts.Config)
 	if err != nil {
 		return nil, err
 	}
-
-	valuesYaml, err := yaml.Marshal(values)
+	opts.Values, err = yaml.Marshal(values)
 	if err != nil {
 		return nil, fmt.Errorf("failed serializing values yaml: %w", err)
 	}
-	logger.Debug().Msgf("Generated values:\n %s", string(valuesYaml))
+
+	logger.Debug().Msgf("Helm values.yaml:\n%s", string(opts.Values))
 
 	chartVersion := "" // any available
 	if opts.Override != nil {
@@ -108,7 +80,7 @@ func chartSpec(client helmclient.Client, cfg *Configuration, opts *HelmOptions) 
 		ChartName:       chartLocation,
 		Version:         chartVersion,
 		Namespace:       namespace,
-		ValuesYaml:      string(valuesYaml),
+		ValuesYaml:      string(opts.Values),
 		CreateNamespace: true,
 		ResetValues:     true,
 		Wait:            true,

@@ -222,3 +222,13 @@ func ExecCommand(ctx context.Context, name string, args []string, opts ...comman
 	}
 	return cmd, cmd.Start()
 }
+
+// IsSetP returns true if pointer is not nil and value is not empty
+func IsSetP[T comparable](v *T) bool {
+	var empty T
+	if v != nil && *v != empty {
+		return true
+	}
+
+	return false
+}

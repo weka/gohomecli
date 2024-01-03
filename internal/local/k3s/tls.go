@@ -48,10 +48,14 @@ func setupTLS(ctx context.Context, config TLSConfig) error {
 
 	logger.Info().Msg("Adding TLS secret")
 
-	cmd, err := utils.ExecCommand(ctx, "kubectl", []string{
-		"create", "secret", "tls", "tls-secret",
-		"--namespace", "kube-system", "--cert", config.CertFile, "--key", config.KeyFile,
-	}, utils.WithStderrLogger(logger, utils.WarnLevel), utils.WithStdoutLogger(logger, utils.InfoLevel))
+	cmd, err := utils.ExecCommand(ctx, "kubectl",
+		[]string{
+			"create", "secret", "tls", "tls-secret",
+			"--namespace", "kube-system", "--cert", config.CertFile, "--key", config.KeyFile,
+		},
+		utils.WithStderrLogger(logger, utils.WarnLevel),
+		utils.WithStdoutLogger(logger, utils.InfoLevel),
+	)
 
 	if err != nil {
 		return err
@@ -66,9 +70,11 @@ func setupTLS(ctx context.Context, config TLSConfig) error {
 
 	waitScript := `until [[ $(kubectl get endpoints/traefik -n kube-system) ]]; do sleep 5; done`
 
-	cmd, err = utils.ExecCommand(ctx, "bash", []string{"-"},
+	cmd, err = utils.ExecCommand(ctx, "bash",
+		[]string{"-"},
 		utils.WithStdin(strings.NewReader(waitScript)),
-		utils.WithStderrLogger(logger, utils.DebugLevel))
+		utils.WithStderrLogger(logger, utils.DebugLevel),
+	)
 	if err != nil {
 		return err
 	}
@@ -78,9 +84,12 @@ func setupTLS(ctx context.Context, config TLSConfig) error {
 	}
 
 	logger.Info().Msg("Applying traefik config")
-	cmd, err = utils.ExecCommand(ctx, "kubectl", []string{"apply", "-f", "-"},
+	cmd, err = utils.ExecCommand(ctx, "kubectl",
+		[]string{"apply", "-f", "-"},
 		utils.WithStdin(strings.NewReader(tlsYaml)),
-		utils.WithStdoutLogger(logger, utils.InfoLevel), utils.WithStderrLogger(logger, utils.WarnLevel))
+		utils.WithStdoutLogger(logger, utils.InfoLevel),
+		utils.WithStderrLogger(logger, utils.WarnLevel),
+	)
 	if err != nil {
 		return err
 	}

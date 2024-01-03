@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -24,12 +25,10 @@ var (
 )
 
 type InstallConfig struct {
-	Iface       string   // interface for k3s network to work on, required
-	Hostname    string   // host name of the cluster, optional, default from env
-	NodeIP      string   // node ip to bind on as primary internal ip
-	ExternalIPs []string // list of external ip addresses, optional
-	TLS         TLSConfig
-	Debug       bool
+	config_v1.Configuration
+
+	Iface string // interface for k3s network to work on, required
+	Debug bool
 }
 
 func (c InstallConfig) k3sInstallArgs() string {
@@ -41,6 +40,7 @@ func (c InstallConfig) k3sInstallArgs() string {
 
 	if len(c.ExternalIPs) > 0 {
 		k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", strings.Join(c.ExternalIPs, ",")))
+		k3sArgs = append(k3sArgs, fmt.Sprintf("--tls-san=%s", strings.Join(c.ExternalIPs, ",")))
 	}
 
 	return strings.Join(k3sArgs, " ")
@@ -54,16 +54,16 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return ErrExists
 	}
 
-	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
-		return err
-	}
-
 	name, manifest, err := findBundle()
 	if err != nil {
 		return err
 	}
 
 	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
+
+	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
+		return err
+	}
 
 	bundle := bundle.Tar(name)
 
@@ -79,7 +79,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	err = setupTLS(ctx, c.TLS)
+	err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
 	if err != nil && !errors.Is(err, ErrNoTLS) {
 		cleanup(c.Debug)
 		return err
@@ -160,9 +160,9 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 		Callback: func(ctx context.Context, fi fs.FileInfo, r io.Reader) error {
 			logger.Info().Msg("Starting k3s install")
 
-			if c.Hostname != "" {
-				os.Setenv("K3S_HOSTNAME", c.Hostname)
-				os.Setenv("K3S_NODE_NAME", c.Hostname)
+			if c.Host != "" {
+				os.Setenv("K3S_HOSTNAME", c.Host)
+				os.Setenv("K3S_NODE_NAME", c.Host)
 			}
 			overriden, err := resolvConfOverriden()
 			if err != nil {
