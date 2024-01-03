@@ -47,8 +47,8 @@ type Configuration struct {
 	Autoscaling     *bool `json:"autoscaling,omitempty"`        // enable services autoscaling
 	WekaNodesServed int   `json:"wekaNodesMonitored,omitempty"` // number of weka nodes to monitor, controls load preset
 
-	HelmOverrides map[string]any    // additional overrides for helm chart
-	K3SArgs       map[string]string // k3s args overrides during install
+	HelmOverrides map[string]any `json:"helmOverrides"` // additional overrides for helm chart
+	K3SArgs       []string       `json:"k3sArgs"`       // k3s args overrides during install
 }
 
 func (c Configuration) Validate() error {
