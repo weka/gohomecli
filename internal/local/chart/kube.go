@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+const KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
+
 // ReadKubeConfig reads the kubeconfig from the given path with fallback to ~/.kube/config
 func ReadKubeConfig(kubeConfigPath string) ([]byte, error) {
 	if kubeConfigPath == "" {

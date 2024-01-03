@@ -56,19 +56,17 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 		return nil, err
 	}
 
-	if len(opts.Values) == 0 {
-		logger.Debug().
-			Interface("configuration", opts.Config).
-			Msg("Generating chart values")
+	logger.Debug().
+		Interface("configuration", opts.Config).
+		Msg("Generating chart values")
 
-		values, err := generateValuesV3(opts.Config)
-		if err != nil {
-			return nil, err
-		}
-		opts.Values, err = yaml.Marshal(values)
-		if err != nil {
-			return nil, fmt.Errorf("failed serializing values yaml: %w", err)
-		}
+	values, err := generateValuesV3(opts.Config)
+	if err != nil {
+		return nil, err
+	}
+	opts.Values, err = yaml.Marshal(values)
+	if err != nil {
+		return nil, fmt.Errorf("failed serializing values yaml: %w", err)
 	}
 
 	logger.Debug().Msgf("Helm values.yaml:\n%s", string(opts.Values))

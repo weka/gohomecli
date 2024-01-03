@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -15,21 +12,7 @@ import (
 	"github.com/weka/gohomecli/internal/local/config"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
-	"github.com/weka/gohomecli/internal/utils"
 )
-
-func normPath(path string) (string, error) {
-	if strings.HasPrefix(path, "~/") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("unable to expand home directory: %w", err)
-		}
-
-		path = filepath.Join(homeDir, path[2:])
-	}
-
-	return filepath.Clean(path), nil
-}
 
 func runSetup(cmd *cobra.Command, args []string) error {
 	if setupConfig.BundlePath != bundle.BundlePath() {
@@ -56,50 +39,34 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(k3sImportConfig.ImagePaths) == 0 {
-		err = k3s.ImportBundleImages(cmd.Context(), k3sImportConfig.FailFast)
-	} else {
-		err = k3s.ImportImages(cmd.Context(), k3sImportConfig.ImagePaths, k3sImportConfig.FailFast)
-	}
-
+	// in debug mode we don't do fail-fast
+	err = k3s.ImportBundleImages(cmd.Context(), !setupConfig.Debug)
 	if err != nil {
 		return err
 	}
 
-	if setupConfig.Chart.remoteVersion != "" && !setupConfig.Chart.remoteDownload {
-		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
-	}
-
-	if setupConfig.Chart.kubeConfigPath != "" {
-		setupConfig.Chart.kubeConfigPath, err = normPath(setupConfig.Chart.kubeConfigPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	kubeConfig, err := chart.ReadKubeConfig(setupConfig.Chart.kubeConfigPath)
+	kubeConfig, err := chart.ReadKubeConfig(chart.KubeConfigPath)
 	if err != nil {
 		return err
 	}
 
 	var chartLocation *chart.LocationOverride
-	if setupConfig.Chart.remoteDownload {
+	if setupConfig.Chart.RemoteDownload {
 		chartLocation = &chart.LocationOverride{
 			RemoteDownload: true,
-			Version:        setupConfig.Chart.remoteVersion,
+			Version:        setupConfig.Chart.RemoteVersion,
 		}
 	}
 
-	if setupConfig.Chart.localChart != "" {
+	if setupConfig.Chart.LocalChart != "" {
 		chartLocation = &chart.LocationOverride{
-			Path: setupConfig.Chart.localChart,
+			Path: setupConfig.Chart.LocalChart,
 		}
 	}
 
 	helmOptions := &chart.HelmOptions{
 		KubeConfig: kubeConfig,
 		Override:   chartLocation,
-		Values:     setupConfig.Chart.values,
 		Config:     &setupConfig.Configuration,
 	}
 
