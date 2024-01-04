@@ -139,6 +139,7 @@ func setupNetwork(iface string, c *config_v1.Configuration) (err error) {
 
 	if c.Host == "" {
 		logger.Warn().Msgf("Hostname is not set, using %q as Hostname", c.NodeIP)
+		c.Host = c.NodeIP
 	}
 
 	return nil
