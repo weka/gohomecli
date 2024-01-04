@@ -26,7 +26,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := k3s.Install(r.Context(), k3s.InstallConfig{
-		Configuration: config,
+		Configuration: &config,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

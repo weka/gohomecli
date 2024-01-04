@@ -1,7 +1,5 @@
 package config_v1
 
-import "fmt"
-
 type TLSConfig struct {
 	Cert string `json:"cert,omitempty"` // ingress tls cert
 	Key  string `json:"key,omitempty"`  // ingress tls key
@@ -52,9 +50,5 @@ type Configuration struct {
 }
 
 func (c Configuration) Validate() error {
-	if c.Host == "" {
-		return fmt.Errorf("host name is required")
-	}
-
 	return nil
 }
