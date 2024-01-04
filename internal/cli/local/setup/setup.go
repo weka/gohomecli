@@ -22,6 +22,9 @@ type setup struct {
 
 	Iface      string
 	JsonConfig string
+
+	TLSCert string // TLS certificate file
+	TLSKey  string // TLS key file
 }
 
 func (s setup) Validate() error {
@@ -48,6 +51,10 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
+		if err := readTLS(setupConfig.TLSCert, setupConfig.TLSKey, &setupConfig.Configuration); err != nil {
+			return err
+		}
+
 		return setupConfig.Validate()
 	},
 	RunE: runSetup,
@@ -65,8 +72,9 @@ func init() {
 
 		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
 		setupCmd.Flags().StringSliceVar(&setupConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
-		setupCmd.Flags().StringVar(&setupConfig.TLS.Cert, "cert", "", "TLS certificate")
-		setupCmd.Flags().StringVar(&setupConfig.TLS.Key, "key", "", "TLS secret key")
+
+		setupCmd.Flags().StringVar(&setupConfig.TLSCert, "cert", "", "TLS certificate file")
+		setupCmd.Flags().StringVar(&setupConfig.TLSKey, "key", "", "TLS secret key file")
 
 		setupCmd.MarkFlagRequired("iface")
 		setupCmd.Flags().MarkHidden("ip")

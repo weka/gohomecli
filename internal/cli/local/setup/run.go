@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
 	"github.com/weka/gohomecli/internal/local/config"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
@@ -89,4 +91,25 @@ func runSetup(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	return config.SaveV1(config.CLIConfig, setupConfig.Configuration)
+}
+
+func readTLS(certFile, keyFile string, config *config_v1.Configuration) error {
+	if certFile == "" || keyFile == "" {
+		return nil
+	}
+
+	cert, err := os.ReadFile(certFile)
+	if err != nil {
+		return err
+	}
+	config.TLS.Cert = string(cert)
+
+	key, err := os.ReadFile(keyFile)
+	if err != nil {
+		return err
+	}
+
+	config.TLS.Key = string(key)
+
+	return nil
 }

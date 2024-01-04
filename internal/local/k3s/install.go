@@ -78,7 +78,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
-	err = setupTLS(ctx, TLSConfig{CertFile: c.TLS.Cert, KeyFile: c.TLS.Key})
+	err = setupTLS(ctx, c.Configuration)
 	if err != nil && !errors.Is(err, ErrNoTLS) {
 		return err
 	}
