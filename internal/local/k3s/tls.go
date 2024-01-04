@@ -1,14 +1,20 @@
 package k3s
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
+
+const waitScript = `until [[ $(kubectl get endpoints/traefik -n kube-system) ]]; do sleep 5; done`
 
 var tlsYaml = `---
 apiVersion: traefik.containo.us/v1alpha1
@@ -19,58 +25,44 @@ metadata:
 spec:
   defaultCertificate:
     secretName: tls-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-secret
+  namespace: kube-system
+data:
+  tls.crt: {{ .Cert | b64enc }}
+  tls.key: {{ .Key | b64enc }}
+type: Opaque
 `
 
-var ErrNoTLS = errors.New("no tls files")
-
-type TLSConfig struct {
-	CertFile string
-	KeyFile  string
+func init() {
+	tlsTemplate, _ = template.New("tls").
+		Funcs(template.FuncMap{
+			"b64enc": func(s string) string {
+				return base64.StdEncoding.EncodeToString([]byte(s))
+			},
+		}).
+		Parse(tlsYaml)
 }
 
-func (t *TLSConfig) WithDefaults() TLSConfig {
-	if t.CertFile == "" {
-		t.CertFile = "/etc/ssl/certs/k3s.cert"
-	}
-	if t.KeyFile == "" {
-		t.KeyFile = "/etc/ssl/k3s.pem"
-	}
-	return *t
-}
+var (
+	ErrNoTLS    = errors.New("no tls files")
+	tlsTemplate *template.Template
+)
 
-func setupTLS(ctx context.Context, config TLSConfig) error {
-	config = config.WithDefaults()
-
-	if !utils.IsFileExists(config.CertFile) || !utils.IsFileExists(config.KeyFile) {
+func setupTLS(ctx context.Context, config config_v1.Configuration) error {
+	if config.TLS.Key == "" || config.TLS.Cert == "" {
 		logger.Warn().Msg("No TLS configuration added")
 		return ErrNoTLS
 	}
 
 	logger.Info().Msg("Adding TLS secret")
 
-	cmd, err := utils.ExecCommand(ctx, "kubectl",
-		[]string{
-			"create", "secret", "tls", "tls-secret",
-			"--namespace", "kube-system", "--cert", config.CertFile, "--key", config.KeyFile,
-		},
-		utils.WithStderrLogger(logger, utils.WarnLevel),
-		utils.WithStdoutLogger(logger, utils.InfoLevel),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		return fmt.Errorf("kubectl create secret: %w", err)
-	}
-
 	logger.Info().Msg("Waiting for Traefik to be ready")
 
-	waitScript := `until [[ $(kubectl get endpoints/traefik -n kube-system) ]]; do sleep 5; done`
-
-	cmd, err = utils.ExecCommand(ctx, "bash",
+	cmd, err := utils.ExecCommand(ctx, "bash",
 		[]string{"-"},
 		utils.WithStdin(strings.NewReader(waitScript)),
 		utils.WithStderrLogger(logger, utils.DebugLevel),
@@ -83,10 +75,16 @@ func setupTLS(ctx context.Context, config TLSConfig) error {
 		return fmt.Errorf("kubectl wait: %w", err)
 	}
 
-	logger.Info().Msg("Applying traefik config")
+	var buf bytes.Buffer
+
+	if err := tlsTemplate.Execute(&buf, config.TLS); err != nil {
+		return fmt.Errorf("TLS template: %w", err)
+	}
+
+	logger.Info().Msg("Applying TLS config")
 	cmd, err = utils.ExecCommand(ctx, "kubectl",
 		[]string{"apply", "-f", "-"},
-		utils.WithStdin(strings.NewReader(tlsYaml)),
+		utils.WithStdin(&buf),
 		utils.WithStdoutLogger(logger, utils.InfoLevel),
 		utils.WithStderrLogger(logger, utils.WarnLevel),
 	)
