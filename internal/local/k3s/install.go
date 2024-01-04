@@ -25,7 +25,7 @@ var (
 )
 
 type InstallConfig struct {
-	config_v1.Configuration
+	*config_v1.Configuration
 
 	Iface string // interface for k3s network to work on, required
 	Debug bool
@@ -63,7 +63,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 
 	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
 
-	if err := setupNetwork(c.Iface, &c.NodeIP); err != nil {
+	if err := setupNetwork(c.Iface, c.Configuration); err != nil {
 		return err
 	}
 

@@ -52,7 +52,7 @@ var (
 	tlsTemplate *template.Template
 )
 
-func setupTLS(ctx context.Context, config config_v1.Configuration) error {
+func setupTLS(ctx context.Context, config *config_v1.Configuration) error {
 	if config.TLS.Key == "" || config.TLS.Cert == "" {
 		logger.Warn().Msg("No TLS configuration added")
 		return ErrNoTLS

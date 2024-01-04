@@ -19,6 +19,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -92,20 +93,9 @@ func hasSystemd() bool {
 	return true
 }
 
-func Hostname() string {
-	hostname := os.Getenv("HOSTNAME")
-	if hostname == "" {
-		f, _ := os.Open("/etc/hostname")
-		hostname, _ = bufio.NewReader(f).ReadString('\n')
-		f.Close()
-	}
-
-	return hostname
-}
-
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
-func setupNetwork(iface string, nodeIP *string) (err error) {
+func setupNetwork(iface string, c *config_v1.Configuration) (err error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return err
@@ -133,18 +123,23 @@ func setupNetwork(iface string, nodeIP *string) (err error) {
 
 		ip := ipnet.IP.To4()
 		// setup first ip as default one
-		if *nodeIP == "" {
+		if c.NodeIP == "" {
 			logger.Warn().Msgf("IP not defined, using %q from %q as NodeIP\n", ip.String(), iface)
-			*nodeIP = ip.String()
+			c.NodeIP = ip.String()
 		}
 		// check if provided node ip matched to interface
-		if *nodeIP == ip.String() {
+		if c.NodeIP == ip.String() {
 			ipMatch = true
 		}
 	}
 
 	if !ipMatch {
-		return fmt.Errorf("IP address for node %q not belongs to %q", *nodeIP, iface)
+		return fmt.Errorf("IP address for node %q not belongs to %q", c.NodeIP, iface)
+	}
+
+	if c.Host == "" {
+		logger.Warn().Msgf("Hostname is not set, using %q as Hostname", c.NodeIP)
+		c.Host = c.NodeIP
 	}
 
 	return nil
