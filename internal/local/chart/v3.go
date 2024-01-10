@@ -149,14 +149,14 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 
 	cfg := make(yamlMap)
 	err := errors.Join(
-		writeMapEntry(cfg, "forwarding.enabled", true),
-		writeMapEntryIfSet(cfg, "forwarding.url", configuration.Forwarding.Url),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
-		writeMapEntryIfSet(cfg, "forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
+		writeMapEntry(cfg, "api.forwarding.enabled", true),
+		writeMapEntryIfSet(cfg, "api.forwarding.url", configuration.Forwarding.Url),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
+		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
 	)
 
 	return cfg, err
