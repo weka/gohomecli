@@ -102,7 +102,7 @@ func createDefaultConfigFileAndExit(createDir bool) {
 
 func readCLIConfig() *Config {
 	logger.Debug().Str("file", ConfigFilePath).Msg("Reading configuration")
-	data, e := ioutil.ReadFile(ConfigFilePath)
+	data, e := os.ReadFile(ConfigFilePath)
 	if e != nil {
 		logger.Fatal().
 			Str("file", ConfigFilePath).
