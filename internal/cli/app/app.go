@@ -6,7 +6,10 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 
+	"github.com/weka/gohomecli/internal/cli/api"
+	"github.com/weka/gohomecli/internal/cli/config"
 	"github.com/weka/gohomecli/internal/env"
 )
 
@@ -23,6 +26,12 @@ var appCmd = &cobra.Command{
 			return fmt.Errorf("invalid color mode: %s", env.ColorMode)
 		}
 
+		env.InitEnv()
+
+		if cmdHasGroup(cmd, api.APIGroup.ID, config.ConfigGroup.ID) {
+			env.InitConfig(env.SiteName)
+		}
+
 		return nil
 	},
 	SilenceErrors: true, // we're having custom UserError, so disabling integrated one
@@ -34,7 +43,6 @@ func Cmd() *cobra.Command {
 }
 
 func init() {
-	cobra.OnInitialize(env.InitEnv)
 	cobra.EnableTraverseRunHooks = true
 
 	appCmd.PersistentFlags().StringVar(&env.SiteName, "site", "",
@@ -43,4 +51,16 @@ func init() {
 		"verbose output")
 	appCmd.PersistentFlags().StringVar(&env.ColorMode, "color", "auto",
 		"colored output, even when stdout is not a terminal")
+}
+
+func cmdHasGroup(cmd *cobra.Command, groupsIDs ...string) bool {
+	if slices.Contains(groupsIDs, cmd.GroupID) {
+		return true
+	}
+
+	if cmd.Parent() != nil {
+		return cmdHasGroup(cmd.Parent(), groupsIDs...)
+	}
+
+	return false
 }

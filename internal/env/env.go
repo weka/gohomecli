@@ -45,7 +45,6 @@ func InitEnv() {
 	case "auto":
 		utils.IsColorOutputSupported = IsInteractiveTerminal
 	}
-	initConfig()
 	initLogging()
 }
 
@@ -53,8 +52,4 @@ func initLogging() {
 	if VerboseLogging {
 		utils.SetGlobalLoggingLevel(utils.DebugLevel)
 	}
-}
-
-func initConfig() {
-	InitConfig(SiteName)
 }
