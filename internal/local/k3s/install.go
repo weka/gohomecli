@@ -38,11 +38,6 @@ func (c InstallConfig) k3sInstallArgs() string {
 		fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
 	}
 
-	if len(c.ExternalIPs) > 0 {
-		k3sArgs = append(k3sArgs, fmt.Sprintf("--node-external-ip=%s", strings.Join(c.ExternalIPs, ",")))
-		k3sArgs = append(k3sArgs, fmt.Sprintf("--tls-san=%s", strings.Join(c.ExternalIPs, ",")))
-	}
-
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
 
 	return strings.Join(k3sArgs, " ")
@@ -63,7 +58,7 @@ func Install(ctx context.Context, c InstallConfig) error {
 
 	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
 
-	if err := setupNetwork(c.Iface, c.Configuration); err != nil {
+	if err := setupNetwork(&c); err != nil {
 		return err
 	}
 

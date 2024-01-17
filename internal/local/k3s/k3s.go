@@ -19,7 +19,6 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
-	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -95,54 +94,89 @@ func hasSystemd() bool {
 
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
-func setupNetwork(iface string, c *config_v1.Configuration) (err error) {
-	ifaces, err := net.Interfaces()
+func setupNetwork(c *InstallConfig) (err error) {
+	netIF, err := getInterface(c.Iface)
 	if err != nil {
 		return err
 	}
 
-	var nodeIface *net.Interface
+	if c.Iface == "" {
+		// use random iface
+		c.Iface = netIF.Name
+	}
+
+	err = validateIpHostname(netIF, c.NodeIP, &c.Host)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getInterface checks if iface name is valid and running
+func getInterface(iface string) (net.Interface, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return net.Interface{}, err
+	}
+
 	for _, i := range ifaces {
-		if iface == i.Name && i.Flags&net.FlagLoopback == 0 {
-			nodeIface = &i
-			break
+		// if it's loopback or not running - skip it
+		if i.Flags&net.FlagLoopback == net.FlagLoopback || i.Flags&net.FlagRunning != net.FlagRunning {
+			logger.Debug().
+				Str("iface", i.Name).
+				Bool("loopback", i.Flags&net.FlagLoopback == net.FlagLoopback).
+				Bool("running", i.Flags&net.FlagRunning == net.FlagRunning).
+				Msg("Skipping interface")
+			continue
+		}
+
+		if iface == i.Name || iface == "" {
+			logger.Info().
+				Str("iface", i.Name).
+				Bool("loopback", i.Flags&net.FlagLoopback == net.FlagLoopback).
+				Bool("running", i.Flags&net.FlagRunning == net.FlagRunning).
+				Msg("Found interface for networking")
+
+			return i, nil
 		}
 	}
 
-	if nodeIface == nil {
-		return fmt.Errorf("interface %q is not exists or it's loopback interface", iface)
+	return net.Interface{}, fmt.Errorf("network interface %q is not running, does not exists or it's loopback interface", iface)
+}
+
+// validateIpHostname returns any IP from iface and error if provided IP not match to the interface
+func validateIpHostname(iface net.Interface, ip string, hostname *string) error {
+	addr, err := iface.Addrs()
+	if err != nil {
+		return fmt.Errorf("network addr: %w", err)
 	}
 
-	addr, _ := nodeIface.Addrs()
-	var ipMatch bool
 	for _, a := range addr {
 		ipnet, ok := a.(*net.IPNet)
 		if !ok || ipnet.IP.To4() == nil {
 			continue
 		}
-
-		ip := ipnet.IP.To4()
-		// setup first ip as default one
-		if c.NodeIP == "" {
-			logger.Warn().Msgf("IP not defined, using %q from %q as NodeIP\n", ip.String(), iface)
-			c.NodeIP = ip.String()
+		if ip == ipnet.IP.To4().String() {
+			return nil
 		}
-		// check if provided node ip matched to interface
-		if c.NodeIP == ip.String() {
-			ipMatch = true
+
+		if *hostname == "" {
+			// set IP to hostname
+			logger.Warn().
+				Str("hostname", ipnet.IP.To4().String()).
+				Msgf("Hostname is not set, using IP")
+
+			*hostname = ipnet.IP.To4().String()
+		}
+
+		if ip == "0.0.0.0" {
+			// nothing to check
+			return nil
 		}
 	}
 
-	if !ipMatch {
-		return fmt.Errorf("IP address for node %q not belongs to %q", c.NodeIP, iface)
-	}
-
-	if c.Host == "" {
-		logger.Warn().Msgf("Hostname is not set, using %q as Hostname", c.NodeIP)
-		c.Host = c.NodeIP
-	}
-
-	return nil
+	return fmt.Errorf("IP address for node %q is not exists", ip)
 }
 
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
