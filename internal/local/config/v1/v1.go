@@ -33,9 +33,8 @@ type ForwardingConfig struct {
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Host        string   `json:"host,omitempty"`         // ingress host
-	NodeIP      string   `json:"node_ip,omitempty"`      // node ip to bind on as primary internal ip
-	ExternalIPs []string `json:"external_ips,omitempty"` // list of external ip addresses, optional
+	Host   string `json:"host,omitempty"`   // ingress host
+	BindIP string `json:"bindIp,omitempty"` // node ip to bind on
 
 	TLS           TLSConfig        `json:"tls,omitempty"`
 	SMTP          SMTPConfig       `json:"smtp,omitempty"`

@@ -65,18 +65,13 @@ func init() {
 		appCmd.AddCommand(setupCmd)
 
 		setup_flags.Use(setupCmd, &setupConfig.Flags)
-		setupCmd.Flags().StringVarP(&setupConfig.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
-		setupCmd.Flags().StringVarP(&setupConfig.Iface, "iface", "i", "", "interface for k3s network (required)")
-		setupCmd.Flags().StringVarP(&setupConfig.Host, "hostname", "n", "", "hostname for cluster (required)")
+		setupCmd.Flags().StringVar(&setupConfig.Host, "host", "", "public host or IP address for LWH")
 
-		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "", "primary IP internal address for wekahome API")
-		setupCmd.Flags().StringSliceVar(&setupConfig.ExternalIPs, "ips", nil, "additional IP addresses for wekahome API (e.g public ip)")
+		setupCmd.Flags().StringVar(&setupConfig.BindIP, "bind-ip", "0.0.0.0", "IP address to use for cluster")
+		setupCmd.Flags().StringVar(&setupConfig.Iface, "iface", "", "interface to use for internal networking")
 
-		setupCmd.Flags().StringVar(&setupConfig.TLSCert, "cert", "", "TLS certificate file")
-		setupCmd.Flags().StringVar(&setupConfig.TLSKey, "key", "", "TLS secret key file")
-
-		setupCmd.MarkFlagRequired("iface")
-		setupCmd.Flags().MarkHidden("ip")
+		setupCmd.Flags().StringVar(&setupConfig.TLSCert, "tls-cert", "", "TLS certificate file")
+		setupCmd.Flags().StringVar(&setupConfig.TLSKey, "tls-key", "", "TLS secret key file")
 	})
 }

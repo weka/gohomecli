@@ -42,7 +42,7 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 }
 
 func SaveV1(path string, c config_v1.Configuration) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0750))
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600))
 	if err != nil {
 		return err
 	}

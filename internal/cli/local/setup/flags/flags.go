@@ -13,8 +13,8 @@ type Flags struct {
 	Web         bool
 	WebBindAddr string
 	BundlePath  string
-
-	Chart struct {
+	JsonConfig  string
+	Chart       struct {
 		LocalChart     string
 		RemoteDownload bool
 		RemoteVersion  string
@@ -35,6 +35,8 @@ func Use(cmd *cobra.Command, config *Flags) {
 		cmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
 		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
+
+	cmd.Flags().StringVarP(&config.JsonConfig, "json-config", "c", "", "Configuration in JSON format (file or JSON string)")
 
 	cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
 	cmd.Flags().BoolVar(&config.Debug, "debug", false, "enable debug mode")

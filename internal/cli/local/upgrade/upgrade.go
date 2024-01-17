@@ -31,7 +31,11 @@ var upgradeCmd = &cobra.Command{
 	Short: "Upgrade Local Weka Home",
 	Long:  `Upgrade Weka Home with K3S bundle`,
 	PreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		if err := config.ReadV1(config.CLIConfig, &upgradeConfig.Configuration); err != nil {
+		var c = config.CLIConfig
+		if upgradeConfig.JsonConfig != "" {
+			c = upgradeConfig.JsonConfig
+		}
+		if err := config.ReadV1(c, &upgradeConfig.Configuration); err != nil {
 			return err
 		}
 
