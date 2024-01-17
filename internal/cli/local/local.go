@@ -26,7 +26,7 @@ var localCmd = &cobra.Command{
 	GroupID: "local",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if !env.VerboseLogging {
-			utils.SetGlobalLoggingLevel(utils.InfoLevel)
+			utils.SetLoggingLevel(utils.InfoLevel)
 		}
 	},
 }

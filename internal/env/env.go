@@ -50,6 +50,6 @@ func InitEnv() {
 
 func initLogging() {
 	if VerboseLogging {
-		utils.SetGlobalLoggingLevel(utils.DebugLevel)
+		utils.SetLoggingLevel(utils.DebugLevel)
 	}
 }

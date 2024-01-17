@@ -18,16 +18,42 @@ const (
 	WarnLevel  = zerolog.WarnLevel
 )
 
+const debugLog = "/var/log/homecli.log"
+
+var stdoutWriter *zerolog.FilteredLevelWriter
+
 func init() {
+	var logWriter zerolog.LevelWriter
+
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	output := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}
-	log.Logger = zerolog.New(output).With().Timestamp().Logger()
-	SetGlobalLoggingLevel(WarnLevel)
+
+	stdoutWriter = &zerolog.FilteredLevelWriter{
+		Writer: zerolog.LevelWriterAdapter{
+			Writer: zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339},
+		},
+		Level: WarnLevel,
+	}
+
+	logWriter = stdoutWriter
+
+	f, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+	if err == nil {
+		debugWriter := zerolog.FilteredLevelWriter{
+			Writer: zerolog.LevelWriterAdapter{Writer: f},
+			Level:  DebugLevel,
+		}
+		logWriter = zerolog.MultiLevelWriter(logWriter, &debugWriter)
+	}
+
+	log.Logger = zerolog.New(logWriter).With().Timestamp().Logger()
+	zerolog.SetGlobalLevel(DebugLevel)
+
+	SetLoggingLevel(WarnLevel)
 }
 
-// SetGlobalLoggingLevel should be invoked once by each entry point
-func SetGlobalLoggingLevel(level zerolog.Level) {
-	zerolog.SetGlobalLevel(level)
+// SetLoggingLevel should be invoked once by each entry point
+func SetLoggingLevel(level zerolog.Level) {
+	stdoutWriter.Level = level
 }
 
 // GetLogger returns a new logger instance with the specified component
