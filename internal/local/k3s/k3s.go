@@ -95,7 +95,7 @@ func hasSystemd() bool {
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
 func setupNetwork(c *InstallConfig) (err error) {
-	if c.BindIP == "127.0.0.1" {
+	if c.IP == "127.0.0.1" {
 		return fmt.Errorf("unable to bind to 127.0.0.1")
 	}
 
@@ -112,7 +112,7 @@ func setupNetwork(c *InstallConfig) (err error) {
 		c.Iface = netIF.Name
 	}
 
-	c.IfaceAddr = c.BindIP
+	c.IfaceAddr = c.IP
 
 	err = upsertIfaceAddrHost(netIF, &c.IfaceAddr, &c.Host)
 	if err != nil {
