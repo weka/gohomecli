@@ -35,7 +35,7 @@ type InstallConfig struct {
 func (c InstallConfig) k3sInstallArgs() []string {
 	k3sArgs := []string{
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
-		fmt.Sprintf("--node-ip=%s", c.IfaceAddr),
+		fmt.Sprintf("--node-ip=%s", c.IfaceAddr), // node ip needs to have ip address (not 0.0.0.0)
 		fmt.Sprintf("--kubelet-arg=address=%s", c.BindIP),
 		fmt.Sprintf("--bind-address=%s", c.BindIP),
 		fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
