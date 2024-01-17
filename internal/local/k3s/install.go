@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
@@ -27,20 +26,24 @@ var (
 type InstallConfig struct {
 	*config_v1.Configuration
 
-	Iface string // interface for k3s network to work on, required
+	Iface     string // interface for k3s network to work on
+	IfaceAddr string // ip addr for k3s to use as node ip
+
 	Debug bool
 }
 
-func (c InstallConfig) k3sInstallArgs() string {
+func (c InstallConfig) k3sInstallArgs() []string {
 	k3sArgs := []string{
-		fmt.Sprintf("--node-ip=%s", c.NodeIP),
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
+		fmt.Sprintf("--node-ip=%s", c.IfaceAddr),
+		fmt.Sprintf("--kubelet-arg=address=%s", c.BindIP),
+		fmt.Sprintf("--bind-address=%s", c.BindIP),
 		fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
 	}
 
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
 
-	return strings.Join(k3sArgs, " ")
+	return k3sArgs
 }
 
 // Install runs K3S installation process
@@ -154,23 +157,30 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			logger.Info().Msg("Starting k3s install")
 
 			if c.Host != "" {
+				logger.Debug().Str("hostname", c.Host).Msg("Using hostname")
 				os.Setenv("K3S_HOSTNAME", c.Host)
 				os.Setenv("K3S_NODE_NAME", c.Host)
 			}
+
 			overriden, err := resolvConfOverriden()
 			if err != nil {
 				return err
 			}
 			if overriden {
+				logger.Debug().Str("resolvconf", k3sResolvConfPath).Msg("Resolv.conf is overriden")
 				os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 			}
+
+			logger.Debug().
+				Str("installPath", k3sInstallPath).
+				Msg("Setting env vars")
+
 			os.Setenv("INSTALL_K3S_BIN_DIR", k3sInstallPath)
 			os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
-			os.Setenv("INSTALL_K3S_EXEC", c.k3sInstallArgs())
 
-			cmd, err := utils.ExecCommand(ctx, "bash", []string{"-"},
+			cmd, err := utils.ExecCommand(ctx, "sh", append([]string{"-s", "-", "server"}, c.k3sInstallArgs()...),
 				utils.WithStdin(r),
 				utils.WithStdoutReader(k3sLogParser(utils.InfoLevel)),
 				utils.WithStderrReader(k3sLogParser(utils.InfoLevel)),

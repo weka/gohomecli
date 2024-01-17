@@ -68,12 +68,10 @@ func init() {
 
 		setupCmd.Flags().StringVar(&setupConfig.Host, "host", "", "public host or IP address for LWH")
 
-		setupCmd.Flags().StringVar(&setupConfig.NodeIP, "ip", "0.0.0.0", "primary IP address, used for internal networking")
+		setupCmd.Flags().StringVar(&setupConfig.BindIP, "bind-ip", "0.0.0.0", "IP address to use for cluster")
 		setupCmd.Flags().StringVar(&setupConfig.Iface, "iface", "", "interface to use for internal networking")
 
 		setupCmd.Flags().StringVar(&setupConfig.TLSCert, "tls-cert", "", "TLS certificate file")
 		setupCmd.Flags().StringVar(&setupConfig.TLSKey, "tls-key", "", "TLS secret key file")
-
-		setupCmd.Flags().MarkHidden("ip")
 	})
 }

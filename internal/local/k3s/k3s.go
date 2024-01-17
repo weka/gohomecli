@@ -101,11 +101,16 @@ func setupNetwork(c *InstallConfig) (err error) {
 	}
 
 	if c.Iface == "" {
+		logger.Debug().
+			Str("iface", netIF.Name).
+			Msg("Iface is not set, using from lookup")
 		// use random iface
 		c.Iface = netIF.Name
 	}
 
-	err = validateIpHostname(netIF, c.NodeIP, &c.Host)
+	c.IfaceAddr = c.BindIP
+
+	err = upsertIfaceAddrHost(netIF, &c.IfaceAddr, &c.Host)
 	if err != nil {
 		return err
 	}
@@ -145,8 +150,8 @@ func getInterface(iface string) (net.Interface, error) {
 	return net.Interface{}, fmt.Errorf("network interface %q is not running, does not exists or it's loopback interface", iface)
 }
 
-// validateIpHostname returns any IP from iface and error if provided IP not match to the interface
-func validateIpHostname(iface net.Interface, ip string, hostname *string) error {
+// upsertIfaceAddrHost sets any IP from iface or returns error if provided IP not match to the interface
+func upsertIfaceAddrHost(iface net.Interface, ifaceAddr *string, hostname *string) error {
 	addr, err := iface.Addrs()
 	if err != nil {
 		return fmt.Errorf("network addr: %w", err)
@@ -155,9 +160,11 @@ func validateIpHostname(iface net.Interface, ip string, hostname *string) error 
 	for _, a := range addr {
 		ipnet, ok := a.(*net.IPNet)
 		if !ok || ipnet.IP.To4() == nil {
+			logger.Debug().Str("addr", a.String()).Msg("Not an IPv4")
 			continue
 		}
-		if ip == ipnet.IP.To4().String() {
+		if *ifaceAddr == ipnet.IP.To4().String() {
+			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP match to interface")
 			return nil
 		}
 
@@ -170,13 +177,15 @@ func validateIpHostname(iface net.Interface, ip string, hostname *string) error 
 			*hostname = ipnet.IP.To4().String()
 		}
 
-		if ip == "0.0.0.0" {
-			// nothing to check
+		if *ifaceAddr == "0.0.0.0" || *ifaceAddr == "127.0.0.1" || *ifaceAddr == "" {
+			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
+			// use first ip found from interface
+			*ifaceAddr = ipnet.IP.To4().String()
 			return nil
 		}
 	}
 
-	return fmt.Errorf("IP address for node %q is not exists", ip)
+	return fmt.Errorf("IP address for node %q is not exists", *ifaceAddr)
 }
 
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
