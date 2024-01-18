@@ -20,8 +20,7 @@ type setup struct {
 	config_v1.Configuration
 	setup_flags.Flags
 
-	Iface      string
-	JsonConfig string
+	Iface string
 
 	TLSCert string // TLS certificate file
 	TLSKey  string // TLS key file
