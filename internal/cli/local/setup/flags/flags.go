@@ -61,8 +61,8 @@ func Use(cmd *cobra.Command, config *Flags) {
 		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
 
-	cmd.Flags().StringVar(&config.Proxy, "proxy", "", "Use proxy URL for networking (example: http://user:password@addr )")
-	cmd.Flags().BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, "Add proxy support for kubernetes")
+	cmd.Flags().StringVar(&config.Proxy, "proxy", "", fmt.Sprintf("Use proxy URL for networking (example: http://user:password@addr), supported proxy type: %v", validProxyScheme))
+	cmd.Flags().BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, fmt.Sprintf("Add proxy support for kubernetes, supported proxy type: %v", validK3SProxyScheme))
 	cmd.Flags().StringVarP(&config.JsonConfig, "json-config", "c", "", "Configuration in JSON format")
 
 	cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
