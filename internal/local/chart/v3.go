@@ -177,11 +177,23 @@ func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error)
 	return cfg, err
 }
 
+func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
+	var (
+		err error
+		cfg = make(yamlMap)
+	)
+
+	err = writeMapEntryIfSet(cfg, "core.proxy", configuration.Proxy)
+
+	return cfg, err
+}
+
 func init() {
 	valuesGeneratorV3 = &yamlGenerator{
 		visitors: map[string]configVisitor{},
 	}
 
+	valuesGeneratorV3.AddVisitor("core", configureCore)
 	valuesGeneratorV3.AddVisitor("ingress", configureIngress)
 	valuesGeneratorV3.AddVisitor("smtp", configureSMTP)
 	valuesGeneratorV3.AddVisitor("retention", configureRetention)

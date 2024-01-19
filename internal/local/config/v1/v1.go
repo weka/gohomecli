@@ -33,9 +33,9 @@ type ForwardingConfig struct {
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Host string `json:"host,omitempty"` // ingress host
-	IP   string `json:"ip,omitempty"`   // ip to bind on for k3s cluster
-
+	Host          string           `json:"host,omitempty"` // ingress host
+	IP            string           `json:"ip,omitempty"`   // ip to bind on for k3s cluster
+	Proxy         string           `json:"proxy,omitempty"`
 	TLS           TLSConfig        `json:"tls,omitempty"`
 	SMTP          SMTPConfig       `json:"smtp,omitempty"`
 	RetentionDays RetentionConfig  `json:"retentionDays,omitempty"`

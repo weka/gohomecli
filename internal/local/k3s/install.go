@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -179,6 +180,25 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
+			if c.Proxy != "" {
+				proxyURL, err := url.Parse(c.Proxy)
+				if err != nil {
+					return fmt.Errorf("url parse: %w", err)
+				}
+				os.Setenv("NO_PROXY", "127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16")
+
+				switch proxyURL.Scheme {
+				case "https":
+					proxyURL.Scheme = "http"
+					os.Setenv("HTTPS_PROXY", proxyURL.String())
+				case "http":
+					os.Setenv("HTTP_PROXY", proxyURL.String())
+				default:
+					logger.Warn().
+						Str("url", proxyURL.String()).
+						Msgf("Proxy scheme %s is not supported with K3S", proxyURL.Scheme)
+				}
+			}
 
 			cmd, err := utils.ExecCommand(ctx, "sh", append([]string{"-s", "-", "server"}, c.k3sInstallArgs()...),
 				utils.WithStdin(r),
