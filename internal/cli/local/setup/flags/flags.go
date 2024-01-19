@@ -8,15 +8,22 @@ import (
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
+	"k8s.io/utils/strings/slices"
+)
+
+var (
+	validProxyScheme    = []string{"http", "https", "socks5"}
+	validK3SProxyScheme = []string{"http", "https"}
 )
 
 type Flags struct {
-	Web         bool
-	WebBindAddr string
-	Proxy       string
-	BundlePath  string
-	JsonConfig  string
-	Chart       struct {
+	Web             bool
+	WebBindAddr     string
+	Proxy           string
+	ProxyKubernetes bool
+	BundlePath      string
+	JsonConfig      string
+	Chart           struct {
 		LocalChart     string
 		RemoteDownload bool
 		RemoteVersion  string
@@ -35,8 +42,13 @@ func (c Flags) Validate() error {
 		if err != nil {
 			return err
 		}
-		if addr.Scheme != "http" && addr.Scheme != "https" || addr.Scheme != "sock5" {
-			return fmt.Errorf("proxy supports only http,https or socks5")
+
+		if !slices.Contains(validProxyScheme, addr.Scheme) {
+			return fmt.Errorf("proxy supports only %v, %s is given", validProxyScheme, addr.Scheme)
+		}
+
+		if c.ProxyKubernetes && !slices.Contains(validK3SProxyScheme, addr.Scheme) {
+			return fmt.Errorf("kubernetes proxy supports only %v, %s is given", validK3SProxyScheme, addr.Scheme)
 		}
 	}
 
@@ -49,7 +61,8 @@ func Use(cmd *cobra.Command, config *Flags) {
 		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
 
-	cmd.Flags().StringVar(&config.Proxy, "proxy", "", "Use proxy URL for networking (example: https://user:password@addr )")
+	cmd.Flags().StringVar(&config.Proxy, "proxy", "", "Use proxy URL for networking (example: http://user:password@addr )")
+	cmd.Flags().BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, "Add proxy support for kubernetes")
 	cmd.Flags().StringVarP(&config.JsonConfig, "json-config", "c", "", "Configuration in JSON format")
 
 	cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
