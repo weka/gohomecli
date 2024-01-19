@@ -54,8 +54,8 @@ var setupCmd = &cobra.Command{
 			return err
 		}
 
-		if setupConfig.Flags.Proxy != "" {
-			setupConfig.Configuration.Proxy = setupConfig.Flags.Proxy
+		if setupConfig.Flags.ProxyURL != "" {
+			setupConfig.Configuration.Proxy.URL = setupConfig.Flags.ProxyURL
 		}
 
 		return setupConfig.Validate()

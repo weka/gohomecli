@@ -184,13 +184,15 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
 
-			if c.Proxy != "" && c.ProxyKubernetes {
-				proxyURL, err := url.Parse(c.Proxy)
+			if c.Proxy.URL != "" && c.ProxyKubernetes {
+				proxyURL, err := url.Parse(c.Proxy.URL)
 				if err != nil {
 					return fmt.Errorf("url parse: %w", err)
 				}
 
-				logger.Info().Str("proxy", c.Proxy).Msg("Using proxy")
+				logger.Info().
+					Str("proxy", utils.URLSafe(proxyURL).String()).
+					Msg("Using proxy")
 
 				var noProxy = []string{
 					"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",

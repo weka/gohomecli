@@ -39,8 +39,8 @@ var upgradeCmd = &cobra.Command{
 			return err
 		}
 
-		if upgradeConfig.Flags.Proxy != "" {
-			upgradeConfig.Configuration.Proxy = upgradeConfig.Flags.Proxy
+		if upgradeConfig.Flags.ProxyURL != "" {
+			upgradeConfig.Configuration.Proxy.URL = upgradeConfig.Flags.ProxyURL
 		}
 
 		return upgradeConfig.Validate()

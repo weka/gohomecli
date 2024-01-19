@@ -19,7 +19,7 @@ var (
 type Flags struct {
 	Web             bool
 	WebBindAddr     string
-	Proxy           string
+	ProxyURL        string
 	ProxyKubernetes bool
 	BundlePath      string
 	JsonConfig      string
@@ -37,8 +37,8 @@ func (c Flags) Validate() error {
 		return fmt.Errorf("%w: --remote-version can only be used with --remote-download", utils.ErrValidationFailed)
 	}
 
-	if c.Proxy != "" {
-		addr, err := url.Parse(c.Proxy)
+	if c.ProxyURL != "" {
+		addr, err := url.Parse(c.ProxyURL)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func Use(cmd *cobra.Command, config *Flags) {
 		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
 
-	cmd.Flags().StringVar(&config.Proxy, "proxy", "", fmt.Sprintf("Use proxy URL for networking (example: http://user:password@addr), supported proxy type: %v", validProxyScheme))
+	cmd.Flags().StringVar(&config.ProxyURL, "proxy-url", "", fmt.Sprintf("Use proxy URL for networking (example: http://user:password@addr), supported proxy type: %v", validProxyScheme))
 	cmd.Flags().BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, fmt.Sprintf("Add proxy support for kubernetes, supported proxy type: %v", validK3SProxyScheme))
 	cmd.Flags().StringVarP(&config.JsonConfig, "json-config", "c", "", "Configuration in JSON format")
 

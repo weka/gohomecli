@@ -183,7 +183,7 @@ func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 		cfg = make(yamlMap)
 	)
 
-	err = writeMapEntryIfSet(cfg, "core.proxy", configuration.Proxy)
+	err = writeMapEntryIfSet(cfg, "core.proxy.url", configuration.Proxy)
 
 	return cfg, err
 }
