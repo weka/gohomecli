@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -231,4 +232,10 @@ func IsSetP[T comparable](v *T) bool {
 	}
 
 	return false
+}
+
+func URLSafe(u *url.URL) *url.URL {
+	urlSafe := *u
+	urlSafe.User = url.UserPassword(u.User.Username(), "[HIDDEN]")
+	return &urlSafe
 }

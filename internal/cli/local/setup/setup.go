@@ -54,6 +54,10 @@ var setupCmd = &cobra.Command{
 			return err
 		}
 
+		if setupConfig.Flags.ProxyURL != "" {
+			setupConfig.Configuration.Proxy.URL = setupConfig.Flags.ProxyURL
+		}
+
 		return setupConfig.Validate()
 	},
 	RunE: runSetup,

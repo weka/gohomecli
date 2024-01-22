@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
@@ -28,6 +30,8 @@ type InstallConfig struct {
 
 	Iface     string // interface for k3s network to work on
 	IfaceAddr string // ip addr for k3s to use as node ip
+
+	ProxyKubernetes bool // use proxy for k3s
 
 	Debug bool
 }
@@ -179,6 +183,37 @@ func runInstallScript(c InstallConfig) bundle.TarCallback {
 			os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 			os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 			os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
+
+			if c.Proxy.URL != "" && c.ProxyKubernetes {
+				proxyURL, err := url.Parse(c.Proxy.URL)
+				if err != nil {
+					return fmt.Errorf("url parse: %w", err)
+				}
+
+				logger.Info().
+					Str("proxy", utils.URLSafe(proxyURL).String()).
+					Msg("Using proxy")
+
+				var noProxy = []string{
+					"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+					fmt.Sprintf("%s/32", c.IP),
+					fmt.Sprintf("%s/32", c.IfaceAddr),
+				}
+
+				os.Setenv("NO_PROXY", strings.Join(noProxy, ","))
+
+				switch proxyURL.Scheme {
+				case "http":
+					os.Setenv("HTTPS_PROXY", proxyURL.String())
+					os.Setenv("HTTP_PROXY", proxyURL.String())
+				case "https":
+					os.Setenv("HTTPS_PROXY", proxyURL.String())
+				default:
+					logger.Warn().
+						Str("url", proxyURL.String()).
+						Msgf("Proxy scheme %s is not supported with K3S", proxyURL.Scheme)
+				}
+			}
 
 			cmd, err := utils.ExecCommand(ctx, "sh", append([]string{"-s", "-", "server"}, c.k3sInstallArgs()...),
 				utils.WithStdin(r),

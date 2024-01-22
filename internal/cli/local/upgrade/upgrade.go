@@ -39,6 +39,10 @@ var upgradeCmd = &cobra.Command{
 			return err
 		}
 
+		if upgradeConfig.Flags.ProxyURL != "" {
+			upgradeConfig.Configuration.Proxy.URL = upgradeConfig.Flags.ProxyURL
+		}
+
 		return upgradeConfig.Validate()
 	},
 	RunE: runUpgrade,
