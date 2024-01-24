@@ -19,7 +19,7 @@ type (
 	}
 )
 
-func (g *yamlGenerator) AddVisitor(name string, visitor configVisitor) {
+func (g *yamlGenerator) MustAddVisitor(name string, visitor configVisitor) {
 	if _, exist := g.visitors[name]; exist {
 		panic(fmt.Sprintf("visitor with name %s already exists, unable to register", name))
 	}
@@ -43,6 +43,9 @@ func (g *yamlGenerator) Generate(configuration *config_v1.Configuration) (yamlMa
 
 			return nil, err
 		}
+
+		logger.Debug().Interface("result", result).Interface("visitorResult", visitorResult).Msg("Generated yaml")
+
 	}
 
 	return result, nil

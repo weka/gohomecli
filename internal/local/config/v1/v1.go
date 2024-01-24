@@ -32,7 +32,7 @@ type ForwardingConfig struct {
 }
 
 type ProxyConfig struct {
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 }
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
@@ -48,8 +48,8 @@ type Configuration struct {
 	Autoscaling     *bool `json:"autoscaling,omitempty"`        // enable services autoscaling
 	WekaNodesServed int   `json:"wekaNodesMonitored,omitempty"` // number of weka nodes to monitor, controls load preset
 
-	HelmOverrides map[string]any `json:"helmOverrides"` // additional overrides for helm chart
-	K3SArgs       []string       `json:"k3sArgs"`       // k3s args overrides during install
+	HelmOverrides map[string]any `json:"helmOverrides,omitempty"` // additional overrides for helm chart
+	K3SArgs       []string       `json:"k3sArgs,omitempty"`       // k3s args overrides during install
 }
 
 func (c Configuration) Validate() error {

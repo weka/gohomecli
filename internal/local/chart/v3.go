@@ -174,6 +174,8 @@ func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error)
 		err = errors.Join(err, writeMapEntry(cfg, key, v))
 	}
 
+	logger.Debug().Interface("overrides", cfg).Msg("Overrides")
+
 	return cfg, err
 }
 
@@ -193,13 +195,13 @@ func init() {
 		visitors: map[string]configVisitor{},
 	}
 
-	valuesGeneratorV3.AddVisitor("core", configureCore)
-	valuesGeneratorV3.AddVisitor("ingress", configureIngress)
-	valuesGeneratorV3.AddVisitor("smtp", configureSMTP)
-	valuesGeneratorV3.AddVisitor("retention", configureRetention)
-	valuesGeneratorV3.AddVisitor("resources", configureResources)
-	valuesGeneratorV3.AddVisitor("forwarding", configureForwarding)
-	valuesGeneratorV3.AddVisitor("overrides", configureOverrides)
+	valuesGeneratorV3.MustAddVisitor("core", configureCore)
+	valuesGeneratorV3.MustAddVisitor("ingress", configureIngress)
+	valuesGeneratorV3.MustAddVisitor("smtp", configureSMTP)
+	valuesGeneratorV3.MustAddVisitor("retention", configureRetention)
+	valuesGeneratorV3.MustAddVisitor("resources", configureResources)
+	valuesGeneratorV3.MustAddVisitor("forwarding", configureForwarding)
+	valuesGeneratorV3.MustAddVisitor("overrides", configureOverrides)
 }
 
 func generateValuesV3(configuration *config_v1.Configuration) (map[string]interface{}, error) {
