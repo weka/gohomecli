@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const CLIConfig = "/etc/wekahome/config.json"
+const configDir = "/opt/wekahome/config"
+
+var CLIConfig = filepath.Join(configDir, "config.json")
 
 var logger = utils.GetLogger("configuration")
 
@@ -42,6 +45,10 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 }
 
 func SaveV1(path string, c config_v1.Configuration) error {
+	if err := os.MkdirAll(configDir, os.FileMode(0700)); err != nil {
+		return err
+	}
+
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600))
 	if err != nil {
 		return err
