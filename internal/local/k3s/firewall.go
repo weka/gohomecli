@@ -123,7 +123,7 @@ func addUFWRules(ctx context.Context) error {
 	}
 
 	for _, network := range openNetworks {
-		args := []string{"allow", "from", network}
+		args := []string{"allow", "from", network, "to", "any"}
 		cmd, err := utils.ExecCommand(ctx, "ufw", args,
 			utils.WithStderrReader(func(b []byte) {
 				logger.Debug().Str("output", string(b)).Msgf("error adding UFW rule %v", args)
