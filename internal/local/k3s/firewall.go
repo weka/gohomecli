@@ -20,10 +20,16 @@ func isFirewalldActive(ctx context.Context) bool {
 
 	var active bool
 
-	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-active", "firewalld"}, utils.WithStdoutReader(func(b []byte) {
-		logger.Debug().Str("output", string(b)).Msg("firewalld status")
-		active = string(b) == "active"
-	}))
+	cmd, err := utils.ExecCommand(ctx, "systemctl",
+		[]string{"is-active", "firewalld"},
+		utils.WithStdoutReader(func(lines chan []byte) {
+			for line := range lines {
+				logger.Debug().Str("output", string(line)).Msg("firewalld status")
+				if string(line) == "active" {
+					active = true
+				}
+			}
+		}))
 
 	err = errors.Join(err, cmd.Wait())
 	if err != nil && cmd.ProcessState.ExitCode() != 3 {
@@ -38,10 +44,16 @@ func isUFWActive(ctx context.Context) bool {
 
 	var active bool
 
-	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-active", "ufw"}, utils.WithStdoutReader(func(b []byte) {
-		logger.Debug().Str("output", string(b)).Msg("ufw enabled")
-		active = string(b) == "active"
-	}))
+	cmd, err := utils.ExecCommand(ctx, "systemctl",
+		[]string{"is-active", "ufw"},
+		utils.WithStdoutReader(func(lines chan []byte) {
+			for line := range lines {
+				logger.Debug().Str("output", string(line)).Msg("ufw enabled")
+				if string(line) == "active" {
+					active = true
+				}
+			}
+		}))
 
 	err = errors.Join(err, cmd.Wait())
 	if err != nil && cmd.ProcessState.ExitCode() != 3 {
@@ -60,11 +72,15 @@ func addFirewalldRules(ctx context.Context) error {
 		}
 
 		cmd, err := utils.ExecCommand(ctx, "firewall-cmd", args,
-			utils.WithStderrReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("error adding firewalld rule %v", args)
+			utils.WithStderrReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("error adding firewalld rule %v", args)
+				}
 			}),
-			utils.WithStdoutReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("firewalld rule %v added", args)
+			utils.WithStdoutReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("firewalld rule %v added", args)
+				}
 			}),
 		)
 
@@ -77,11 +93,15 @@ func addFirewalldRules(ctx context.Context) error {
 	for _, network := range openNetworks {
 		args := []string{"--add-source", network, "--permanent", "--zone=trusted"}
 		cmd, err := utils.ExecCommand(ctx, "firewall-cmd", args,
-			utils.WithStderrReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("error adding firewalld rule %v", args)
+			utils.WithStderrReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("error adding firewalld rule %v", args)
+				}
 			}),
-			utils.WithStdoutReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("firewalld rule %v added", args)
+			utils.WithStdoutReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("firewalld rule %v added", args)
+				}
 			}),
 		)
 		err = errors.Join(err, cmd.Wait())
@@ -108,11 +128,15 @@ func addUFWRules(ctx context.Context) error {
 		}
 
 		cmd, err := utils.ExecCommand(ctx, "ufw", args,
-			utils.WithStderrReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("error adding UFW rule %v", args)
+			utils.WithStderrReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("error adding UFW rule %v", args)
+				}
 			}),
-			utils.WithStdoutReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("UFW rule %v added", args)
+			utils.WithStdoutReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("UFW rule %v added", args)
+				}
 			}),
 		)
 
@@ -125,15 +149,19 @@ func addUFWRules(ctx context.Context) error {
 	for _, network := range openNetworks {
 		args := []string{"allow", "from", network, "to", "any"}
 		cmd, err := utils.ExecCommand(ctx, "ufw", args,
-			utils.WithStderrReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("error adding UFW rule %v", args)
+			utils.WithStderrReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("error adding UFW rule %v", args)
+				}
 			}),
-			utils.WithStdoutReader(func(b []byte) {
-				logger.Debug().Str("output", string(b)).Msgf("UFW rule %v added", args)
+			utils.WithStdoutReader(func(lines chan []byte) {
+				for line := range lines {
+					logger.Debug().Str("output", string(line)).Msgf("UFW rule %v added", args)
+				}
 			}),
 		)
-		err = errors.Join(err, cmd.Wait())
-		if err != nil {
+
+		if err = errors.Join(err, cmd.Wait()); err != nil {
 			return err
 		}
 	}

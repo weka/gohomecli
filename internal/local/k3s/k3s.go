@@ -251,20 +251,22 @@ func getK3SVersion(binary string) (string, error) {
 var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)
 
 // k3sLogParser parses log files and uses our logging system
-func k3sLogParser(lvl zerolog.Level) func(line []byte) {
-	return func(line []byte) {
-		// parse log level if present, otherwise log full line
-		matches := logRegexp.FindSubmatch(line)
-		if matches == nil {
-			logger.WithLevel(lvl).Msg(string(line))
-			return
-		}
+func k3sLogParser(lvl zerolog.Level) func(lines chan []byte) {
+	return func(lines chan []byte) {
+		for line := range lines {
+			// parse log level if present, otherwise log full line
+			matches := logRegexp.FindSubmatch(line)
+			if matches == nil {
+				logger.WithLevel(lvl).Msg(string(line))
+				return
+			}
 
-		parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(string(matches[2])))
-		if parsedLvl != zerolog.NoLevel {
-			lvl = parsedLvl
-		}
+			parsedLvl, _ := zerolog.ParseLevel(strings.ToLower(string(matches[2])))
+			if parsedLvl != zerolog.NoLevel {
+				lvl = parsedLvl
+			}
 
-		logger.WithLevel(lvl).Msg(string(matches[3]))
+			logger.WithLevel(lvl).Msg(string(matches[3]))
+		}
 	}
 }
