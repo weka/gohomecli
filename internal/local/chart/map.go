@@ -54,17 +54,21 @@ func mergeMaps(source yamlMap, overrides yamlMap, valuePath string) error {
 		}
 
 		sourceMap, sourceMapOk := source[key].(yamlMap)
-		overridesMap, overridesMapOk := overrides[key].(yamlMap)
-		if sourceMapOk && overridesMapOk {
-			subPath := fmt.Sprintf("%s.%s", valuePath, key)
-			if err := mergeMaps(sourceMap, overridesMap, subPath); err != nil {
-				return err
+		overridesMap, overridesMapOk := value.(yamlMap)
+		if !overridesMapOk {
+			if sourceMapOk {
+				// handle the case when incompatible types are provided
+				return fmt.Errorf("%w: source=%T, overrides=%T", errConflictingKeys, source[key], overrides[key])
 			}
-		} else if sourceMapOk != overridesMapOk {
-			return fmt.Errorf("%w: source=%T, overrides=%T", errConflictingKeys, source[key], overrides[key])
-		} else {
-			subPath := fmt.Sprintf("%s.%s", valuePath, key)
-			return fmt.Errorf("%w: %s", errConflictingKeys, subPath)
+
+			// if it's not a map, we do override existing value
+			source[key] = value
+			continue
+		}
+
+		subPath := fmt.Sprintf("%s.%s", valuePath, key)
+		if err := mergeMaps(sourceMap, overridesMap, subPath); err != nil {
+			return err
 		}
 	}
 
