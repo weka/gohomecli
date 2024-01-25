@@ -5,12 +5,8 @@ import (
 	"github.com/weka/gohomecli/internal/local/cleanup"
 )
 
-var config struct {
-	LocalPath string
-}
-
 var localStorageCmd = &cobra.Command{
-	Use:   "local-storage",
+	Use:   "storage",
 	Short: "cleans up unused volumes from local path provisioner",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cleanup.LocalStorage(cmd.Context())
