@@ -198,8 +198,13 @@ var WithStdoutReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) er
 
 		lines := make(chan []byte)
 
-		go cb(lines)
+		// run callback
+		go func() {
+			cb(lines)
+			cmd.wg.Done()
+		}()
 
+		// run scanner
 		go func() {
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
@@ -226,7 +231,13 @@ var WithStderrReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) er
 
 		lines := make(chan []byte)
 
-		go cb(lines)
+		// run callback
+		go func() {
+			cb(lines)
+			cmd.wg.Done()
+		}()
+
+		// run scanner
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
@@ -236,7 +247,6 @@ var WithStderrReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) er
 				}
 			}
 			close(lines)
-			cmd.wg.Done()
 		}()
 
 		return nil
