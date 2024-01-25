@@ -8,7 +8,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var openPorts = []int{80, 443, 2379, 2380, 6443, 10250, 10257, 10259}
+var openPorts = []int{80, 443, 6443, 10250, 10257, 10259}
 
 var openNetworks = []string{
 	"10.42.0.0/16", // pods
