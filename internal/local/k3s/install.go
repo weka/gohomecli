@@ -74,6 +74,19 @@ func Install(ctx context.Context, c InstallConfig) error {
 		return err
 	}
 
+	switch {
+	case isFirewalldActive(ctx):
+		if err := addFirewalldRules(ctx); err != nil {
+			logger.Warn().Err(err).Msg("Failed to add firewalld rules")
+		}
+	case isUFWActive(ctx):
+		if err := addUFWRules(ctx); err != nil {
+			logger.Warn().Err(err).Msg("Failed to add UFW rules")
+		}
+	default:
+		logger.Warn().Msg("No supported firewall found, skipping firewall rules setup. Please make sure to open required ports manually")
+	}
+
 	bundle := bundle.Tar(name)
 
 	err = bundle.GetFiles(ctx, copyK3S(), copyAirgapImages(), runInstallScript(c))
