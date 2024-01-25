@@ -10,24 +10,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
 var logger = utils.GetLogger("cleanup")
 
-var localStoragePath = "/opt/local-path-provisioner"
-
-func SetLocalStoragePath(path string) {
-	localStoragePath = path
-}
-
 func LocalStorage(ctx context.Context) error {
-	used, err := getUsed(ctx)
+	used, err := getVolumesInUse(ctx)
 	if err != nil {
 		return err
 	}
 
-	localPath, err := filepath.EvalSymlinks(localStoragePath)
+	localPath, err := filepath.EvalSymlinks(k3s.DefaultLocalStoragePath)
 	if err != nil {
 		return err
 	}
@@ -77,8 +72,8 @@ func LocalStorage(ctx context.Context) error {
 	return nil
 }
 
-func getUsed(ctx context.Context) (map[string]bool, error) {
-	logger.Debug().Str("path", localStoragePath).Msg("Getting used volumes")
+func getVolumesInUse(ctx context.Context) (map[string]bool, error) {
+	logger.Debug().Str("path", k3s.DefaultLocalStoragePath).Msg("Getting used volumes")
 
 	kubeCmd := exec.CommandContext(ctx, "kubectl", "get", "pv", "-o", "jsonpath='{.items[*].spec.hostPath.path}'", "-A")
 	stdout, err := kubeCmd.StdoutPipe()

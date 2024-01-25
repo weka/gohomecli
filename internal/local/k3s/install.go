@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -18,11 +19,15 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const k3sImagesPath = "/var/lib/rancher/k3s/agent/images/"
+const dataDir = "/opt/wekahome/data/"
 
 var (
-	ErrExists       = errors.New("k3s already installed")
+	ErrExists = errors.New("k3s already installed")
+
+	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
+
 	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
+	k3sImagesPath   = "/var/lib/rancher/k3s/agent/images/"
 )
 
 type InstallConfig struct {
@@ -42,7 +47,7 @@ func (c InstallConfig) k3sInstallArgs() []string {
 		fmt.Sprintf("--node-ip=%s", c.IfaceAddr), // node ip needs to have ip address (not 0.0.0.0)
 		fmt.Sprintf("--kubelet-arg=address=%s", c.IP),
 		fmt.Sprintf("--bind-address=%s", c.IP),
-		fmt.Sprintf("--default-local-storage-path=%s", defaultLocalStoragePath),
+		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
 	}
 
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)

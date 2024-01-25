@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	k3sInstallPath          = "/usr/local/bin"
-	defaultLocalStoragePath = "/opt/local-path-provisioner"
+	k3sInstallPath = "/usr/local/bin"
 )
 
 var logger = utils.GetLogger("K3S")
