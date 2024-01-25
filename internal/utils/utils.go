@@ -214,7 +214,6 @@ var WithStdoutReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) er
 				}
 			}
 			close(lines)
-			cmd.wg.Done()
 		}()
 		return nil
 	}
