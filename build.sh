@@ -8,8 +8,8 @@ CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="$LD_FLAGS" -o bin/home
 
 # Add UPX compression
 
-UPX_VERSION=4.2.2
-UPX_PLATFORM=amd64_linux
+UPX_VERSION="${UPX_VERSION:-4.2.2}"
+UPX_PLATFORM="${UPX_PLATFORM:-amd64_linux}"
 
 if [ ! -d "upx-${UPX_VERSION}-${UPX_PLATFORM}" ]; then
   wget "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-${UPX_PLATFORM}.tar.xz"
