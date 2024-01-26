@@ -306,6 +306,7 @@ type WriteScanner struct {
 	}
 }
 
+// NewWriteScanner returns a helper which runs reader callback for each line, written to it
 func NewWriteScanner(readers ...func([]byte)) WriteScanner {
 	reader, writer := io.Pipe()
 	go func() {
