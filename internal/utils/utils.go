@@ -1,19 +1,14 @@
 package utils
 
 import (
-	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/olekukonko/tablewriter"
@@ -185,103 +180,6 @@ func IsFileExists(name string) bool {
 	return err == nil
 }
 
-type commandOpt func(*WrappedCmd) error
-
-var WithStdoutReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) error {
-	return func(cmd *WrappedCmd) error {
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-
-		cmd.wg.Add(1) // we need to wait for stderr to closed before we can wait for the command to finish
-
-		lines := make(chan []byte)
-
-		// run callback
-		go func() {
-			cb(lines)
-			cmd.wg.Done()
-		}()
-
-		// run scanner
-		go func() {
-			scanner := bufio.NewScanner(stdout)
-			for scanner.Scan() {
-				bytes := scanner.Bytes()
-				if len(bytes) > 0 {
-					lines <- bytes
-				}
-			}
-			close(lines)
-		}()
-		return nil
-	}
-}
-
-var WithStderrReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) error {
-	return func(cmd *WrappedCmd) error {
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-
-		cmd.wg.Add(1) // we need to wait for stderr to closed before we can wait for the command to finish
-
-		lines := make(chan []byte)
-
-		// run callback
-		go func() {
-			cb(lines)
-			cmd.wg.Done()
-		}()
-
-		// run scanner
-		go func() {
-			scanner := bufio.NewScanner(stderr)
-			for scanner.Scan() {
-				bytes := scanner.Bytes()
-				if len(bytes) > 0 {
-					lines <- bytes
-				}
-			}
-			close(lines)
-		}()
-
-		return nil
-	}
-}
-
-var WithStdin = func(stdin io.Reader) func(cmd *WrappedCmd) error {
-	return func(cmd *WrappedCmd) error {
-		cmd.Stdin = stdin
-		return nil
-	}
-}
-
-type WrappedCmd struct {
-	*exec.Cmd
-	wg sync.WaitGroup
-}
-
-func (c *WrappedCmd) Wait() error {
-	c.wg.Wait()
-	return c.Cmd.Wait()
-}
-
-func ExecCommand(ctx context.Context, name string, args []string, opts ...commandOpt) (*WrappedCmd, error) {
-	cmd := WrappedCmd{
-		Cmd: exec.CommandContext(ctx, name, args...),
-	}
-
-	for _, opt := range opts {
-		if err := opt(&cmd); err != nil {
-			return nil, err
-		}
-	}
-	return &cmd, cmd.Start()
-}
-
 // IsSetP returns true if pointer is not nil and value is not empty
 func IsSetP[T comparable](v *T) bool {
 	var empty T
@@ -296,31 +194,4 @@ func URLSafe(u *url.URL) *url.URL {
 	urlSafe := *u
 	urlSafe.User = url.UserPassword(u.User.Username(), "[HIDDEN]")
 	return &urlSafe
-}
-
-type WriteScanner struct {
-	io.Writer
-	io.Closer
-	ErrCloser interface {
-		CloseWithError(err error) error
-	}
-}
-
-// NewWriteScanner returns a helper which runs reader callback for each line, written to it
-func NewWriteScanner(readers ...func([]byte)) WriteScanner {
-	reader, writer := io.Pipe()
-	go func() {
-		scan := bufio.NewScanner(reader)
-		for scan.Scan() {
-			for _, cb := range readers {
-				cb(scan.Bytes())
-			}
-		}
-	}()
-
-	return WriteScanner{
-		Writer:    writer,
-		Closer:    writer,
-		ErrCloser: writer,
-	}
 }
