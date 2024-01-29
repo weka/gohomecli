@@ -52,10 +52,10 @@ func Dump(ctx context.Context, config Config) error {
 		return err
 	}
 
-	infoLogWriter := utils.NewWriteScanner(func(b []byte) {
+	infoLogWriter := utils.NewWritterFunc(func(b []byte) {
 		logger.WithLevel(utils.InfoLevel).Msg(string(b))
 	})
-	errorLogWriter := utils.NewWriteScanner(func(b []byte) {
+	errorLogWriter := utils.NewWritterFunc(func(b []byte) {
 		logger.WithLevel(utils.WarnLevel).Msg(string(b))
 	})
 

@@ -26,7 +26,7 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 			DebugLog: func(format string, v ...interface{}) {
 				logger.Debug().Msgf(format, v...)
 			},
-			Output: utils.NewWriteScanner(func(b []byte) {
+			Output: utils.NewWritterFunc(func(b []byte) {
 				logger.Info().Msg(string(b))
 			}),
 		},

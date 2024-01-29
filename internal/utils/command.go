@@ -92,7 +92,9 @@ func ExecCommand(ctx context.Context, name string, args []string, opts ...comman
 	return &cmd, cmd.Start()
 }
 
-type WriteScanner struct {
+type WriterFunc struct {
+	*sync.WaitGroup
+
 	io.Writer
 	io.Closer
 	ErrCloser interface {
@@ -100,8 +102,11 @@ type WriteScanner struct {
 	}
 }
 
-// NewWriteScanner returns a helper which runs reader callback for each line, written to it
-func NewWriteScanner(readers ...func([]byte)) WriteScanner {
+// NewWritterFunc returns a helper which runs callback for each line, written to WriterFunc
+func NewWritterFunc(readers ...func([]byte)) WriterFunc {
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	reader, writer := io.Pipe()
 	go func() {
 		scan := bufio.NewScanner(reader)
@@ -110,9 +115,11 @@ func NewWriteScanner(readers ...func([]byte)) WriteScanner {
 				cb(scan.Bytes())
 			}
 		}
+		wg.Done()
 	}()
 
-	return WriteScanner{
+	return WriterFunc{
+		WaitGroup: &wg,
 		Writer:    writer,
 		Closer:    writer,
 		ErrCloser: writer,
