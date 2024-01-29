@@ -91,12 +91,11 @@ func getVolumesInUse(ctx context.Context) (map[string]bool, error) {
 	var isUsed = map[string]bool{}
 
 	kubeCmd, err := utils.ExecCommand(ctx, "kubectl",
-		[]string{"get", "pv", "-o", "jsonpath='{.items[*].spec.hostPath.path}'", "-A"},
+		[]string{"get", "pv", "-o", "jsonpath={.items[*].spec.hostPath.path}", "-A"},
 		utils.WithStderrLogger(logger, zerolog.WarnLevel),
 		utils.WithStdoutReader(func(lines chan []byte) {
 			for line := range lines {
 				for _, dir := range strings.Split(string(line), " ") {
-					dir = strings.Trim(dir, "'") // have no idea where quotes come from
 					logger.Debug().Str("output", dir).Msg("PV")
 					isUsed[dir] = true
 				}
