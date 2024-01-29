@@ -85,7 +85,7 @@ func getVolumesInUse(ctx context.Context) (map[string]bool, error) {
 		return nil, err
 	}
 
-	errWriter := utils.NewWriteScanner(func(b []byte) {
+	errWriter := utils.NewWritterFunc(func(b []byte) {
 		logger.Warn().Msg(string(b))
 	})
 

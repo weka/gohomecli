@@ -1,14 +1,11 @@
 package utils
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -181,47 +178,6 @@ func IsFileExists(name string) bool {
 
 	_, err = os.Stat(name)
 	return err == nil
-}
-
-type commandOpt func(*exec.Cmd) error
-
-var WithStdoutReader = func(cb func([]byte)) func(cmd *exec.Cmd) error {
-	return func(cmd *exec.Cmd) error {
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		go io.Copy(NewWriteScanner(cb), stdout)
-		return nil
-	}
-}
-
-var WithStderrReader = func(cb func([]byte)) func(cmd *exec.Cmd) error {
-	return func(cmd *exec.Cmd) error {
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-		go io.Copy(NewWriteScanner(cb), stderr)
-		return nil
-	}
-}
-
-var WithStdin = func(stdin io.Reader) func(cmd *exec.Cmd) error {
-	return func(cmd *exec.Cmd) error {
-		cmd.Stdin = stdin
-		return nil
-	}
-}
-
-func ExecCommand(ctx context.Context, name string, args []string, opts ...commandOpt) (*exec.Cmd, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	for _, opt := range opts {
-		if err := opt(cmd); err != nil {
-			return nil, err
-		}
-	}
-	return cmd, cmd.Start()
 }
 
 // IsSetP returns true if pointer is not nil and value is not empty

@@ -1,10 +1,7 @@
 package utils
 
 import (
-	"bufio"
-	"io"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -61,46 +58,22 @@ func GetLogger(component string) zerolog.Logger {
 	return log.With().Str("component", component).Logger()
 }
 
-type WriteScanner struct {
-	io.Writer
-	io.Closer
-	ErrCloser interface {
-		CloseWithError(err error) error
-	}
-}
-
-func NewWriteScanner(readers ...func([]byte)) WriteScanner {
-	reader, writer := io.Pipe()
-	go func() {
-		scan := bufio.NewScanner(reader)
-		for scan.Scan() {
-			for _, cb := range readers {
-				cb(scan.Bytes())
+func LineLogger(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(chan []byte) {
+	return func(ch chan []byte) {
+		for line := range ch {
+			event := logger.WithLevel(level)
+			for _, c := range cb {
+				c(event)
 			}
+			event.Msg(string(line))
 		}
-	}()
-
-	return WriteScanner{
-		Writer:    writer,
-		Closer:    writer,
-		ErrCloser: writer,
 	}
 }
 
-func LineLogger(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func([]byte) {
-	return func(b []byte) {
-		event := logger.WithLevel(level)
-		for _, c := range cb {
-			c(event)
-		}
-		event.Msg(string(b))
-	}
-}
-
-var WithStdoutLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*exec.Cmd) error {
+var WithStdoutLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*WrappedCmd) error {
 	return WithStdoutReader(LineLogger(logger, level, cb...))
 }
 
-var WithStderrLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*exec.Cmd) error {
+var WithStderrLogger = func(logger zerolog.Logger, level zerolog.Level, cb ...func(*zerolog.Event)) func(*WrappedCmd) error {
 	return WithStderrReader(LineLogger(logger, level, cb...))
 }
