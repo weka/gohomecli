@@ -8,6 +8,13 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+type FirewallType string
+
+var (
+	FirewallTypeFirewalld FirewallType = "firewalld"
+	FirewallTypeUFW       FirewallType = "ufw"
+)
+
 var openPorts = []int{80, 443, 6443, 10250, 10257, 10259}
 
 var openNetworks = []string{
@@ -15,16 +22,17 @@ var openNetworks = []string{
 	"10.43.0.0/16", // services
 }
 
-func isFirewalldActive(ctx context.Context) bool {
-	logger.Info().Msg("Checking if firewalld is enabled")
+func isFirewallActive(ctx context.Context, fw FirewallType) bool {
+	logger.Info().Msgf("Checking if %s is enabled", fw)
 
 	var active bool
 
 	cmd, err := utils.ExecCommand(ctx, "systemctl",
-		[]string{"is-active", "firewalld"},
+		[]string{"is-active", string(fw)},
+		utils.WithStderrLogger(logger, utils.DebugLevel),
 		utils.WithStdoutReader(func(lines chan []byte) {
 			for line := range lines {
-				logger.Debug().Str("output", string(line)).Msg("firewalld status")
+				logger.Debug().Str("output", string(line)).Msgf("%s status", fw)
 				if string(line) == "active" {
 					active = true
 				}
@@ -32,139 +40,80 @@ func isFirewalldActive(ctx context.Context) bool {
 		}))
 
 	err = errors.Join(err, cmd.Wait())
-	if err != nil && cmd.ProcessState.ExitCode() != 3 {
+	if err != nil && cmd.ProcessState.ExitCode() != 3 { // 3 means no systemd unit exists
 		logger.Debug().Err(err).Msg("systemctl exit status")
 	}
 
 	return active
 }
 
-func isUFWActive(ctx context.Context) bool {
-	logger.Info().Msg("Checking if UFW is enabled")
+func addFirewallRules(ctx context.Context, fw FirewallType) error {
+	logger.Info().Msgf("Adding firewall rules for %s", fw)
 
-	var active bool
-
-	cmd, err := utils.ExecCommand(ctx, "systemctl",
-		[]string{"is-active", "ufw"},
-		utils.WithStdoutReader(func(lines chan []byte) {
-			for line := range lines {
-				logger.Debug().Str("output", string(line)).Msg("ufw enabled")
-				if string(line) == "active" {
-					active = true
-				}
-			}
-		}))
-
-	err = errors.Join(err, cmd.Wait())
-	if err != nil && cmd.ProcessState.ExitCode() != 3 {
-		logger.Debug().Err(err).Msg("systemctl exit status")
+	cmd, rules := firewallRules(fw)
+	if cmd == "" {
+		return errors.New("unsupported firewall")
 	}
 
-	return active
-}
-
-func addFirewalldRules(ctx context.Context) error {
-	logger.Info().Msg("Adding firewalld rules")
-
-	for _, port := range openPorts {
-		args := []string{
-			"--add-port", fmt.Sprintf("%d/tcp", port), "--permanent",
-		}
-
-		cmd, err := utils.ExecCommand(ctx, "firewall-cmd", args,
-			utils.WithStderrReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("error adding firewalld rule %v", args)
-				}
-			}),
-			utils.WithStdoutReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("firewalld rule %v added", args)
-				}
-			}),
+	for _, args := range rules {
+		cmd, err := utils.ExecCommand(ctx, cmd, args,
+			utils.WithStderrLogger(logger, utils.DebugLevel),
+			utils.WithStdoutLogger(logger, utils.DebugLevel),
 		)
 
 		err = errors.Join(err, cmd.Wait())
 		if err != nil {
 			return err
 		}
+		logger.Info().Strs("args", args).Msgf("Added %s rule", cmd)
 	}
 
-	for _, network := range openNetworks {
-		args := []string{"--add-source", network, "--permanent", "--zone=trusted"}
-		cmd, err := utils.ExecCommand(ctx, "firewall-cmd", args,
-			utils.WithStderrReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("error adding firewalld rule %v", args)
-				}
-			}),
-			utils.WithStdoutReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("firewalld rule %v added", args)
-				}
-			}),
-		)
+	if fw == FirewallTypeFirewalld {
+		cmd, err := utils.ExecCommand(ctx, "firewall-cmd", []string{"--reload"})
 		err = errors.Join(err, cmd.Wait())
 		if err != nil {
 			return err
 		}
-	}
-
-	cmd, err := utils.ExecCommand(ctx, "firewall-cmd", []string{"--reload"})
-	err = errors.Join(err, cmd.Wait())
-	if err != nil {
-		return err
 	}
 
 	return nil
 }
 
-func addUFWRules(ctx context.Context) error {
-	logger.Info().Msg("Adding UFW rules")
+func firewallRules(fw FirewallType) (cmd string, rules [][]string) {
+	switch fw {
+	case FirewallTypeFirewalld:
+		cmd = "firewall-cmd"
+	case FirewallTypeUFW:
+		cmd = "ufw"
+	}
 
 	for _, port := range openPorts {
-		args := []string{
-			"allow", fmt.Sprintf("%d/tcp", port),
-		}
+		switch fw {
+		case FirewallTypeFirewalld:
+			rules = append(rules, []string{
+				"--add-port", fmt.Sprintf("%d/tcp", port), "--permanent",
+			})
 
-		cmd, err := utils.ExecCommand(ctx, "ufw", args,
-			utils.WithStderrReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("error adding UFW rule %v", args)
-				}
-			}),
-			utils.WithStdoutReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("UFW rule %v added", args)
-				}
-			}),
-		)
-
-		err = errors.Join(err, cmd.Wait())
-		if err != nil {
-			return err
+		case FirewallTypeUFW:
+			rules = append(rules, []string{
+				"allow", fmt.Sprintf("%d/tcp", port),
+			})
 		}
 	}
 
 	for _, network := range openNetworks {
-		args := []string{"allow", "from", network, "to", "any"}
-		cmd, err := utils.ExecCommand(ctx, "ufw", args,
-			utils.WithStderrReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("error adding UFW rule %v", args)
-				}
-			}),
-			utils.WithStdoutReader(func(lines chan []byte) {
-				for line := range lines {
-					logger.Debug().Str("output", string(line)).Msgf("UFW rule %v added", args)
-				}
-			}),
-		)
+		switch fw {
+		case FirewallTypeFirewalld:
+			rules = append(rules, []string{
+				"--add-source", network, "--permanent", "--zone=trusted",
+			})
 
-		if err = errors.Join(err, cmd.Wait()); err != nil {
-			return err
+		case FirewallTypeUFW:
+			rules = append(rules, []string{
+				"allow", "from", network, "to", "any",
+			})
 		}
 	}
 
-	return nil
+	return cmd, rules
 }

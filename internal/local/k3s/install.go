@@ -75,12 +75,12 @@ func Install(ctx context.Context, c InstallConfig) error {
 	}
 
 	switch {
-	case isFirewalldActive(ctx):
-		if err := addFirewalldRules(ctx); err != nil {
+	case isFirewallActive(ctx, FirewallTypeFirewalld):
+		if err := addFirewallRules(ctx, FirewallTypeFirewalld); err != nil {
 			logger.Warn().Err(err).Msg("Failed to add firewalld rules")
 		}
-	case isUFWActive(ctx):
-		if err := addUFWRules(ctx); err != nil {
+	case isFirewallActive(ctx, FirewallTypeUFW):
+		if err := addFirewallRules(ctx, FirewallTypeFirewalld); err != nil {
 			logger.Warn().Err(err).Msg("Failed to add UFW rules")
 		}
 	default:
