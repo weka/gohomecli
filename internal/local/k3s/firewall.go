@@ -50,13 +50,13 @@ func isFirewallActive(ctx context.Context, fw FirewallType) bool {
 func addFirewallRules(ctx context.Context, fw FirewallType) error {
 	logger.Info().Msgf("Adding firewall rules for %s", fw)
 
-	cmd, rules := firewallRules(fw)
-	if cmd == "" {
+	fwCmd, rules := firewallRules(fw)
+	if fwCmd == "" {
 		return errors.New("unsupported firewall")
 	}
 
 	for _, args := range rules {
-		cmd, err := utils.ExecCommand(ctx, cmd, args,
+		cmd, err := utils.ExecCommand(ctx, fwCmd, args,
 			utils.WithStderrLogger(logger, utils.DebugLevel),
 			utils.WithStdoutLogger(logger, utils.DebugLevel),
 		)
@@ -65,7 +65,7 @@ func addFirewallRules(ctx context.Context, fw FirewallType) error {
 		if err != nil {
 			return err
 		}
-		logger.Info().Strs("args", args).Msgf("Added %s rule", cmd)
+		logger.Info().Msgf("Added %s rule", cmd)
 	}
 
 	if fw == FirewallTypeFirewalld {
