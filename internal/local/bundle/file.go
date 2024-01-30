@@ -84,6 +84,26 @@ func ReadFile(path string) (io.Reader, error) {
 	return os.Open(GetPath(path))
 }
 
-func Walk(root string, walkFn filepath.WalkFunc) error {
-	return filepath.Walk(GetPath(root), walkFn)
+type BundleImage struct {
+	Name     string
+	Location string
+}
+
+// Images returns list of images in bundle
+func Images() ([]BundleImage, error) {
+	manifest, err := GetManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	var images []BundleImage
+
+	for path, img := range manifest.DockerImages {
+		images = append(images, BundleImage{
+			Name:     img,
+			Location: filepath.Join(BundlePath(), path),
+		})
+	}
+
+	return images, nil
 }

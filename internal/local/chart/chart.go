@@ -2,8 +2,6 @@ package chart
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
@@ -89,37 +87,6 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 	}, nil
 }
 
-func findBundledChart() (string, error) {
-	path := ""
-
-	err := bundle.Walk("", func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if path != "" {
-			return nil
-		}
-
-		matched, err := filepath.Match("wekahome-*.tgz", info.Name())
-		if err != nil {
-			return err
-		}
-
-		if matched {
-			path = name
-		}
-
-		return nil
-	})
-
-	if err != nil || path == "" {
-		return "", fmt.Errorf("unable to find wekahome chart in bundle")
-	}
-
-	return path, nil
-}
-
 func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
 	var chartLocation string
 
@@ -141,7 +108,7 @@ func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, erro
 	}
 
 	if bundle.IsBundled() {
-		return findBundledChart()
+		return bundle.Chart()
 	}
 
 	return "", ErrUnableToFindChart

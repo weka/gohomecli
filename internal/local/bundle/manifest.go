@@ -10,10 +10,13 @@ const (
 )
 
 type Manifest struct {
-	WekaHome     string            `json:"wekaHome"`
-	K3S          string            `json:"k3s"`
+	WekaHome string `json:"wekaHome"`
+	K3S      string `json:"k3s"`
+
+	// map[filename]imageName
 	DockerImages map[string]string `json:"dockerImages"`
-	FilesDigest  map[string]string `json:"filesDigest"`
+	// map[filename]digest
+	FilesDigest map[string]string `json:"filesDigest"`
 }
 
 func GetManifest() (Manifest, error) {
