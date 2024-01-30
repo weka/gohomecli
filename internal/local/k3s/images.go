@@ -10,51 +10,29 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/platforms"
+
 	"github.com/weka/gohomecli/internal/local/bundle"
-	"github.com/weka/gohomecli/internal/utils"
 )
 
-func getCurrentPlatform() string {
-	return fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-}
-
-func imageReader(imagePath string) (r io.Reader, close func() error, err error) {
-	file, err := os.Open(imagePath)
+func ImportImages(ctx context.Context, images map[string]string, failFast bool) error {
+	client, err := containerd.New("/run/k3s/containerd/containerd.sock")
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
+	ctx = namespaces.WithNamespace(ctx, "k8s.io")
+
+	platform, err := platforms.Parse(getCurrentPlatform())
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mime := http.DetectContentType(buffer)
-	if mime == "application/x-gzip" {
-		reader, err := gzip.NewReader(file)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return reader, func() error {
-			return errors.Join(reader.Close(), file.Close())
-		}, nil
-	}
-
-	return file, file.Close, nil
-}
-
-func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error {
 	var importErrors []error
-	for _, imagePath := range imagePaths {
-		logger := logger.With().Str("imagePath", imagePath).Logger()
-
+	for name, imagePath := range images {
 		// check if cancelled
 		select {
 		case <-ctx.Done():
@@ -62,46 +40,26 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 		default:
 		}
 
-		reader, closeFn, err := imageReader(imagePath)
-		if err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Failed to read image data")
+		logger := logger.With().Str("image", name).Logger()
 
-			if failFast {
+		err := imageReaderFunc(imagePath, func(reader io.Reader) error {
+			_, err := client.ImageService().Get(ctx, name)
+			if !errors.Is(err, errdefs.ErrNotFound) {
 				return err
-			} else {
-				importErrors = append(importErrors, err)
-				continue
 			}
-		}
-
-		if closeFn != nil {
-			defer closeFn()
-		}
-
-		cmd, err := utils.ExecCommand(ctx, "k3s", []string{
-			"ctr", "image", "import",
-			"--platform", getCurrentPlatform(),
-			"--", "-"},
-			utils.WithStdin(reader),
-			utils.WithStdoutLogger(logger, utils.InfoLevel),
-			utils.WithStderrLogger(logger, utils.WarnLevel),
-		)
-		logger.Debug().Strs("command", cmd.Args).Msg("Running import command")
-
-		if err != nil {
-			logger.Warn().Err(err).Msg("Failed run import command")
-
-			if failFast {
-				return err
-			} else {
-				importErrors = append(importErrors, err)
-				continue
+			if err == nil {
+				logger.Debug().Msg("Image already exists")
+				return nil
 			}
-		}
 
-		err = cmd.Wait()
+			logger.Info().Msg("Importing image")
+
+			_, err = client.Import(ctx, reader,
+				containerd.WithImportPlatform(platforms.Any(platform)),
+				containerd.WithIndexName(name),
+			)
+			return err
+		})
 		if err != nil {
 			logger.Warn().Err(err).Msg("Failed to import image")
 
@@ -122,21 +80,51 @@ func ImportImages(ctx context.Context, imagePaths []string, failFast bool) error
 }
 
 func ImportBundleImages(ctx context.Context, failFast bool) error {
-	imagePaths := []string{}
-	err := bundle.Walk("images", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
+	var imagePaths = make(map[string]string)
 
-		if !info.IsDir() {
-			imagePaths = append(imagePaths, path)
-		}
-
-		return nil
-	})
+	images, err := bundle.Images()
 	if err != nil {
 		return err
 	}
 
+	for i := range images {
+		imagePaths[images[i].Name] = images[i].Location
+	}
+
 	return ImportImages(ctx, imagePaths, failFast)
+}
+
+func getCurrentPlatform() string {
+	return fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+}
+
+func imageReaderFunc(imagePath string, cb func(io.Reader) error) (err error) {
+	file, err := os.Open(imagePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	if mime := http.DetectContentType(buffer); mime == "application/x-gzip" {
+		reader, err := gzip.NewReader(file)
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+
+		return cb(reader)
+	}
+
+	return cb(file)
 }
