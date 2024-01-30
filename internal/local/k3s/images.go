@@ -56,7 +56,6 @@ func ImportImages(ctx context.Context, images map[string]string, failFast bool) 
 
 			_, err = client.Import(ctx, reader,
 				containerd.WithImportPlatform(platforms.Any(platform)),
-				containerd.WithIndexName(name),
 			)
 			return err
 		})
