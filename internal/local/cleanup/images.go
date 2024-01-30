@@ -11,6 +11,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const kubernetesImagesNamespace = "k8s.io"
+
 type ImagesArgs struct {
 	Force  bool
 	DryRun bool
@@ -30,17 +32,19 @@ func Images(ctx context.Context, args ImagesArgs) error {
 		return err
 	}
 
-	protected, err := getProtected(ctx, client)
+	inUse, err := getInUseImages(ctx, client)
 	if err != nil {
 		return err
 	}
 
 	for _, img := range imgs {
-		if protected[img] {
+		if inUse[img] {
+			logger.Debug().Str("image", img).Msg("Skipping in-use image")
 			continue
 		}
 
 		if additionallyProtected(img) && !args.Force {
+			logger.Debug().Str("image", img).Msg("Skipping additionally protected image")
 			continue
 		}
 
@@ -58,7 +62,7 @@ func Images(ctx context.Context, args ImagesArgs) error {
 }
 
 func getImages(ctx context.Context, client *containerd.Client) ([]string, error) {
-	list, err := client.ImageService().List(namespaces.WithNamespace(ctx, "k8s.io"))
+	list, err := client.ImageService().List(namespaces.WithNamespace(ctx, kubernetesImagesNamespace))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +79,7 @@ func getImages(ctx context.Context, client *containerd.Client) ([]string, error)
 	return slices.Compact(imgs), nil
 }
 
-func getProtected(ctx context.Context, client *containerd.Client) (map[string]bool, error) {
+func getInUseImages(ctx context.Context, client *containerd.Client) (map[string]bool, error) {
 	var protected = map[string]bool{}
 
 	ns, err := client.NamespaceService().List(ctx)
