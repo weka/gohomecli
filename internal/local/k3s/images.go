@@ -12,27 +12,35 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/platforms"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 )
 
-func ImportImages(ctx context.Context, images map[string]string, failFast bool) error {
-	client, err := containerd.New("/run/k3s/containerd/containerd.sock")
-	if err != nil {
-		return err
-	}
+const sockPath = "/run/k3s/containerd/containerd.sock"
 
-	ctx = namespaces.WithNamespace(ctx, "k8s.io")
-
+func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) error {
 	platform, err := platforms.Parse(getCurrentPlatform())
 	if err != nil {
 		return err
 	}
 
+	client, err := containerd.New(sockPath, containerd.WithDefaultNamespace("k8s.io"))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	serving, err := client.IsServing(ctx)
+	if err != nil {
+		return err
+	}
+	if !serving {
+		return fmt.Errorf("containerd is not serving")
+	}
+
 	var importErrors []error
-	for name, imagePath := range images {
+	for name, imagePath := range imgs {
 		// check if cancelled
 		select {
 		case <-ctx.Done():
@@ -53,10 +61,10 @@ func ImportImages(ctx context.Context, images map[string]string, failFast bool) 
 			}
 
 			logger.Info().Msg("Importing image")
-
 			_, err = client.Import(ctx, reader,
 				containerd.WithImportPlatform(platforms.Any(platform)),
 			)
+
 			return err
 		})
 		if err != nil {
@@ -97,6 +105,8 @@ func getCurrentPlatform() string {
 	return fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
+var gz gzip.Reader
+
 func imageReaderFunc(imagePath string, cb func(io.Reader) error) (err error) {
 	file, err := os.Open(imagePath)
 	if err != nil {
@@ -116,13 +126,12 @@ func imageReaderFunc(imagePath string, cb func(io.Reader) error) (err error) {
 	}
 
 	if mime := http.DetectContentType(buffer); mime == "application/x-gzip" {
-		reader, err := gzip.NewReader(file)
+		err = gz.Reset(file)
 		if err != nil {
 			return err
 		}
-		defer reader.Close()
 
-		return cb(reader)
+		return cb(&gz)
 	}
 
 	return cb(file)
