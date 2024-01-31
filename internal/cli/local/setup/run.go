@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -35,9 +36,21 @@ func runSetup(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	// cleanup on any error during installing
+	// cleanup on error during installing
 	defer func() {
-		if err != nil && !errors.Is(err, k3s.ErrExists) {
+		var skipErrors = []error{
+			k3s.ErrExists,
+			chart.ErrTimeout,
+			context.DeadlineExceeded,
+		}
+
+		if err != nil {
+			for _, skipErr := range skipErrors {
+				if errors.Is(err, skipErr) {
+					return
+				}
+			}
+
 			k3s.Cleanup(setupConfig.Debug)
 		}
 	}()

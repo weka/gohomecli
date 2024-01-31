@@ -14,6 +14,8 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 		namespace = opts.NamespaceOverride
 	}
 
+	go watchEvents(ctx, opts)
+
 	logger.Info().
 		Str("namespace", namespace).
 		Str("kubeContext", opts.KubeContext).
