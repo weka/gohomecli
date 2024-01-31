@@ -12,7 +12,7 @@ const (
 	fakeNameserver    = "nameserver 127.0.0.1:9999"
 )
 
-var resolvRegexp = regexp.MustCompile(`\s*nameserver.*`)
+var resolvRegexp = regexp.MustCompile(`^\s*nameserver`)
 
 // resolvConfigOverriden is WORKAROUND for an issue in CoreDNS with AirGap environment
 func resolvConfOverriden() (bool, error) {
