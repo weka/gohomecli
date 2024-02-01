@@ -20,7 +20,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.Upgrade(r.Context(), k3s.UpgradeConfig{})
+	err := k3s.Upgrade(r.Context(), k3s.Config{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

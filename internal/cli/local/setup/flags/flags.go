@@ -29,6 +29,11 @@ type Flags struct {
 		RemoteVersion  string
 	}
 
+	Iface string
+
+	TLSCert string // TLS certificate file
+	TLSKey  string // TLS key file
+
 	Debug bool
 }
 
@@ -75,4 +80,9 @@ func Use(cmd *cobra.Command, config *Flags) {
 	cmd.Flags().BoolVarP(&config.Chart.RemoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
 	cmd.Flags().StringVar(&config.Chart.RemoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 	cmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
+
+	cmd.Flags().StringVar(&config.Iface, "iface", "", "interface to use for internal networking")
+
+	cmd.Flags().StringVar(&config.TLSCert, "tls-cert", "", "TLS certificate file")
+	cmd.Flags().StringVar(&config.TLSKey, "tls-key", "", "TLS secret key file")
 }

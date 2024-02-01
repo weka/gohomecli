@@ -43,6 +43,10 @@ var upgradeCmd = &cobra.Command{
 			upgradeConfig.Configuration.Proxy.URL = upgradeConfig.Flags.ProxyURL
 		}
 
+		if err := readTLS(upgradeConfig.TLSCert, upgradeConfig.TLSKey, &upgradeConfig.Configuration); err != nil {
+			return err
+		}
+
 		return upgradeConfig.Validate()
 	},
 	RunE: runUpgrade,
@@ -53,5 +57,8 @@ func init() {
 		appCmd.AddCommand(upgradeCmd)
 
 		setup_flags.Use(upgradeCmd, &upgradeConfig.Flags)
+
+		upgradeCmd.Flags().StringVar(&upgradeConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
+		upgradeCmd.Flags().StringVar(&upgradeConfig.IP, "ip", "0.0.0.0", "internal IP address to use for cluster")
 	})
 }
