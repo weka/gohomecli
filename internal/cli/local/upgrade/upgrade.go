@@ -3,6 +3,7 @@ package upgrade
 import (
 	"errors"
 
+	"github.com/imdario/mergo"
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
@@ -31,20 +32,30 @@ var upgradeCmd = &cobra.Command{
 	Short: "Upgrade Local Weka Home",
 	Long:  `Upgrade Weka Home with K3S bundle`,
 	PreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		var c = config.CLIConfig
+		var jsonConfig = config.CLIConfig
 		if upgradeConfig.JsonConfig != "" {
-			c = upgradeConfig.JsonConfig
+			jsonConfig = upgradeConfig.JsonConfig
 		}
-		if err := config.ReadV1(c, &upgradeConfig.Configuration); err != nil {
+
+		if upgradeConfig.JsonConfig != "" {
+			// Use cli configuration over config json passed for overwrite
+			var cfg config_v1.Configuration
+
+			err := errors.Join(
+				config.ReadV1(jsonConfig, &cfg),                // read config into cfg
+				mergo.Merge(&upgradeConfig.Configuration, cfg), // merge cfg into upgradeConfig
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := readTLS(upgradeConfig.TLSCert, upgradeConfig.TLSKey, &upgradeConfig.Configuration); err != nil {
 			return err
 		}
 
 		if upgradeConfig.Flags.ProxyURL != "" {
 			upgradeConfig.Configuration.Proxy.URL = upgradeConfig.Flags.ProxyURL
-		}
-
-		if err := readTLS(upgradeConfig.TLSCert, upgradeConfig.TLSKey, &upgradeConfig.Configuration); err != nil {
-			return err
 		}
 
 		return upgradeConfig.Validate()
