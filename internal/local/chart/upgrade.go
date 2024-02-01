@@ -43,15 +43,16 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 			}
 		}
 
+		// don't do rollback on timeout
+		if isTimeoutErr(err) {
+			return errors.Join(ErrTimeout, err)
+		}
+
 		if !debug {
 			logger.Warn().Msg("Rolling back release")
 			if err := client.RollbackRelease(spec); err != nil {
 				logger.Error().Err(err).Msg("Rollback failed")
 			}
-		}
-
-		if isTimeoutErr(err) {
-			return errors.Join(ErrTimeout, err)
 		}
 
 		logger.Error().Err(err).Msg("Upgrade failed")
