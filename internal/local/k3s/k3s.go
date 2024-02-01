@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -19,6 +20,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
 )
 
@@ -26,7 +28,42 @@ const (
 	k3sInstallPath = "/usr/local/bin"
 )
 
+type Config struct {
+	*config_v1.Configuration
+
+	Iface           string // interface for k3s network to work on
+	ProxyKubernetes bool   // use proxy for k3s
+	Debug           bool
+
+	ifaceAddr string // ip addr for k3s to use as node ip (taken from iface or IP)
+}
+
+func (c Config) k3sInstallArgs() []string {
+	k3sArgs := []string{
+		fmt.Sprintf("--flannel-iface=%s", c.Iface),
+		fmt.Sprintf("--node-ip=%s", c.ifaceAddr), // node ip needs to have ip address (not 0.0.0.0)
+		fmt.Sprintf("--kubelet-arg=address=%s", c.IP),
+		fmt.Sprintf("--bind-address=%s", c.IP),
+		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
+	}
+
+	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
+
+	return k3sArgs
+}
+
+const dataDir = "/opt/wekahome/data/"
+
 var logger = utils.GetLogger("K3S")
+
+var (
+	ErrExists = errors.New("k3s already installed")
+
+	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
+
+	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
+	k3sImagesPath   = "/var/lib/rancher/k3s/agent/images/"
+)
 
 func setupLogger(debug bool) {
 	if debug {
@@ -93,7 +130,7 @@ func hasSystemd() bool {
 
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
-func setupNetwork(c *InstallConfig) (err error) {
+func setupNetwork(c *Config) (err error) {
 	if c.IP == "127.0.0.1" {
 		return fmt.Errorf("unable to bind to 127.0.0.1")
 	}
@@ -111,9 +148,9 @@ func setupNetwork(c *InstallConfig) (err error) {
 		c.Iface = netIF.Name
 	}
 
-	c.IfaceAddr = c.IP
+	c.ifaceAddr = c.IP
 
-	err = upsertIfaceAddrHost(netIF, &c.IfaceAddr, &c.Host)
+	err = upsertIfaceAddrHost(netIF, &c.ifaceAddr, &c.Host)
 	if err != nil {
 		return err
 	}
@@ -246,6 +283,82 @@ func getK3SVersion(binary string) (string, error) {
 	}
 
 	return version[2], nil
+}
+
+func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) error {
+	logger.Info().Msg("Running k3s install script")
+
+	if c.Host != "" {
+		logger.Debug().Str("hostname", c.Host).Msg("Using hostname")
+		os.Setenv("K3S_HOSTNAME", c.Host)
+		os.Setenv("K3S_NODE_NAME", c.Host)
+	}
+
+	overriden, err := resolvConfOverriden()
+	if err != nil {
+		return err
+	}
+	if overriden {
+		logger.Debug().Str("resolvconf", k3sResolvConfPath).Msg("Resolv.conf is overriden")
+		os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
+	}
+
+	logger.Debug().
+		Str("installPath", k3sInstallPath).
+		Msg("Setting env vars")
+
+	os.Setenv("INSTALL_K3S_BIN_DIR", k3sInstallPath)
+	os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
+	os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
+	os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
+
+	if c.Proxy.URL != "" && c.ProxyKubernetes {
+		proxyURL, err := url.Parse(c.Proxy.URL)
+		if err != nil {
+			return fmt.Errorf("url parse: %w", err)
+		}
+
+		logger.Info().
+			Str("proxy", utils.URLSafe(proxyURL).String()).
+			Msg("Using proxy")
+
+		var noProxy = []string{
+			"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+			fmt.Sprintf("%s/32", c.IP),
+			fmt.Sprintf("%s/32", c.ifaceAddr),
+		}
+
+		os.Setenv("NO_PROXY", strings.Join(noProxy, ","))
+
+		switch proxyURL.Scheme {
+		case "http":
+			os.Setenv("HTTPS_PROXY", proxyURL.String())
+			os.Setenv("HTTP_PROXY", proxyURL.String())
+		case "https":
+			os.Setenv("HTTPS_PROXY", proxyURL.String())
+		default:
+			logger.Warn().
+				Str("url", proxyURL.String()).
+				Msgf("Proxy scheme %s is not supported with K3S", proxyURL.Scheme)
+		}
+	}
+
+	cmd, err := utils.ExecCommand(ctx, "sh", append([]string{"-s", "-", "server"}, c.k3sInstallArgs()...),
+		utils.WithStdin(r),
+		utils.WithStdoutReader(k3sLogParser(utils.InfoLevel)),
+		utils.WithStderrReader(k3sLogParser(utils.InfoLevel)),
+	)
+	if err != nil {
+		return err
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return fmt.Errorf("install.sh: %w", errors.Join(err, ctx.Err()))
+	}
+
+	logger.Info().Msg("Install completed")
+
+	return nil
 }
 
 var logRegexp = regexp.MustCompile(`(\[(.+?)\]\s*)?(.+)`)

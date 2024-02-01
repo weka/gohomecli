@@ -1,10 +1,13 @@
 package upgrade
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
+	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/k3s"
 )
 
@@ -15,7 +18,12 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err := k3s.Upgrade(cmd.Context(), k3s.UpgradeConfig{Debug: upgradeConfig.Debug})
+	err := k3s.Upgrade(cmd.Context(), k3s.Config{
+		Configuration:   &upgradeConfig.Configuration,
+		Iface:           upgradeConfig.Iface,
+		ProxyKubernetes: upgradeConfig.ProxyKubernetes,
+		Debug:           upgradeConfig.Debug,
+	})
 	if err != nil {
 		return err
 	}
@@ -55,4 +63,25 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	return chart.Upgrade(cmd.Context(), helmOptions, upgradeConfig.Debug)
+}
+
+func readTLS(certFile, keyFile string, config *config_v1.Configuration) error {
+	if certFile == "" || keyFile == "" {
+		return nil
+	}
+
+	cert, err := os.ReadFile(certFile)
+	if err != nil {
+		return err
+	}
+	config.TLS.Cert = string(cert)
+
+	key, err := os.ReadFile(keyFile)
+	if err != nil {
+		return err
+	}
+
+	config.TLS.Key = string(key)
+
+	return nil
 }

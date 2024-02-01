@@ -55,7 +55,7 @@ func runSetup(cmd *cobra.Command, args []string) (err error) {
 		}
 	}()
 
-	err = k3s.Install(cmd.Context(), k3s.InstallConfig{
+	err = k3s.Install(cmd.Context(), k3s.Config{
 		Configuration:   &setupConfig.Configuration,
 		Iface:           setupConfig.Iface,
 		ProxyKubernetes: setupConfig.ProxyKubernetes,

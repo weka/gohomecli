@@ -12,11 +12,7 @@ import (
 
 var ErrNotExist = errors.New("k3s not exists")
 
-type UpgradeConfig struct {
-	Debug bool
-}
-
-func Upgrade(ctx context.Context, c UpgradeConfig) (retErr error) {
+func Upgrade(ctx context.Context, c Config) (retErr error) {
 	setupLogger(c.Debug)
 
 	if !hasK3S() {
@@ -63,14 +59,23 @@ func Upgrade(ctx context.Context, c UpgradeConfig) (retErr error) {
 		}
 	}()
 
+	if err := setupNetwork(&c); err != nil {
+		return err
+	}
+
 	logger.Info().Msg("Copying new k3s image...")
-	err = bundle.Tar(file).GetFiles(ctx, copyK3S(), copyAirgapImages())
+	err = bundle.Tar(file).GetFiles(ctx, copyK3S(), copyAirgapImages(), runInstallScript(c))
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Warn().Msg("Upgrade was cancelled")
 			return err
 		}
 		return fmt.Errorf("read bundle: %w", err)
+	}
+
+	err = setupTLS(ctx, c.Configuration)
+	if err != nil && !errors.Is(err, ErrNoTLS) {
+		return err
 	}
 
 	logger.Info().Msg("Upgrade completed")

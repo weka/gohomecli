@@ -25,7 +25,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := k3s.Install(r.Context(), k3s.InstallConfig{
+	err := k3s.Install(r.Context(), k3s.Config{
 		Configuration: &config,
 	})
 	if err != nil {
