@@ -79,7 +79,7 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		return err
 	}
 
-	logger.Info().Msg("Upgrade completed")
+	logger.Info().Msg("K3S upgrade completed")
 
 	return nil
 }
