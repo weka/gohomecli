@@ -50,23 +50,28 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		}
 		logger.Warn().Err(err).Msg("Backing up old K3S failed, doing upgrade anyway...")
 	}
-	defer func() {
-		if retErr != nil && len(backupFiles) > 0 && !c.Debug {
-			retErr = errors.Join(retErr, restore(backupFiles))
-		}
-		if err := serviceCmd("start").Run(); err != nil {
-			retErr = errors.Join(retErr, fmt.Errorf("start K3S service: %w", err))
-		}
-	}()
 
 	logger.Info().Msg("Copying new k3s image...")
 	err = bundle.Tar(file).GetFiles(ctx, copyK3S(), copyAirgapImages(), runInstallScript(c))
 	if err != nil {
+		// restoring backup
+		if len(backupFiles) > 0 && !c.Debug {
+			err = errors.Join(err, restore(backupFiles))
+			if startErr := serviceCmd("start").Run(); err != nil {
+				err = errors.Join(err, fmt.Errorf("start K3S service: %w", startErr))
+			}
+		}
+
 		if errors.Is(err, context.Canceled) {
 			logger.Warn().Msg("Upgrade was cancelled")
 			return err
 		}
-		return fmt.Errorf("read bundle: %w", err)
+
+		return err
+	}
+
+	if err := serviceCmd("start").Run(); err != nil {
+		return fmt.Errorf("start K3S service: %w", err)
 	}
 
 	err = setupTLS(ctx, c.Configuration)
@@ -74,7 +79,7 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		return err
 	}
 
-	logger.Info().Msg("Upgrade completed")
+	logger.Info().Msg("K3S upgrade completed")
 
 	return nil
 }
