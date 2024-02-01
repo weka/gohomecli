@@ -59,10 +59,6 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		}
 	}()
 
-	if err := setupNetwork(&c); err != nil {
-		return err
-	}
-
 	logger.Info().Msg("Copying new k3s image...")
 	err = bundle.Tar(file).GetFiles(ctx, copyK3S(), copyAirgapImages(), runInstallScript(c))
 	if err != nil {

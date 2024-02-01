@@ -197,35 +197,44 @@ func upsertIfaceAddrHost(iface net.Interface, ifaceAddr *string, hostname *strin
 		return fmt.Errorf("network addr: %w", err)
 	}
 
+	var addrFound bool
+
 	for _, a := range addr {
 		ipnet, ok := a.(*net.IPNet)
 		if !ok || ipnet.IP.To4() == nil {
 			logger.Debug().Str("addr", a.String()).Msg("Not an IPv4")
 			continue
 		}
+
 		if *ifaceAddr == ipnet.IP.To4().String() {
 			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP match to interface")
-			return nil
-		}
-
-		if *hostname == "" {
-			// set IP to hostname
-			logger.Warn().
-				Str("hostname", ipnet.IP.To4().String()).
-				Msgf("Hostname is not set, using IP")
-
-			*hostname = ipnet.IP.To4().String()
+			addrFound = true
+			break
 		}
 
 		if *ifaceAddr == "0.0.0.0" || *ifaceAddr == "" {
 			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
 			// use first ip found from interface
 			*ifaceAddr = ipnet.IP.To4().String()
-			return nil
+			addrFound = true
+			break
 		}
 	}
 
-	return fmt.Errorf("IP address for node %q is not exists", *ifaceAddr)
+	if !addrFound {
+		return fmt.Errorf("IP address %q is valid", *ifaceAddr)
+	}
+
+	if *hostname == "" {
+		// set IP to hostname
+		logger.Warn().
+			Str("hostname", *ifaceAddr).
+			Msgf("Hostname is not set, using IP")
+
+		*hostname = *ifaceAddr
+	}
+
+	return nil
 }
 
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
@@ -288,10 +297,13 @@ func getK3SVersion(binary string) (string, error) {
 func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) error {
 	logger.Info().Msg("Running k3s install script")
 
+	if err := setupNetwork(&c); err != nil {
+		return err
+	}
+
 	if c.Host != "" {
 		logger.Debug().Str("hostname", c.Host).Msg("Using hostname")
 		os.Setenv("K3S_HOSTNAME", c.Host)
-		os.Setenv("K3S_NODE_NAME", c.Host)
 	}
 
 	overriden, err := resolvConfOverriden()
@@ -311,6 +323,7 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 	os.Setenv("INSTALL_K3S_SKIP_DOWNLOAD", "true")
 	os.Setenv("INSTALL_K3S_SELINUX_WARN", "true")
 	os.Setenv("INSTALL_K3S_SKIP_SELINUX_RPM", "true")
+	os.Setenv("K3S_NODE_NAME", "wekahome.local")
 
 	if c.Proxy.URL != "" && c.ProxyKubernetes {
 		proxyURL, err := url.Parse(c.Proxy.URL)
