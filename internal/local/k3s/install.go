@@ -27,10 +27,6 @@ func Install(ctx context.Context, c Config) error {
 
 	logger.Info().Msgf("Installing K3S %q\n", manifest.K3S)
 
-	if err := setupNetwork(&c); err != nil {
-		return err
-	}
-
 	switch {
 	case isFirewallActive(ctx, FirewallTypeFirewalld):
 		if err := addFirewallRules(ctx, FirewallTypeFirewalld); err != nil {
