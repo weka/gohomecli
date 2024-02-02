@@ -11,7 +11,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-const kubernetesImagesNamespace = "k8s.io"
+const (
+	kubernetesImagesNamespace = "k8s.io"
+	k3sSocket                 = "/run/k3s/containerd/containerd.sock"
+)
 
 type ImagesArgs struct {
 	Force  bool
@@ -21,7 +24,7 @@ type ImagesArgs struct {
 func Images(ctx context.Context, args ImagesArgs) error {
 	logger.Info().Msg("Removing unused images")
 
-	client, err := containerd.New("/run/k3s/containerd/containerd.sock")
+	client, err := containerd.New(k3sSocket)
 	if err != nil {
 		return err
 	}
@@ -37,6 +40,8 @@ func Images(ctx context.Context, args ImagesArgs) error {
 		return err
 	}
 
+	var deleted int
+
 	for _, img := range imgs {
 		if inUse[img] {
 			logger.Debug().Str("image", img).Msg("Skipping in-use image")
@@ -50,12 +55,19 @@ func Images(ctx context.Context, args ImagesArgs) error {
 
 		logger.Info().Str("image", img).Msg("Removing image")
 
+		deleted++
+
 		if !args.DryRun {
-			err = client.ImageService().Delete(ctx, img)
+			ctx = namespaces.WithNamespace(ctx, kubernetesImagesNamespace)
+			err = client.ImageService().Delete(ctx, img, images.SynchronousDelete())
 			if err != nil {
 				return err
 			}
 		}
+	}
+
+	if deleted == 0 {
+		logger.Info().Msg("No images to remove")
 	}
 
 	return nil
@@ -71,7 +83,7 @@ func getImages(ctx context.Context, client *containerd.Client) ([]string, error)
 
 	for _, img := range list {
 		logger.Debug().Interface("image", img).Msg("Got image")
-		imgs = append(imgs, img.Target.Annotations[images.AnnotationImageName])
+		imgs = append(imgs, img.Name)
 	}
 
 	slices.Sort(imgs)
