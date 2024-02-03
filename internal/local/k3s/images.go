@@ -61,11 +61,23 @@ func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) er
 			}
 
 			logger.Info().Msg("Importing image")
-			_, err = client.Import(ctx, reader,
+			imported, err := client.Import(ctx, reader,
 				containerd.WithImportPlatform(platforms.Any(platform)),
 			)
+			if err != nil {
+				return err
+			}
 
-			return err
+			for _, img := range imported {
+				logger.Debug().Msg("Unpacking image")
+				err := containerd.NewImageWithPlatform(client, img, platforms.Any(platform)).
+					Unpack(ctx, "")
+				if err != nil {
+					return fmt.Errorf("unpack image: %w", err)
+				}
+			}
+
+			return nil
 		})
 		if err != nil {
 			logger.Warn().Err(err).Msg("Failed to import image")
