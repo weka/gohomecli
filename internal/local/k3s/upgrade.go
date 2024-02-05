@@ -57,7 +57,7 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		// restoring backup
 		if len(backupFiles) > 0 && !c.Debug {
 			err = errors.Join(err, restore(backupFiles))
-			if startErr := serviceCmd("start").Run(); err != nil {
+			if startErr := serviceCmd("start").Run(); startErr != nil {
 				err = errors.Join(err, fmt.Errorf("start K3S service: %w", startErr))
 			}
 		}
