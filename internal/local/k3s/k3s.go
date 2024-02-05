@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/exp/slices"
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
@@ -158,6 +159,13 @@ func setupNetwork(c *Config) (err error) {
 	return nil
 }
 
+var internalIfaces = []string{
+	"cni",
+	"veth",
+	"flannel",
+	"docker",
+}
+
 // getInterface checks if iface name is valid and running
 func getInterface(iface string) (net.Interface, error) {
 	ifaces, err := net.Interfaces()
@@ -166,8 +174,13 @@ func getInterface(iface string) (net.Interface, error) {
 	}
 
 	for _, i := range ifaces {
-		// if it's loopback or not running - skip it
-		if i.Flags&net.FlagLoopback == net.FlagLoopback || i.Flags&net.FlagRunning != net.FlagRunning {
+		// skip internal k3s flannel ifaces
+		internal := slices.ContainsFunc(internalIfaces, func(s string) bool {
+			return strings.HasPrefix(i.Name, s)
+		})
+
+		// if it's internal flannel iface, loopback or not running - skip it
+		if internal || i.Flags&net.FlagLoopback == net.FlagLoopback || i.Flags&net.FlagRunning != net.FlagRunning {
 			logger.Debug().
 				Str("iface", i.Name).
 				Bool("loopback", i.Flags&net.FlagLoopback == net.FlagLoopback).
@@ -222,7 +235,7 @@ func upsertIfaceAddrHost(iface net.Interface, ifaceAddr *string, hostname *strin
 	}
 
 	if !addrFound {
-		return fmt.Errorf("IP address %q is valid", *ifaceAddr)
+		return fmt.Errorf("IP address %q is not valid", *ifaceAddr)
 	}
 
 	if *hostname == "" {
