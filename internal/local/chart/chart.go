@@ -55,7 +55,7 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 	}
 
 	logger.Debug().
-		Interface("configuration", opts.Config).
+		Interface("configuration", opts.Config.LoggingSafe()).
 		Msg("Generating chart values")
 
 	values, err := generateValuesV3(opts.Config)
@@ -67,12 +67,11 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 		return nil, fmt.Errorf("failed serializing values yaml: %w", err)
 	}
 
-	logger.Debug().Msgf("Helm values.yaml:\n%s", string(opts.Values))
-
 	chartVersion := "" // any available
 	if opts.Override != nil {
 		chartVersion = opts.Override.Version
 	}
+
 	return &helmclient.ChartSpec{
 		ReleaseName:     ReleaseName,
 		ChartName:       chartLocation,

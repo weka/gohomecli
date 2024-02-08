@@ -43,9 +43,6 @@ func (g *yamlGenerator) Generate(configuration *config_v1.Configuration) (yamlMa
 
 			return nil, err
 		}
-
-		logger.Debug().Interface("result", result).Interface("visitorResult", visitorResult).Msg("Generated yaml")
-
 	}
 
 	return result, nil

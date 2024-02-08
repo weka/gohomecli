@@ -55,3 +55,10 @@ type Configuration struct {
 func (c Configuration) Validate() error {
 	return nil
 }
+
+func (c Configuration) LoggingSafe() Configuration {
+	c.TLS.Cert = "HIDDEN"
+	c.TLS.Key = "HIDDEN"
+	c.SMTP.Password = "HIDDEN"
+	return c
+}

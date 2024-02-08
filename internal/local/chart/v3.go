@@ -174,8 +174,6 @@ func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error)
 		err = errors.Join(err, writeMapEntry(cfg, key, v))
 	}
 
-	logger.Debug().Interface("overrides", cfg).Msg("Overrides")
-
 	return cfg, err
 }
 
