@@ -74,11 +74,6 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		return fmt.Errorf("start K3S service: %w", err)
 	}
 
-	err = setupTLS(ctx, c.Configuration)
-	if err != nil && !errors.Is(err, ErrNoTLS) {
-		return err
-	}
-
 	logger.Info().Msg("K3S upgrade completed")
 
 	return nil

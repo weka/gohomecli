@@ -51,11 +51,6 @@ func Install(ctx context.Context, c Config) error {
 		return err
 	}
 
-	err = setupTLS(ctx, c.Configuration)
-	if err != nil && !errors.Is(err, ErrNoTLS) {
-		return err
-	}
-
 	return nil
 }
 
@@ -78,6 +73,8 @@ func copyK3S() bundle.TarCallback {
 
 		Callback: func(ctx context.Context, _ fs.FileInfo, r io.Reader) (err error) {
 			logger.Info().Msg("Copying k3s binary")
+
+			_ = os.MkdirAll(k3sInstallPath, 0o755)
 
 			f, err := os.OpenFile(k3sBinary(), os.O_CREATE|os.O_WRONLY, fs.FileMode(0o755))
 			if err != nil {
