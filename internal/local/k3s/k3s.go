@@ -26,7 +26,19 @@ import (
 )
 
 const (
-	k3sInstallPath = "/usr/local/bin"
+	k3sInstallPath = "/opt/k3s/bin"
+	dataDir        = "/opt/wekahome/data/"
+)
+
+var logger = utils.GetLogger("K3S")
+
+var (
+	ErrExists = errors.New("k3s already installed")
+
+	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
+
+	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
+	k3sImagesPath   = "/var/lib/rancher/k3s/agent/images/"
 )
 
 type Config struct {
@@ -53,19 +65,6 @@ func (c Config) k3sInstallArgs() []string {
 	return k3sArgs
 }
 
-const dataDir = "/opt/wekahome/data/"
-
-var logger = utils.GetLogger("K3S")
-
-var (
-	ErrExists = errors.New("k3s already installed")
-
-	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
-
-	k3sBundleRegexp = regexp.MustCompile(`k3s.*\.(tar(\.gz)?)|(tgz)`)
-	k3sImagesPath   = "/var/lib/rancher/k3s/agent/images/"
-)
-
 func setupLogger(debug bool) {
 	if debug {
 		utils.SetLoggingLevel(utils.DebugLevel)
@@ -74,6 +73,8 @@ func setupLogger(debug bool) {
 
 // Wait waits for k3s to be up
 func Wait(ctx context.Context) error {
+	logger.Info().Msg("Waiting for k3s to be up...")
+
 	waitScript := `until [[ $(k3s ctr info) ]]; do sleep 5; done`
 
 	cmd, err := utils.ExecCommand(ctx, "bash", []string{"-"},
