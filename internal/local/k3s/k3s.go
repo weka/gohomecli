@@ -34,6 +34,7 @@ var logger = utils.GetLogger("K3S")
 
 var (
 	ErrExists = errors.New("k3s already installed")
+	ErrNMCS   = errors.New("nm-cloud-setup is enabled, please run systemctl disable nm-cloud-setup.service nm-cloud-setup.timer and reboot")
 
 	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
 
@@ -409,4 +410,28 @@ func k3sLogParser(lvl zerolog.Level) func(lines chan []byte) {
 			logger.WithLevel(lvl).Msg(string(matches[3]))
 		}
 	}
+}
+
+func isNmCloudSetupEnabled(ctx context.Context) bool {
+	logger.Info().Msgf("Checking if nm-cloud-setup is enabled")
+
+	var active bool
+
+	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-active", "nm-cloud-setup"},
+		utils.WithStderrLogger(logger, utils.DebugLevel),
+		utils.WithStdoutReader(func(lines chan []byte) {
+			for line := range lines {
+				logger.Debug().Str("output", string(line)).Msg("nm-cloud-setup status")
+				if string(line) == "active" {
+					active = true
+				}
+			}
+		}))
+
+	err = errors.Join(err, cmd.Wait())
+	if err != nil && cmd.ProcessState.ExitCode() != 3 { // 3 means no systemd unit exists
+		logger.Debug().Err(err).Msg("systemctl exit status")
+	}
+
+	return active
 }

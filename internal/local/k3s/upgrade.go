@@ -18,6 +18,9 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 	if !hasK3S() {
 		return ErrNotExist
 	}
+	if isNmCloudSetupEnabled(ctx) {
+		return ErrNMCS
+	}
 
 	logger.Debug().Msgf("Looking for bundle")
 
