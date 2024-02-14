@@ -415,15 +415,15 @@ func k3sLogParser(lvl zerolog.Level) func(lines chan []byte) {
 func isNmCloudSetupEnabled(ctx context.Context) bool {
 	logger.Info().Msgf("Checking if nm-cloud-setup is enabled")
 
-	var active bool
+	var enabled bool
 
 	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-active", "nm-cloud-setup"},
 		utils.WithStderrLogger(logger, utils.DebugLevel),
 		utils.WithStdoutReader(func(lines chan []byte) {
 			for line := range lines {
 				logger.Debug().Str("output", string(line)).Msg("nm-cloud-setup status")
-				if string(line) == "active" {
-					active = true
+				if string(line) == "enabled" {
+					enabled = true
 				}
 			}
 		}))
@@ -433,5 +433,5 @@ func isNmCloudSetupEnabled(ctx context.Context) bool {
 		logger.Debug().Err(err).Msg("systemctl exit status")
 	}
 
-	return active
+	return enabled
 }
