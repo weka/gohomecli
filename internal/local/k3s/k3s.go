@@ -417,7 +417,7 @@ func isNmCloudSetupEnabled(ctx context.Context) bool {
 
 	var enabled bool
 
-	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-active", "nm-cloud-setup"},
+	cmd, err := utils.ExecCommand(ctx, "systemctl", []string{"is-enabled", "nm-cloud-setup"},
 		utils.WithStderrLogger(logger, utils.DebugLevel),
 		utils.WithStdoutReader(func(lines chan []byte) {
 			for line := range lines {
