@@ -20,6 +20,10 @@ func Install(ctx context.Context, c Config) error {
 		return ErrExists
 	}
 
+	if isNmCloudSetupEnabled(ctx) {
+		return ErrNMCS
+	}
+
 	name, manifest, err := findBundle()
 	if err != nil {
 		return err
