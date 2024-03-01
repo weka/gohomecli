@@ -37,17 +37,16 @@ var upgradeCmd = &cobra.Command{
 			jsonConfig = upgradeConfig.JsonConfig
 		}
 
-		if upgradeConfig.JsonConfig != "" {
-			// Use cli configuration over config json passed for overwrite
-			var cfg config_v1.Configuration
+		// Use cli configuration over config json passed for overwrite
+		var cfg config_v1.Configuration
 
-			err := errors.Join(
-				config.ReadV1(jsonConfig, &cfg),                // read config into cfg
-				mergo.Merge(&upgradeConfig.Configuration, cfg), // merge cfg into upgradeConfig
-			)
-			if err != nil {
-				return err
-			}
+		err = errors.Join(
+			config.ReadV1(jsonConfig, &cfg),                // read config into cfg
+			mergo.Merge(&upgradeConfig.Configuration, cfg), // merge cfg into upgradeConfig
+		)
+
+		if err != nil {
+			return err
 		}
 
 		if err := readTLS(upgradeConfig.TLSCert, upgradeConfig.TLSKey, &upgradeConfig.Configuration); err != nil {
