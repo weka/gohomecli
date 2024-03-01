@@ -143,13 +143,20 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 }
 
 func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error) {
-	if !utils.IsSetP(configuration.Forwarding.Enabled) {
-		return yamlMap{}, nil
+	cfg := make(yamlMap)
+
+	enabled := true // it's enabled by default
+
+	if configuration.Forwarding.Enabled != nil {
+		enabled = *configuration.Forwarding.Enabled
 	}
 
-	cfg := make(yamlMap)
+	if !enabled {
+		return cfg, nil
+	}
+
 	err := errors.Join(
-		writeMapEntry(cfg, "api.forwarding.enabled", true),
+		writeMapEntry(cfg, "api.forwarding.enabled", enabled),
 		writeMapEntryIfSet(cfg, "api.forwarding.url", configuration.Forwarding.Url),
 		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
 		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
