@@ -61,6 +61,13 @@ func configureRetention(configuration *config_v1.Configuration) (yamlMap, error)
 		)
 	}
 
+	if configuration.RetentionDays.Stats != 0 {
+		retention := fmt.Sprintf("%dd", configuration.RetentionDays.Stats)
+		err = errors.Join(err,
+			writeMapEntry(cfg, "victoria.vmstorage.retentionPeriod", retention),
+		)
+	}
+
 	return cfg, err
 }
 
