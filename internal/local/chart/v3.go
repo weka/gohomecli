@@ -165,6 +165,32 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 	return cfg, err
 }
 
+func configureStorage(configuration *config_v1.Configuration) (yamlMap, error) {
+	cfg := make(yamlMap)
+
+	var err error
+	if configuration.Storage.Nats != 0 {
+		err = writeMapEntry(cfg, "nats.config.merge.jetstream.max_file_store", configuration.Storage.Nats)
+
+		storage := float64(configuration.Storage.Nats)
+
+		var streams = map[string]float64{
+			"events":          storage * 0.1,  // 10%
+			"stats":           storage * 0.3,  // 30%
+			"alerts":          storage * 0.03, // 3%
+			"forwarding_low":  storage * 0.3,  // 30%
+			"forwarding_high": storage * 0.15, // 15%
+			"notifications":   storage * 0.02, // 2%
+		}
+
+		for stream, size := range streams {
+			err = errors.Join(err, writeMapEntry(cfg, fmt.Sprintf("storage.nats.streams.%s.maxSize", stream), size))
+		}
+	}
+
+	return cfg, err
+}
+
 func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error) {
 	if len(configuration.HelmOverrides) == 0 {
 		return yamlMap{}, nil
@@ -203,6 +229,7 @@ func init() {
 	valuesGeneratorV3.MustAddVisitor("resources", configureResources)
 	valuesGeneratorV3.MustAddVisitor("forwarding", configureForwarding)
 	valuesGeneratorV3.MustAddVisitor("overrides", configureOverrides)
+	valuesGeneratorV3.MustAddVisitor("storage", configureStorage)
 }
 
 func generateValuesV3(configuration *config_v1.Configuration) (map[string]interface{}, error) {
