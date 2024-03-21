@@ -56,5 +56,6 @@ func SaveV1(path string, c config_v1.Configuration) error {
 	defer f.Close()
 
 	enc := json.NewEncoder(f)
+	enc.SetIndent("", "    ")
 	return enc.Encode(c)
 }
