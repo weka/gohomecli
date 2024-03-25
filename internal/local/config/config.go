@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,21 +22,26 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 		return nil
 	}
 
-	var jsonConfigBytes []byte
-	if _, err := os.Stat(jsonConfig); err == nil {
-		logger.Debug().Str("path", jsonConfig).Msg("Reading JSON config from file")
-		jsonConfigBytes, err = os.ReadFile(jsonConfig)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to read JSON config from file")
-			return fmt.Errorf("failed to read JSON config from file: %w", err)
+	_, err := os.Stat(jsonConfig)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("config file %q is not not found", jsonConfig)
 		}
-	} else {
-		logger.Debug().Msg("Using JSON object from command line")
-		jsonConfigBytes = []byte(jsonConfig)
+		return err
+	}
+
+	var jsonConfigBytes []byte
+
+	logger.Debug().Str("path", jsonConfig).Msg("Reading JSON config from file")
+
+	jsonConfigBytes, err = os.ReadFile(jsonConfig)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to read JSON config from file")
+		return fmt.Errorf("failed to read JSON config from file: %w", err)
 	}
 
 	logger.Debug().Msg("Parsing JSON config")
-	err := json.Unmarshal(jsonConfigBytes, config)
+	err = json.Unmarshal(jsonConfigBytes, config)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse JSON config")
 		return fmt.Errorf("failed to parse JSON config: %w", err)
