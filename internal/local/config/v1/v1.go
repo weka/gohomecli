@@ -36,6 +36,10 @@ type ProxyConfig struct {
 	URL string `json:"url,omitempty"`
 }
 
+type StorageConfig struct {
+	Nats int `json:"nats,omitempty"`
+}
+
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
 	Host          string           `json:"host,omitempty"` // ingress host
@@ -45,6 +49,8 @@ type Configuration struct {
 	SMTP          SMTPConfig       `json:"smtp,omitempty"`
 	RetentionDays RetentionConfig  `json:"retentionDays,omitempty"`
 	Forwarding    ForwardingConfig `json:"forwarding,omitempty"`
+
+	Storage StorageConfig `json:"storage,omitempty"`
 
 	Autoscaling     *bool `json:"autoscaling,omitempty"`        // enable services autoscaling
 	WekaNodesServed int   `json:"wekaNodesMonitored,omitempty"` // number of weka nodes to monitor, controls load preset
