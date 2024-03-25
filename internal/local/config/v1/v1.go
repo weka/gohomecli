@@ -18,6 +18,7 @@ type SMTPConfig struct {
 type RetentionConfig struct {
 	Diagnostics int `json:"diagnostics,omitempty"` // diagnostics retention days
 	Events      int `json:"events,omitempty"`      // events retention days
+	Stats       int `json:"stats,omitempty"`       // stats retention days
 }
 
 type ForwardingConfig struct {
