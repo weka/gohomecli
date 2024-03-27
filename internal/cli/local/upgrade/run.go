@@ -1,12 +1,14 @@
 package upgrade
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/chart"
+	"github.com/weka/gohomecli/internal/local/config"
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/local/k3s"
 )
@@ -62,7 +64,12 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		Config:     &upgradeConfig.Configuration,
 	}
 
-	return chart.Upgrade(cmd.Context(), helmOptions, upgradeConfig.Debug)
+	err = chart.Upgrade(cmd.Context(), helmOptions, upgradeConfig.Debug)
+	if err != nil {
+		return fmt.Errorf("chart upgrade: %w", err)
+	}
+
+	return config.SaveV1(config.CLIConfig, upgradeConfig.Configuration)
 }
 
 func readTLS(certFile, keyFile string, config *config_v1.Configuration) error {
