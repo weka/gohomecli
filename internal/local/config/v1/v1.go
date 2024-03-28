@@ -33,7 +33,15 @@ type ForwardingConfig struct {
 }
 
 type ProxyConfig struct {
-	URL string `json:"url,omitempty"`
+	URL     string   `json:"url,omitempty"`
+	NoProxy []string `json:"no_proxy,omitempty"`
+}
+
+func (p ProxyConfig) NoProxyWithDefaults() []string {
+	return append([]string{
+		"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+		"cluster.local", "localhost",
+	}, p.NoProxy...)
 }
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
