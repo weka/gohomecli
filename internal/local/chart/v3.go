@@ -3,6 +3,7 @@ package chart
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 	"github.com/weka/gohomecli/internal/utils"
@@ -193,7 +194,12 @@ func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 		cfg = make(yamlMap)
 	)
 
-	err = writeMapEntryIfSet(cfg, "core.proxy.url", configuration.Proxy)
+	if configuration.Proxy.URL != "" {
+		err = errors.Join(
+			writeMapEntryIfSet(cfg, "core.proxy.url", configuration.Proxy.URL),
+			writeMapEntryIfSet(cfg, "core.proxy.noProxy", strings.Join(configuration.Proxy.NoProxy, ",")),
+		)
+	}
 
 	return cfg, err
 }

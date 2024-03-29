@@ -346,15 +346,16 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 			return fmt.Errorf("url parse: %w", err)
 		}
 
-		logger.Info().
-			Str("proxy", utils.URLSafe(proxyURL).String()).
-			Msg("Using proxy")
-
-		var noProxy = []string{
-			"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+		// skip internal IP from proxying
+		noProxy := append([]string{
 			fmt.Sprintf("%s/32", c.IP),
 			fmt.Sprintf("%s/32", c.ifaceAddr),
-		}
+		}, c.Proxy.NoProxyWithDefaults()...)
+
+		logger.Info().
+			Str("proxy", utils.URLSafe(proxyURL).String()).
+			Strs("no_proxy", noProxy).
+			Msg("Using proxy")
 
 		os.Setenv("NO_PROXY", strings.Join(noProxy, ","))
 
