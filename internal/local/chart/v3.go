@@ -197,7 +197,7 @@ func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 	if configuration.Proxy.URL != "" {
 		err = errors.Join(
 			writeMapEntryIfSet(cfg, "core.proxy.url", configuration.Proxy.URL),
-			writeMapEntryIfSet(cfg, "core.proxy.noProxy", strings.Join(configuration.Proxy.NoProxy, ",")),
+			writeMapEntryIfSet(cfg, "core.proxy.noProxy", strings.Join(configuration.Proxy.NoProxyWithDefaults(), ",")),
 		)
 	}
 

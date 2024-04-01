@@ -34,7 +34,7 @@ type ForwardingConfig struct {
 
 type ProxyConfig struct {
 	URL     string   `json:"url,omitempty"`
-	NoProxy []string `json:"no_proxy,omitempty"`
+	NoProxy []string `json:"noProxy,omitempty"`
 }
 
 func (p ProxyConfig) NoProxyWithDefaults() []string {
