@@ -59,6 +59,7 @@ func (c Config) k3sInstallArgs() []string {
 		fmt.Sprintf("--kubelet-arg=address=%s", c.IP),
 		fmt.Sprintf("--bind-address=%s", c.IP),
 		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
+		"--prefer-bundled-bin",
 	}
 
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
