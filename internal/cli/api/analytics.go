@@ -79,20 +79,23 @@ func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, sile
 		}
 		utils.UserError("Failed to get analytics for cluster %s: %s", cluster.ID, err)
 	}
-	var customerName string
-	if _, ok := customersCache[cluster.CustomerID]; ok {
-		customerName = customersCache[cluster.CustomerID]
-	} else {
-		customer, err := client.GetCustomer(cluster.CustomerID)
-		if err != nil {
-			if silenceFailure {
-				return
+	customerName := ""
+	if cluster.CustomerID != "" {
+		if _, ok := customersCache[cluster.CustomerID]; ok {
+			customerName = customersCache[cluster.CustomerID]
+		} else {
+			customer, err := client.GetCustomer(cluster.CustomerID)
+			if err != nil {
+				if silenceFailure {
+					return
+				}
+				utils.UserError("Failed to get customer for cluster %s: %s", cluster.ID, err)
 			}
-			utils.UserError("Failed to get customer for cluster %s: %s", cluster.ID, err)
+			customersCache[cluster.CustomerID] = customer.Name
+			customerName = customer.Name
 		}
-		customersCache[cluster.CustomerID] = customer.Name
-		customerName = customer.Name
 	}
+
 	var jsn map[string]interface{}
 	err = json.Unmarshal(analytics, &jsn)
 	if err != nil {
