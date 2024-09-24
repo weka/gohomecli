@@ -12,7 +12,25 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 		return fmt.Errorf("helm client: %w", err)
 	}
 
-	spec, err := chartSpec(client, opts)
+	spec, err := crdSpec(client, opts)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to prepare crd spec")
+	}
+
+	if spec != nil {
+		logger.Info().
+			Str("namespace", spec.Namespace).
+			Str("chart", spec.ChartName).
+			Str("release", spec.ReleaseName).
+			Msg("Installing \\ Upgrading chart crd")
+
+		_, err := client.InstallOrUpgradeChart(ctx, spec, nil)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to install/upgrade chart crd")
+		}
+	}
+
+	spec, err = chartSpec(client, opts)
 	if err != nil {
 		return fmt.Errorf("failed to prepare chart spec: %w", err)
 	}
