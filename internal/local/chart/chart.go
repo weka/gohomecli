@@ -40,6 +40,33 @@ type HelmOptions struct {
 	Config            *config_v1.Configuration // json config
 }
 
+func crdSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSpec, error) {
+	namespace := ReleaseNamespace
+	if opts.NamespaceOverride != "" {
+		namespace = opts.NamespaceOverride
+	}
+
+	logger.Debug().
+		Interface("locationOverride", opts.Override).
+		Msg("Determining chart crd location")
+
+	chartLocation, err := getChartCrdLocation(client, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &helmclient.ChartSpec{
+		ReleaseName:     ReleaseName + "-crds",
+		ChartName:       chartLocation,
+		Namespace:       namespace,
+		CreateNamespace: true,
+		UpgradeCRDs:     true,
+		ResetValues:     true,
+		Wait:            true,
+		Timeout:         time.Minute * 5,
+	}, nil
+}
+
 func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSpec, error) {
 	namespace := ReleaseNamespace
 	if opts.NamespaceOverride != "" {
@@ -82,8 +109,32 @@ func chartSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSp
 		ResetValues:     true,
 		Wait:            true,
 		WaitForJobs:     true,
+		UpgradeCRDs:     true,
 		Timeout:         time.Minute * 5,
 	}, nil
+}
+
+func getChartCrdLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
+	var chartLocation string
+
+	if opts.Override != nil && opts.Override.RemoteDownload {
+		err := client.AddOrUpdateChartRepo(repo.Entry{
+			Name: RepositoryName,
+			URL:  RepositoryURL,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed adding chart repo: %w", err)
+		}
+
+		chartLocation = fmt.Sprintf("%s/%s-crds", RepositoryName, ChartName)
+		return chartLocation, nil
+	}
+
+	if bundle.IsBundled() {
+		return bundle.ChartCrd()
+	}
+
+	return "", ErrUnableToFindChart
 }
 
 func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, error) {
