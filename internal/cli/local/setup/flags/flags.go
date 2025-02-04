@@ -3,12 +3,13 @@ package setup_flags
 import (
 	"fmt"
 	"net/url"
+	"slices"
 
 	"github.com/spf13/cobra"
+
 	"github.com/weka/gohomecli/internal/local/bundle"
 	"github.com/weka/gohomecli/internal/local/web"
 	"github.com/weka/gohomecli/internal/utils"
-	"k8s.io/utils/strings/slices"
 )
 
 var (

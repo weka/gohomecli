@@ -44,6 +44,13 @@ func (p ProxyConfig) NoProxyWithDefaults() []string {
 	}, p.NoProxy...)
 }
 
+// GithubSSOConfig is a custom configuration to login with github SSO.
+type GithubSSOConfig struct {
+	ClientID     string `json:"clientID,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
+	EmailDomain  string `json:"emailDomain,omitempty"`
+}
+
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
 	Host          string           `json:"host,omitempty"` // ingress host
@@ -59,6 +66,8 @@ type Configuration struct {
 
 	HelmOverrides map[string]any `json:"helmOverrides,omitempty"` // additional overrides for helm chart
 	K3SArgs       []string       `json:"k3sArgs,omitempty"`       // k3s args overrides during install
+
+	GithubSSO GithubSSOConfig `json:"githubSSO"` // configuration for github SSO login
 }
 
 func (c Configuration) Validate() error {
@@ -69,5 +78,6 @@ func (c Configuration) LoggingSafe() Configuration {
 	c.TLS.Cert = "HIDDEN"
 	c.TLS.Key = "HIDDEN"
 	c.SMTP.Password = "HIDDEN"
+	c.GithubSSO.ClientSecret = "HIDDEN"
 	return c
 }

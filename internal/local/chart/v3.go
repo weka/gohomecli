@@ -200,6 +200,15 @@ func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 			writeMapEntryIfSet(cfg, "core.proxy.noProxy", strings.Join(configuration.Proxy.NoProxyWithDefaults(), ",")),
 		)
 	}
+	// github SSO configuration.
+	if len(configuration.GithubSSO.ClientID) > 0 && len(configuration.GithubSSO.ClientSecret) > 0 {
+		err = errors.Join(
+			writeMapEntryIfSet(cfg, "core.githubSSO.enabled", true),
+			writeMapEntryIfSet(cfg, "core.githubSSO.clientID", configuration.GithubSSO.ClientID),
+			writeMapEntryIfSet(cfg, "core.githubSSO.clientSecret", configuration.GithubSSO.ClientSecret),
+			writeMapEntryIfSet(cfg, "core.githubSSO.emailDomain", configuration.GithubSSO.EmailDomain),
+		)
+	}
 
 	return cfg, err
 }
