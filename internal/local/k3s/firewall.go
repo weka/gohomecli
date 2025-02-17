@@ -17,7 +17,7 @@ var (
 
 var openPorts = []int{80, 443, 6443, 10250, 10257, 10259}
 
-var openNetworks = []string{ // TODO: FIXME: add ip6
+var openNetworks = []string{
 	"10.42.0.0/16",       // pods
 	"2001:cafe:42::/56",  // pods
 	"10.43.0.0/16",       // services
