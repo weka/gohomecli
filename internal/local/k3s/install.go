@@ -37,7 +37,7 @@ func Install(ctx context.Context, c Config) error {
 			logger.Warn().Err(err).Msg("Failed to add firewalld rules")
 		}
 	case isFirewallActive(ctx, FirewallTypeUFW):
-		if err := addFirewallRules(ctx, FirewallTypeFirewalld); err != nil {
+		if err := addFirewallRules(ctx, FirewallTypeUFW); err != nil {
 			logger.Warn().Err(err).Msg("Failed to add UFW rules")
 		}
 	default:

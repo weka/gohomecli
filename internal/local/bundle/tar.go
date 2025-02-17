@@ -86,6 +86,7 @@ func (t Tar) GetFiles(ctx context.Context, calls ...TarCallback) (err error) {
 				if err := call.Callback(ctx, header.FileInfo(), tarReader); err != nil {
 					return err
 				}
+				break
 			}
 		}
 

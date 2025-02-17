@@ -11,8 +11,8 @@ import (
 	"runtime"
 
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/platforms"
+	"github.com/containerd/errdefs"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
 )
