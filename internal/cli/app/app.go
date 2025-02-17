@@ -3,10 +3,10 @@ package app
 import (
 	"fmt"
 	"os/signal"
-	"slices"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 
 	"github.com/weka/gohomecli/internal/cli/api"
 	"github.com/weka/gohomecli/internal/cli/config"

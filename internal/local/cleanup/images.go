@@ -2,13 +2,13 @@ package cleanup
 
 import (
 	"context"
-	"slices"
 	"strings"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/weka/gohomecli/internal/local/bundle"
+	"golang.org/x/exp/slices"
 )
 
 const (

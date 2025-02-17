@@ -69,7 +69,6 @@ func init() {
 		setup_flags.Use(upgradeCmd, &upgradeConfig.Flags)
 
 		upgradeCmd.Flags().StringVar(&upgradeConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
-		upgradeCmd.Flags().StringVar(&upgradeConfig.IP4, "ip", "0.0.0.0", "internal IP address to use for cluster")
-		upgradeCmd.Flags().StringVar(&upgradeConfig.IP6, "ip6", "[::]", "IP6 address to use for cluster")
+		upgradeCmd.Flags().StringVar(&upgradeConfig.IP, "ip", "0.0.0.0", "internal IP address to use for cluster")
 	})
 }
