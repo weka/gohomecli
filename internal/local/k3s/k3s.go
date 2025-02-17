@@ -14,10 +14,10 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/slices"
 	"golang.org/x/mod/semver"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
@@ -48,23 +48,67 @@ type Config struct {
 	Iface           string // interface for k3s network to work on
 	ProxyKubernetes bool   // use proxy for k3s
 	Debug           bool
-
-	ifaceAddr string // ip addr for k3s to use as node ip (taken from iface or IP)
 }
 
 func (c Config) k3sInstallArgs() []string {
 	k3sArgs := []string{
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
-		fmt.Sprintf("--node-ip=%s", c.ifaceAddr), // node ip needs to have ip address (not 0.0.0.0)
-		fmt.Sprintf("--kubelet-arg=address=%s", c.IP),
-		fmt.Sprintf("--bind-address=%s", c.IP),
+		fmt.Sprintf("--node-ip=%s", c.getIFaceAddress()), // node ip needs to have ip address (not 0.0.0.0)
+		fmt.Sprintf("--kubelet-arg=address=%s", c.IP4),
+		fmt.Sprintf("--bind-address=%s", c.IP4),
 		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
 		"--prefer-bundled-bin",
 	}
-
+	c.validateCIDR()
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
-
+	logger.Debug().Str("arguments", strings.Join(k3sArgs, " ")).Msg("k3s arguments")
 	return k3sArgs
+}
+
+func (c *Config) validateCIDR() {
+	var (
+		isClusterCIDRSet bool
+		isServerCIDRSet  bool
+	)
+	for _, arg := range c.Configuration.K3SArgs {
+		kv := strings.SplitN(arg, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		switch kv[0] {
+		case "--cluster-cidr":
+			isClusterCIDRSet = true
+		case "--service-cidr":
+			isServerCIDRSet = true
+		}
+	}
+	if isClusterCIDRSet && isServerCIDRSet {
+		return // both set, nothing to do
+	}
+	switch {
+	case c.isIP4Set() && c.isIP6Set():
+		if !isClusterCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=10.42.0.0/16,2001:cafe:42::/56")
+		}
+		if !isServerCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=10.43.0.0/16,2001:cafe:43::/112")
+		}
+	case c.isIP4Set():
+		if !isClusterCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=10.42.0.0/16")
+		}
+		if !isServerCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=10.43.0.0/16")
+		}
+	case c.isIP6Set():
+		if !isClusterCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=2001:cafe:42::/56")
+		}
+		if !isServerCIDRSet {
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=2001:cafe:43::/112")
+		}
+
+	}
 }
 
 func setupLogger(debug bool) {
@@ -135,7 +179,7 @@ func hasSystemd() bool {
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
 func setupNetwork(c *Config) (err error) {
-	if c.IP == "127.0.0.1" {
+	if c.IP4 == "127.0.0.1" || c.IP6 == "[::1]" {
 		return fmt.Errorf("unable to bind to 127.0.0.1")
 	}
 
@@ -152,9 +196,7 @@ func setupNetwork(c *Config) (err error) {
 		c.Iface = netIF.Name
 	}
 
-	c.ifaceAddr = c.IP
-
-	err = upsertIfaceAddrHost(netIF, &c.ifaceAddr, &c.Host)
+	err = c.upsertIfaceAddrHost(netIF)
 	if err != nil {
 		return err
 	}
@@ -207,50 +249,107 @@ func getInterface(iface string) (net.Interface, error) {
 }
 
 // upsertIfaceAddrHost sets any IP from iface or returns error if provided IP not match to the interface
-func upsertIfaceAddrHost(iface net.Interface, ifaceAddr *string, hostname *string) error {
+func (c *Config) upsertIfaceAddrHost(iface net.Interface) error {
 	addr, err := iface.Addrs()
 	if err != nil {
 		return fmt.Errorf("network addr: %w", err)
 	}
-
-	var addrFound bool
-
+	var (
+		addrIP4Added bool
+		addrIP6Added bool
+	)
 	for _, a := range addr {
 		ipnet, ok := a.(*net.IPNet)
-		if !ok || ipnet.IP.To4() == nil {
-			logger.Debug().Str("addr", a.String()).Msg("Not an IPv4")
+		if !ok || !ipnet.IP.IsGlobalUnicast() {
+			logger.Debug().Str("addr", a.String()).Msg("Not a global unicast address")
 			continue
 		}
-
-		if *ifaceAddr == ipnet.IP.To4().String() {
-			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP match to interface")
-			addrFound = true
-			break
+		if ipnet.IP.To4() == nil { // validate IP6
+			if addrIP6Added { // already added. skip
+				continue
+			}
+			if !c.parseIP6(ipnet) {
+				return fmt.Errorf("IP6 %q address is not valid", c.IP6)
+			}
+			logger.Debug().Str("ip6", c.IP6).Msg("set IP6")
+			addrIP6Added = true
+			continue
 		}
-
-		if *ifaceAddr == "0.0.0.0" || *ifaceAddr == "" {
-			logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
-			// use first ip found from interface
-			*ifaceAddr = ipnet.IP.To4().String()
-			addrFound = true
-			break
+		if addrIP4Added {
+			continue // already added. skip
 		}
+		if !c.parseIP4(ipnet) {
+			return fmt.Errorf("IP4 %q address is not valid", c.IP4)
+		}
+		logger.Debug().Str("ip4", c.IP6).Msg("set IP4")
+		addrIP4Added = true
 	}
 
-	if !addrFound {
-		return fmt.Errorf("IP address %q is not valid", *ifaceAddr)
-	}
-
-	if *hostname == "" {
-		// set IP to hostname
-		logger.Warn().
-			Str("hostname", *ifaceAddr).
-			Msgf("Hostname is not set, using IP")
-
-		*hostname = *ifaceAddr
+	if !addrIP4Added && !addrIP6Added {
+		return fmt.Errorf("IP address is not valid. IP4: %q, IP6: %q", c.IP4, c.IP6)
 	}
 
 	return nil
+}
+
+func (c Config) getHostname() string {
+	if len(c.Host) > 0 {
+		return c.Host
+	}
+	iFaceAddr := c.getIFaceAddress()
+	// set IP to hostname
+	logger.Warn().
+		Str("hostname", iFaceAddr).
+		Msgf("Hostname is not set, using IP/IPs")
+
+	return iFaceAddr
+}
+
+func (c *Config) isIP4Set() bool {
+	return len(c.IP4) > 0
+}
+
+func (c *Config) isIP6Set() bool {
+	return len(c.IP6) > 0
+}
+
+func (c *Config) parseIP4(ipnet *net.IPNet) bool {
+	if c.IP4 == ipnet.IP.To4().String() {
+		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP4 match to interface")
+		return true
+	}
+	if c.IP4 == "0.0.0.0" || c.IP4 == "" {
+		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
+		// use first ip found from interface
+		c.IP4 = ipnet.IP.To4().String()
+		return true
+	}
+	return false
+}
+
+func (c *Config) getIFaceAddress() string {
+	switch {
+	case !c.isIP4Set():
+		return c.IP6
+	case !c.isIP6Set():
+		return c.IP4
+	default:
+		return c.IP4 + "," + c.IP6
+	}
+}
+
+func (c *Config) parseIP6(ipnet *net.IPNet) bool {
+	if c.IP6 == ipnet.IP.To16().String() {
+		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("IP6 match to interface")
+		return true
+	}
+	if c.IP6 == "[::]" || c.IP6 == "" {
+		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("Using interface IP for NodeIP")
+		// use first ip found from interface
+		c.IP6 = ipnet.IP.To16().String()
+		return true
+	}
+	return false
 }
 
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
@@ -317,10 +416,9 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 		return err
 	}
 
-	if c.Host != "" {
-		logger.Debug().Str("hostname", c.Host).Msg("Using hostname")
-		os.Setenv("K3S_HOSTNAME", c.Host)
-	}
+	hostName := c.getHostname()
+	logger.Debug().Str("hostname", hostName).Msg("Using hostname")
+	os.Setenv("K3S_HOSTNAME", hostName)
 
 	overriden, err := resolvConfOverriden()
 	if err != nil {
@@ -348,10 +446,14 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 		}
 
 		// skip internal IP from proxying
-		noProxy := append([]string{
-			fmt.Sprintf("%s/32", c.IP),
-			fmt.Sprintf("%s/32", c.ifaceAddr),
-		}, c.Proxy.NoProxyWithDefaults()...)
+		var noProxy []string
+		if c.isIP4Set() {
+			noProxy = append(noProxy, fmt.Sprintf("%s/32", c.IP4))
+		}
+		if c.isIP6Set() {
+			noProxy = append(noProxy, fmt.Sprintf("%s/128", c.IP6))
+		}
+		noProxy = append(noProxy, c.Proxy.NoProxyWithDefaults()...)
 
 		logger.Info().
 			Str("proxy", utils.URLSafe(proxyURL).String()).

@@ -41,6 +41,10 @@ func (p ProxyConfig) NoProxyWithDefaults() []string {
 	return append([]string{
 		"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
 		"cluster.local", "localhost",
+		"::1/128",   // IPv6 loopback
+		"fc00::/7",  // Unique Local Addresses (ULA)
+		"fe80::/10", // Link-Local Unicast
+		"ff00::/8",  // Multicast (Optional)
 	}, p.NoProxy...)
 }
 
@@ -54,7 +58,8 @@ type GithubSSOConfig struct {
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
 	Host          string           `json:"host,omitempty"` // ingress host
-	IP            string           `json:"ip,omitempty"`   // ip to bind on for k3s cluster
+	IP4           string           `json:"ip,omitempty"`   // ip4 to bind on for k3s cluster
+	IP6           string           `json:"ip6,omitempty"`  // ip6 to bind on for k3s cluster
 	Proxy         ProxyConfig      `json:"proxy,omitempty"`
 	TLS           TLSConfig        `json:"tls,omitempty"`
 	SMTP          SMTPConfig       `json:"smtp,omitempty"`

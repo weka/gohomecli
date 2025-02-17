@@ -17,9 +17,11 @@ var (
 
 var openPorts = []int{80, 443, 6443, 10250, 10257, 10259}
 
-var openNetworks = []string{
-	"10.42.0.0/16", // pods
-	"10.43.0.0/16", // services
+var openNetworks = []string{ // TODO: FIXME: add ip6
+	"10.42.0.0/16",       // pods
+	"2001:cafe:42::/56",  // pods
+	"10.43.0.0/16",       // services
+	"2001:cafe:43::/112", // services
 }
 
 func isFirewallActive(ctx context.Context, fw FirewallType) bool {
