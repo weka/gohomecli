@@ -160,29 +160,25 @@ func newDefaultCIDRConfig(ipV4Enabled, ipV6Enabled bool) defaultCIDRConfig {
 }
 
 func (c *defaultCIDRConfig) getClusterCIDRArg() string {
-	switch {
-	case c.ipV4Enabled && c.ipV6Enabled:
-		return fmt.Sprintf("--cluster-cidr=%s,%s", defaultClusterCIDRIPv4, defaultClusterCIDRIPv6)
-	case c.ipV4Enabled:
-		return "--cluster-cidr=" + defaultClusterCIDRIPv4
-	case c.ipV6Enabled:
-		return "--cluster-cidr=" + defaultClusterCIDRIPv6
-	default:
-		return ""
+	var cidrs []string
+	if c.ipV4Enabled {
+		cidrs = append(cidrs, defaultClusterCIDRIPv4)
 	}
+	if c.ipV6Enabled {
+		cidrs = append(cidrs, defaultClusterCIDRIPv6)
+	}
+	return "--cluster-cidr=" + strings.Join(cidrs, ",")
 }
 
 func (c *defaultCIDRConfig) getServiceCIDRArg() string {
-	switch {
-	case c.ipV4Enabled && c.ipV6Enabled:
-		return fmt.Sprintf("--service-cidr=%s,%s", defaultServiceCIDRIPv4, defaultServiceCIDRIPv6)
-	case c.ipV4Enabled:
-		return "--service-cidr=" + defaultServiceCIDRIPv4
-	case c.ipV6Enabled:
-		return "--service-cidr=" + defaultServiceCIDRIPv6
-	default:
-		return ""
+	var cidrs []string
+	if c.ipV4Enabled {
+		cidrs = append(cidrs, defaultServiceCIDRIPv4)
 	}
+	if c.ipV6Enabled {
+		cidrs = append(cidrs, defaultServiceCIDRIPv6)
+	}
+	return "--service-cidr=" + strings.Join(cidrs, ",")
 }
 
 func (c *Config) alignCIDRArgs() {
