@@ -37,15 +37,21 @@ type ProxyConfig struct {
 	NoProxy []string `json:"noProxy,omitempty"`
 }
 
+var noProxyIPs = []string{
+	"127.0.0.0/8",
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"cluster.local",
+	"localhost",
+	"::1/128",   // IPv6 loopback
+	"fc00::/7",  // Unique Local Addresses (ULA)
+	"fe80::/10", // Link-Local Unicast
+	"ff00::/8",  // Multicast (Optional)
+}
+
 func (p ProxyConfig) NoProxyWithDefaults() []string {
-	return append([]string{
-		"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
-		"cluster.local", "localhost",
-		"::1/128",   // IPv6 loopback
-		"fc00::/7",  // Unique Local Addresses (ULA)
-		"fe80::/10", // Link-Local Unicast
-		"ff00::/8",  // Multicast (Optional)
-	}, p.NoProxy...)
+	return append(noProxyIPs, p.NoProxy...)
 }
 
 // GithubSSOConfig is a custom configuration to login with github SSO.
