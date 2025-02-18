@@ -136,8 +136,8 @@ func (c Config) k3sInstallArgs() []string {
 	k3sArgs := []string{
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
 		fmt.Sprintf("--node-ip=%s", c.getIFaceAddress()), // node ip needs to have ip address (not 0.0.0.0)
-		fmt.Sprintf("--kubelet-arg=address=%s", c.IPv4),
-		fmt.Sprintf("--bind-address=%s", c.IPv4),
+		fmt.Sprintf("--kubelet-arg=address=%s", c.getBindAddress()),
+		fmt.Sprintf("--bind-address=%s", c.getBindAddress()),
 		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
 		"--prefer-bundled-bin",
 	}
@@ -210,6 +210,13 @@ func (c *Config) alignCIDRArgs() {
 	if !isServerCIDRSet {
 		c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, cidrConfig.getServiceCIDRArg())
 	}
+}
+
+func (c *Config) getBindAddress() string {
+	if c.isIP4Set() {
+		return c.IPv4
+	}
+	return c.IPv6
 }
 
 func setupLogger(debug bool) {
