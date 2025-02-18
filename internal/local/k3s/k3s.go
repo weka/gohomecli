@@ -59,13 +59,13 @@ func (c Config) k3sInstallArgs() []string {
 		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
 		"--prefer-bundled-bin",
 	}
-	c.validateCIDR()
+	c.alignCIDRArgs()
 	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
 	logger.Debug().Str("arguments", strings.Join(k3sArgs, " ")).Msg("k3s arguments")
 	return k3sArgs
 }
 
-func (c *Config) validateCIDR() {
+func (c *Config) alignCIDRArgs() {
 	var (
 		isClusterCIDRSet bool
 		isServerCIDRSet  bool
