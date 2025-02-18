@@ -88,24 +88,24 @@ func (c *Config) alignCIDRArgs() {
 	switch {
 	case c.isIP4Set() && c.isIP6Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=10.42.0.0/16,2001:cafe:42::/56")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--cluster-cidr=%s,%s", clusterCIDRIP4, clusterCIDRIP6))
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=10.43.0.0/16,2001:cafe:43::/112")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--service-cidr=%s,%s", serviceCIDRIP4, serviceCIDRIP6))
 		}
 	case c.isIP4Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=10.42.0.0/16")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIP4)
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=10.43.0.0/16")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIP4)
 		}
 	case c.isIP6Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr=2001:cafe:42::/56")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIP6)
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr=2001:cafe:43::/112")
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIP6)
 		}
 
 	}
