@@ -97,7 +97,7 @@ func (c *Config) AlignIPs(ipConfig IPConfig) error {
 	}
 
 	if len(ipConfig.IP6) > 0 { // validate IPv6
-		if err := c.alignIPv4(ipConfig.IP6); err != nil {
+		if err := c.alignIPv6(ipConfig.IP6); err != nil {
 			return fmt.Errorf("align IPv6 err: %w", err)
 		}
 	}
@@ -189,7 +189,6 @@ func (c *Config) alignCIDRArgs() {
 		if !isServerCIDRSet {
 			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIPv6)
 		}
-
 	}
 }
 
