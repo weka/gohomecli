@@ -318,7 +318,7 @@ func (c *Config) parseIP4(ipnet *net.IPNet) bool {
 		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP4 match to interface")
 		return true
 	}
-	if c.IP4 == "0.0.0.0" || c.IP4 == "" {
+	if c.IP4 == anyIPv4 || c.IP4 == "" {
 		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
 		// use first ip found from interface
 		c.IP4 = ipnet.IP.To4().String()
@@ -343,7 +343,7 @@ func (c *Config) parseIP6(ipnet *net.IPNet) bool {
 		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("IP6 match to interface")
 		return true
 	}
-	if c.IP6 == "::" || c.IP6 == "" {
+	if c.IP6 == anyIPv6 || c.IP6 == "" {
 		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("Using interface IP for NodeIP")
 		// use first ip found from interface
 		c.IP6 = ipnet.IP.To16().String()

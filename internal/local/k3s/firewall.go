@@ -26,6 +26,8 @@ const (
 
 	localhostIPv4 = "127.0.0.1"
 	localhostIPv6 = "::1"
+	anyIPv4       = "0.0.0.0"
+	anyIPv6       = "::"
 )
 
 var openNetworks = []string{
