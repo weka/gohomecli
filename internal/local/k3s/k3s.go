@@ -88,24 +88,24 @@ func (c *Config) alignCIDRArgs() {
 	switch {
 	case c.isIP4Set() && c.isIP6Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--cluster-cidr=%s,%s", clusterCIDRIP4, clusterCIDRIP6))
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--cluster-cidr=%s,%s", clusterCIDRIPv4, clusterCIDRIPv6))
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--service-cidr=%s,%s", serviceCIDRIP4, serviceCIDRIP6))
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--service-cidr=%s,%s", serviceCIDRIPv4, serviceCIDRIPv6))
 		}
 	case c.isIP4Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIP4)
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIPv4)
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIP4)
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIPv4)
 		}
 	case c.isIP6Set():
 		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIP6)
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIPv6)
 		}
 		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIP6)
+			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIPv6)
 		}
 
 	}
@@ -179,8 +179,8 @@ func hasSystemd() bool {
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
 func setupNetwork(c *Config) (err error) {
-	if c.IP4 == "127.0.0.1" || c.IP6 == "[::1]" {
-		return fmt.Errorf("unable to bind to 127.0.0.1")
+	if c.IP4 == localhostIPv4 || c.IP6 == localhostIPv6 {
+		return fmt.Errorf("unable to bind to localhost")
 	}
 
 	netIF, err := getInterface(c.Iface)
@@ -343,7 +343,7 @@ func (c *Config) parseIP6(ipnet *net.IPNet) bool {
 		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("IP6 match to interface")
 		return true
 	}
-	if c.IP6 == "[::]" || c.IP6 == "" {
+	if c.IP6 == "::" || c.IP6 == "" {
 		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("Using interface IP for NodeIP")
 		// use first ip found from interface
 		c.IP6 = ipnet.IP.To16().String()
