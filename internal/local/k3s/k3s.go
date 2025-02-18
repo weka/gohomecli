@@ -50,12 +50,94 @@ type Config struct {
 	Debug           bool
 }
 
+type IPConfig struct {
+	IP4 string
+	IP6 string
+}
+
+func (c *IPConfig) AddAddress(a net.Addr) {
+	ipnet, ok := a.(*net.IPNet)
+	if !ok || !ipnet.IP.IsGlobalUnicast() {
+		logger.Debug().Str("addr", a.String()).Msg("Not a global unicast address")
+		return
+	}
+
+	if ipnet.IP.To4() != nil {
+		if len(c.IP4) > 0 {
+			return // already added
+		}
+		c.IP4 = ipnet.IP.To4().String()
+	}
+
+	if ipnet.IP.To4() == nil {
+		if len(c.IP6) > 0 {
+			return // already added
+		}
+		c.IP6 = ipnet.IP.To16().String()
+		return
+	}
+}
+
+func (c *IPConfig) Validate() error {
+	if len(c.IP4) == 0 && len(c.IP6) == 0 {
+		return errors.New("IP addresses are not found")
+	}
+	return nil
+}
+
+func (c *Config) AlignIPs(ipConfig IPConfig) error {
+	if err := ipConfig.Validate(); err != nil {
+		return fmt.Errorf("ip config is not valid: %w", err)
+	}
+
+	if len(ipConfig.IP4) > 0 { // validate IPv4
+		if err := c.alignIPv4(ipConfig.IP4); err != nil {
+			return fmt.Errorf("align IPv4 err: %w", err)
+		}
+	}
+
+	if len(ipConfig.IP6) > 0 { // validate IPv6
+		if err := c.alignIPv4(ipConfig.IP6); err != nil {
+			return fmt.Errorf("align IPv6 err: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *Config) alignIPv4(ip string) error {
+	if c.IPv4 == ip {
+		logger.Debug().Str("addr", ip).Msg("IP4 match to interface")
+		return nil
+	}
+	if c.IPv4 == anyIPv4 || c.IPv4 == "" {
+		logger.Debug().Str("addr", ip).Msg("Using interface IP for NodeIP")
+		// use first ip found from interface
+		c.IPv4 = ip
+		return nil
+	}
+	return fmt.Errorf("existing IPv4 [%s] mismatch configured [%s]", ip, c.IPv4)
+}
+
+func (c *Config) alignIPv6(ip string) error {
+	if c.IPv6 == ip {
+		logger.Debug().Str("addr", ip).Msg("IPv6 match to interface")
+		return nil
+	}
+	if c.IPv6 == anyIPv6 || c.IPv6 == "" {
+		logger.Debug().Str("addr", ip).Msg("Using interface IP for NodeIP")
+		// use first ip found from interface
+		c.IPv6 = ip
+		return nil
+	}
+	return fmt.Errorf("existing IPv6 [%s] mismatch configured [%s]", ip, c.IPv6)
+}
+
 func (c Config) k3sInstallArgs() []string {
 	k3sArgs := []string{
 		fmt.Sprintf("--flannel-iface=%s", c.Iface),
 		fmt.Sprintf("--node-ip=%s", c.getIFaceAddress()), // node ip needs to have ip address (not 0.0.0.0)
-		fmt.Sprintf("--kubelet-arg=address=%s", c.IP4),
-		fmt.Sprintf("--bind-address=%s", c.IP4),
+		fmt.Sprintf("--kubelet-arg=address=%s", c.IPv4),
+		fmt.Sprintf("--bind-address=%s", c.IPv4),
 		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
 		"--prefer-bundled-bin",
 	}
@@ -179,7 +261,7 @@ func hasSystemd() bool {
 // setupNetwork checks if provided nodeIP belongs to interface
 // if nodeIP is empty it will write first ip from the interface into nodeIP
 func setupNetwork(c *Config) (err error) {
-	if c.IP4 == localhostIPv4 || c.IP6 == localhostIPv6 {
+	if c.IPv4 == localhostIPv4 || c.IPv6 == localhostIPv6 {
 		return fmt.Errorf("unable to bind to localhost")
 	}
 
@@ -254,39 +336,14 @@ func (c *Config) upsertIfaceAddrHost(iface net.Interface) error {
 	if err != nil {
 		return fmt.Errorf("network addr: %w", err)
 	}
-	var (
-		addrIP4Added bool
-		addrIP6Added bool
-	)
+
+	var ipConfig IPConfig
 	for _, a := range addr {
-		ipnet, ok := a.(*net.IPNet)
-		if !ok || !ipnet.IP.IsGlobalUnicast() {
-			logger.Debug().Str("addr", a.String()).Msg("Not a global unicast address")
-			continue
-		}
-		if ipnet.IP.To4() == nil { // validate IP6
-			if addrIP6Added { // already added. skip
-				continue
-			}
-			if !c.parseIP6(ipnet) {
-				return fmt.Errorf("IP6 %q address is not valid", c.IP6)
-			}
-			logger.Debug().Str("ip6", c.IP6).Msg("set IP6")
-			addrIP6Added = true
-			continue
-		}
-		if addrIP4Added {
-			continue // already added. skip
-		}
-		if !c.parseIP4(ipnet) {
-			return fmt.Errorf("IP4 %q address is not valid", c.IP4)
-		}
-		logger.Debug().Str("ip4", c.IP6).Msg("set IP4")
-		addrIP4Added = true
+		ipConfig.AddAddress(a)
 	}
 
-	if !addrIP4Added && !addrIP6Added {
-		return fmt.Errorf("IP address is not valid. IP4: %q, IP6: %q", c.IP4, c.IP6)
+	if err = c.AlignIPs(ipConfig); err != nil {
+		return fmt.Errorf("align config IPs err: %w", err)
 	}
 
 	return nil
@@ -306,50 +363,22 @@ func (c Config) getHostname() string {
 }
 
 func (c *Config) isIP4Set() bool {
-	return len(c.IP4) > 0
+	return len(c.IPv4) > 0
 }
 
 func (c *Config) isIP6Set() bool {
-	return len(c.IP6) > 0
-}
-
-func (c *Config) parseIP4(ipnet *net.IPNet) bool {
-	if c.IP4 == ipnet.IP.To4().String() {
-		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("IP4 match to interface")
-		return true
-	}
-	if c.IP4 == anyIPv4 || c.IP4 == "" {
-		logger.Debug().Str("addr", ipnet.IP.To4().String()).Msg("Using interface IP for NodeIP")
-		// use first ip found from interface
-		c.IP4 = ipnet.IP.To4().String()
-		return true
-	}
-	return false
+	return len(c.IPv6) > 0
 }
 
 func (c *Config) getIFaceAddress() string {
 	switch {
 	case !c.isIP4Set():
-		return c.IP6
+		return c.IPv6
 	case !c.isIP6Set():
-		return c.IP4
+		return c.IPv4
 	default:
-		return c.IP4 + "," + c.IP6
+		return c.IPv4 + "," + c.IPv6
 	}
-}
-
-func (c *Config) parseIP6(ipnet *net.IPNet) bool {
-	if c.IP6 == ipnet.IP.To16().String() {
-		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("IP6 match to interface")
-		return true
-	}
-	if c.IP6 == anyIPv6 || c.IP6 == "" {
-		logger.Debug().Str("addr", ipnet.IP.To16().String()).Msg("Using interface IP for NodeIP")
-		// use first ip found from interface
-		c.IP6 = ipnet.IP.To16().String()
-		return true
-	}
-	return false
 }
 
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
@@ -448,10 +477,10 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 		// skip internal IP from proxying
 		var noProxy []string
 		if c.isIP4Set() {
-			noProxy = append(noProxy, fmt.Sprintf("%s/32", c.IP4))
+			noProxy = append(noProxy, fmt.Sprintf("%s/32", c.IPv4))
 		}
 		if c.isIP6Set() {
-			noProxy = append(noProxy, fmt.Sprintf("%s/128", c.IP6))
+			noProxy = append(noProxy, fmt.Sprintf("%s/128", c.IPv6))
 		}
 		noProxy = append(noProxy, c.Proxy.NoProxyWithDefaults()...)
 

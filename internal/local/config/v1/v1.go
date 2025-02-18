@@ -58,8 +58,8 @@ type GithubSSOConfig struct {
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
 	Host          string           `json:"host,omitempty"` // ingress host
-	IP4           string           `json:"ip,omitempty"`   // ip4 to bind on for k3s cluster
-	IP6           string           `json:"ip6,omitempty"`  // ip6 to bind on for k3s cluster
+	IPv4          string           `json:"ip,omitempty"`   // ip4 to bind on for k3s cluster
+	IPv6          string           `json:"ip6,omitempty"`  // ip6 to bind on for k3s cluster
 	Proxy         ProxyConfig      `json:"proxy,omitempty"`
 	TLS           TLSConfig        `json:"tls,omitempty"`
 	SMTP          SMTPConfig       `json:"smtp,omitempty"`
