@@ -19,10 +19,10 @@ var openPorts = []int{80, 443, 6443, 10250, 10257, 10259}
 
 // source: https://docs.k3s.io/networking/basic-network-options
 const (
-	clusterCIDRIPv4 = "10.42.0.0/16"
-	clusterCIDRIPv6 = "2001:cafe:42::/56"
-	serviceCIDRIPv4 = "10.43.0.0/16"
-	serviceCIDRIPv6 = "2001:cafe:43::/112"
+	defaultClusterCIDRIPv4 = "10.42.0.0/16"
+	defaultClusterCIDRIPv6 = "2001:cafe:42::/56"
+	defaultServiceCIDRIPv4 = "10.43.0.0/16"
+	defaultServiceCIDRIPv6 = "2001:cafe:43::/112"
 
 	localhostIPv4 = "127.0.0.1"
 	localhostIPv6 = "::1"
@@ -31,10 +31,10 @@ const (
 )
 
 var openNetworks = []string{
-	clusterCIDRIPv4, // pods
-	clusterCIDRIPv6, // pods
-	serviceCIDRIPv4, // services
-	serviceCIDRIPv6, // services
+	defaultClusterCIDRIPv4, // pods
+	defaultClusterCIDRIPv6, // pods
+	defaultServiceCIDRIPv4, // services
+	defaultServiceCIDRIPv6, // services
 }
 
 func isFirewallActive(ctx context.Context, fw FirewallType) bool {

@@ -147,6 +147,44 @@ func (c Config) k3sInstallArgs() []string {
 	return k3sArgs
 }
 
+type defaultCIDRConfig struct {
+	ipV4Enabled bool
+	ipV6Enabled bool
+}
+
+func newDefaultCIDRConfig(ipV4Enabled, ipV6Enabled bool) defaultCIDRConfig {
+	return defaultCIDRConfig{
+		ipV4Enabled: ipV4Enabled,
+		ipV6Enabled: ipV6Enabled,
+	}
+}
+
+func (c *defaultCIDRConfig) getClusterCIDRArg() string {
+	switch {
+	case c.ipV4Enabled && c.ipV6Enabled:
+		return fmt.Sprintf("--cluster-cidr=%s,%s", defaultClusterCIDRIPv4, defaultClusterCIDRIPv6)
+	case c.ipV4Enabled:
+		return "--cluster-cidr=" + defaultClusterCIDRIPv4
+	case c.ipV6Enabled:
+		return "--cluster-cidr=" + defaultClusterCIDRIPv6
+	default:
+		return ""
+	}
+}
+
+func (c *defaultCIDRConfig) getServiceCIDRArg() string {
+	switch {
+	case c.ipV4Enabled && c.ipV6Enabled:
+		return fmt.Sprintf("--service-cidr=%s,%s", defaultServiceCIDRIPv4, defaultServiceCIDRIPv6)
+	case c.ipV4Enabled:
+		return "--service-cidr=" + defaultServiceCIDRIPv4
+	case c.ipV6Enabled:
+		return "--service-cidr=" + defaultServiceCIDRIPv6
+	default:
+		return ""
+	}
+}
+
 func (c *Config) alignCIDRArgs() {
 	var (
 		isClusterCIDRSet bool
@@ -167,28 +205,14 @@ func (c *Config) alignCIDRArgs() {
 	if isClusterCIDRSet && isServerCIDRSet {
 		return // both set, nothing to do
 	}
-	switch {
-	case c.isIP4Set() && c.isIP6Set():
-		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--cluster-cidr=%s,%s", clusterCIDRIPv4, clusterCIDRIPv6))
-		}
-		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, fmt.Sprintf("--service-cidr=%s,%s", serviceCIDRIPv4, serviceCIDRIPv6))
-		}
-	case c.isIP4Set():
-		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIPv4)
-		}
-		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIPv4)
-		}
-	case c.isIP6Set():
-		if !isClusterCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--cluster-cidr="+clusterCIDRIPv6)
-		}
-		if !isServerCIDRSet {
-			c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, "--service-cidr="+serviceCIDRIPv6)
-		}
+
+	cidrConfig := newDefaultCIDRConfig(c.isIP4Set(), c.isIP6Set())
+
+	if !isClusterCIDRSet {
+		c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, cidrConfig.getClusterCIDRArg())
+	}
+	if !isServerCIDRSet {
+		c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, cidrConfig.getServiceCIDRArg())
 	}
 }
 
