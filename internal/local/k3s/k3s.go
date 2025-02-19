@@ -90,17 +90,13 @@ func (c *Config) AlignIPs(ipConfig IPConfig) error {
 		return fmt.Errorf("ip config is not valid: %w", err)
 	}
 
-	if len(ipConfig.IP4) > 0 { // validate IPv4
-		if err := c.alignIPv4(ipConfig.IP4); err != nil {
-			return fmt.Errorf("align IPv4 err: %w", err)
-		}
+	if err := c.alignIPv4(ipConfig.IP4); err != nil {
+		return fmt.Errorf("align IPv4 err: %w", err)
+	}
+	if err := c.alignIPv6(ipConfig.IP6); err != nil {
+		return fmt.Errorf("align IPv6 err: %w", err)
 	}
 
-	if len(ipConfig.IP6) > 0 { // validate IPv6
-		if err := c.alignIPv6(ipConfig.IP6); err != nil {
-			return fmt.Errorf("align IPv6 err: %w", err)
-		}
-	}
 	return nil
 }
 
