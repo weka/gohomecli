@@ -4,10 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 
 	"golang.org/x/mod/semver"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/weka/gohomecli/internal/local/bundle"
+	"github.com/weka/gohomecli/internal/local/chart"
 )
 
 var ErrNotExist = errors.New("k3s not exists")
@@ -40,7 +45,11 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		logger.Error().Msg("Downgrading kubernetes cluster is not possible")
 		return nil
 	}
-
+	c.IPv4Only, err = IsClusterIPv4Only(ctx)
+	if err != nil {
+		logger.Error().Err(err).Msg("explore existing cluster")
+		return err
+	}
 	logger.Info().Msg("Starting K3S upgrade...")
 	if err := serviceCmd("stop").Run(); err != nil {
 		return fmt.Errorf("stop K3S service: %w", err)
@@ -80,4 +89,35 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 	logger.Info().Msg("K3S upgrade completed")
 
 	return nil
+}
+
+func IsClusterIPv4Only(ctx context.Context) (bool, error) {
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", chart.KubeConfigPath)
+	if err != nil {
+		return false, fmt.Errorf("read Kubeconfig err: %w", err)
+	}
+
+	client, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return false, fmt.Errorf("create k8s client err: %w", err)
+	}
+	node, err := client.CoreV1().Nodes().Get(ctx, "wekahome.local", metav1.GetOptions{})
+	if err != nil {
+		return false, fmt.Errorf("get node wekahome.local err: %w", err)
+	}
+
+	cidrs := node.Spec.PodCIDRs
+	for _, cidr := range cidrs {
+		logger.Debug().Str("CIDR", cidr).Msg("Node pod CIDR")
+		ip, _, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return false, fmt.Errorf("parse CIDR [%s] err: %w", cidr, err)
+		}
+		if ip.To4() == nil { // cluster support IPv6
+			logger.Debug().Str("IP", ip.String()).Msg("cluster supports IPv6")
+			return false, nil
+		}
+	}
+	logger.Debug().Msg("cluster doesn't support IPv6")
+	return true, nil
 }

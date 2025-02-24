@@ -48,6 +48,7 @@ type Config struct {
 	Iface           string // interface for k3s network to work on
 	ProxyKubernetes bool   // use proxy for k3s
 	Debug           bool
+	IPv4Only        bool
 }
 
 type IPConfig struct {
@@ -95,6 +96,15 @@ func (c *Config) AlignIPs(ipConfig IPConfig) error {
 	}
 	if err := c.alignIPv6(ipConfig.IP6); err != nil {
 		return fmt.Errorf("align IPv6 err: %w", err)
+	}
+	if len(c.IPv4) == 0 {
+		c.IPv4Only = false
+	}
+	if c.IPv4Only && len(c.IPv6) > 0 {
+		logger.Warn().
+			Str("IPv6", c.IPv6).
+			Str("IPv4", c.IPv4).
+			Msg("existing cluster is running in IPv4 only. Dual stack is not possible.")
 	}
 
 	return nil
@@ -389,7 +399,7 @@ func (c *Config) isIP4Set() bool {
 }
 
 func (c *Config) isIP6Set() bool {
-	return len(c.IPv6) > 0
+	return !c.IPv4Only && len(c.IPv6) > 0
 }
 
 func (c *Config) getIFaceAddress() string {
