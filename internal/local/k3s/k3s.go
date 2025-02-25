@@ -45,10 +45,10 @@ var (
 type Config struct {
 	*config_v1.Configuration
 
-	Iface           string // interface for k3s network to work on
-	ProxyKubernetes bool   // use proxy for k3s
-	Debug           bool
-	IPv4Only        bool
+	Iface                          string // interface for k3s network to work on
+	ProxyKubernetes                bool   // use proxy for k3s
+	Debug                          bool
+	ExistingClusterStartedIPv4Only bool
 }
 
 type IPConfig struct {
@@ -98,9 +98,9 @@ func (c *Config) AlignIPs(ipConfig IPConfig) error {
 		return fmt.Errorf("align IPv6 err: %w", err)
 	}
 	if len(c.IPv4) == 0 {
-		c.IPv4Only = false
+		c.ExistingClusterStartedIPv4Only = false
 	}
-	if c.IPv4Only && len(c.IPv6) > 0 {
+	if c.ExistingClusterStartedIPv4Only && len(c.IPv6) > 0 {
 		logger.Warn().
 			Str("IPv6", c.IPv6).
 			Str("IPv4", c.IPv4).
@@ -399,7 +399,7 @@ func (c *Config) isIP4Set() bool {
 }
 
 func (c *Config) isIP6Set() bool {
-	return !c.IPv4Only && len(c.IPv6) > 0
+	return !c.ExistingClusterStartedIPv4Only && len(c.IPv6) > 0
 }
 
 func (c *Config) getIFaceAddress() string {
