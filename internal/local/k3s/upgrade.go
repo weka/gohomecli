@@ -45,7 +45,7 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 		logger.Error().Msg("Downgrading kubernetes cluster is not possible")
 		return nil
 	}
-	c.IPv4Only, err = IsClusterIPv4Only(ctx)
+	c.ExistingClusterStartedIPv4Only, err = IsClusterIPv4Only(ctx)
 	if err != nil {
 		logger.Error().Err(err).Msg("explore existing cluster")
 		return err
