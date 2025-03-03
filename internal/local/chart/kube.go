@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 
 	helmclient "github.com/mittwald/go-helm-client"
-	"github.com/weka/gohomecli/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 const KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
@@ -110,4 +111,43 @@ func watchWarningEvents(ctx context.Context, namespace string, kubeconfig []byte
 	}()
 
 	return ch, watcher.Stop, nil
+}
+
+// returns a list of non-running or completed pods in the specified namespace
+func GetNonRunningOrCompletedPods() ([]corev1.Pod, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := clientset.CoreV1().Pods(ReleaseNamespace).List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var nonRunningOrCompletedPods []corev1.Pod
+	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			state := containerStatus.State
+			if state.Waiting != nil || state.Terminated != nil {
+				if state.Terminated != nil && state.Terminated.Reason == "Completed" {
+					continue
+				}
+				nonRunningOrCompletedPods = append(nonRunningOrCompletedPods, pod)
+				break
+			}
+		}
+	}
+
+	return nonRunningOrCompletedPods, nil
 }
