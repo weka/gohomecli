@@ -151,3 +151,31 @@ func GetNonRunningOrCompletedPods() ([]corev1.Pod, error) {
 
 	return nonRunningOrCompletedPods, nil
 }
+
+func GetIngressAddress() (string, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	ingresses, err := clientset.NetworkingV1().Ingresses(ReleaseNamespace).List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	if len(ingresses.Items) == 0 {
+		return "", fmt.Errorf("no ingress found in namespace %s", ReleaseNamespace)
+	}
+
+	return ingresses.Items[0].Spec.Rules[0].Host, nil
+}
