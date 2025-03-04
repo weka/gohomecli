@@ -22,8 +22,8 @@ var statusCmd = &cobra.Command{
 
 var podsCmd = &cobra.Command{
 	Use:   "pods",
-	Short: "Get the status of pods",
-	Long:  fmt.Sprintf("Get the status of non-running or completed pods in the %s namespace", chart.ReleaseNamespace),
+	Short: "Check the status of pods",
+	Long:  fmt.Sprintf("Check the status of pods and get non-running ones in the %s namespace", chart.ReleaseNamespace),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		detailed, _ := cmd.Flags().GetBool("detailed")
 		outputFormat, _ := cmd.Flags().GetString("output")
@@ -32,7 +32,7 @@ var podsCmd = &cobra.Command{
 			utils.UserError("The --output flag can only be used with the --detailed flag.")
 		}
 
-		pods, err := chart.GetNonRunningOrCompletedPods()
+		pods, err := chart.GetNonRuninngPods()
 		if err != nil {
 			utils.UserError(err.Error())
 		}
@@ -56,12 +56,12 @@ var podsCmd = &cobra.Command{
 				utils.UserOutput(string(output))
 			}
 		} else {
-			utils.UserOutput("Non-running or completed pods:")
+			utils.UserOutput("Non-running pods:")
 			for _, pod := range pods {
-				utils.UserOutput(fmt.Sprintf("- %s", pod.Name))
+				utils.UserOutput(fmt.Sprintf("- Pod name: \"%s\", Pod Status: \"%s\"", pod.Name, pod.Status.Phase))
 			}
 		}
-		utils.UserError("There are non-running or completed pods.")
+		utils.UserError("There are non-running pods.")
 		return nil
 	},
 }
@@ -86,7 +86,7 @@ var wekahomeCmd = &cobra.Command{
 			utils.UserError(err.Error())
 		}
 		if statusCode != 200 {
-			errStr := fmt.Sprintf("Something wrong with WekaHome. Status code: %d", statusCode)
+			errStr := fmt.Sprintf("Something wrong with WekaHome. Address: %s, HTTP Status code: %d", url, statusCode)
 			utils.UserError(errStr)
 		}
 		utils.UserNote("WekaHome is running.")

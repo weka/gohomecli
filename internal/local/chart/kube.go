@@ -113,8 +113,8 @@ func watchWarningEvents(ctx context.Context, namespace string, kubeconfig []byte
 	return ch, watcher.Stop, nil
 }
 
-// GetNonRunningOrCompletedPods returns a list of non-running or completed pods in the specified namespace
-func GetNonRunningOrCompletedPods() ([]corev1.Pod, error) {
+// GetNonRuninngPods returns a list of non-running or completed pods in the specified namespace
+func GetNonRuninngPods() ([]corev1.Pod, error) {
 	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
 	if err != nil {
 		return nil, err
@@ -178,5 +178,17 @@ func GetIngressAddress() (string, error) {
 		return "", fmt.Errorf("no ingress found in namespace %s", ReleaseNamespace)
 	}
 
-	return ingresses.Items[0].Spec.Rules[0].Host, nil
+	ingress := ingresses.Items[0]
+	for _, rule := range ingress.Spec.Rules {
+		if rule.Host != "" && rule.Host != "*" {
+			return rule.Host, nil
+		}
+	}
+
+	// If no specific host is found, return the address
+	if len(ingress.Status.LoadBalancer.Ingress) > 0 {
+		return ingress.Status.LoadBalancer.Ingress[0].IP, nil
+	}
+
+	return "", fmt.Errorf("no valid host or address found for ingress %s in namespace %s", ingress.Name, ReleaseNamespace)
 }
