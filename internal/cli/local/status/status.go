@@ -81,7 +81,7 @@ var wekahomeCmd = &cobra.Command{
 		}
 
 		url := fmt.Sprintf("http://%s", address)
-		statusCode, err := utils.GetUrlStatusCode(url)
+		statusCode, err := utils.GetURLStatusCode(url)
 		if err != nil {
 			utils.UserError(err.Error())
 		}

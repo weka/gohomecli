@@ -197,7 +197,8 @@ func URLSafe(u *url.URL) *url.URL {
 	return &urlSafe
 }
 
-func GetUrlStatusCode(url string) (int, error) {
+// GetURLStatusCode returns the status code of a given URL
+func GetURLStatusCode(url string) (int, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return 0, err

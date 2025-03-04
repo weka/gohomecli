@@ -113,7 +113,7 @@ func watchWarningEvents(ctx context.Context, namespace string, kubeconfig []byte
 	return ch, watcher.Stop, nil
 }
 
-// returns a list of non-running or completed pods in the specified namespace
+// GetNonRunningOrCompletedPods returns a list of non-running or completed pods in the specified namespace
 func GetNonRunningOrCompletedPods() ([]corev1.Pod, error) {
 	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
 	if err != nil {
@@ -152,6 +152,7 @@ func GetNonRunningOrCompletedPods() ([]corev1.Pod, error) {
 	return nonRunningOrCompletedPods, nil
 }
 
+// GetIngressAddress returns the address of the ingress in the specified namespace
 func GetIngressAddress() (string, error) {
 	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
 	if err != nil {
