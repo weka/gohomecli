@@ -220,9 +220,9 @@ func (c *Config) alignCIDRArgs() {
 
 func (c *Config) getBindAddress() string {
 	if c.isIP4Set() {
-		return c.IPv4
+		return anyIPv4
 	}
-	return c.IPv6
+	return anyIPv6
 }
 
 func setupLogger(debug bool) {
