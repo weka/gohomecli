@@ -41,6 +41,7 @@ func init() {
 		setup.Cli.InitCobra(localCmd)
 		upgrade.Cli.InitCobra(localCmd)
 		cleanup.Cli.InitCobra(localCmd)
-		status.Cli.InitCobra(localCmd)
+		statusCli := status.CliHook()
+		statusCli.InitCobra(localCmd)
 	})
 }
