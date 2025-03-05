@@ -210,6 +210,21 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 
 // TODO check if mage sense to use SendRequest
 func (client *Client) Download(url string, fileName string, options *RequestOptions) error {
+	res, err := client.getHTTPBody(url, options)
+	if err != nil {
+		return fmt.Errorf("failed to download file: %s", err)
+	}
+	destFile, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("failed to open destination file: %s", err)
+	}
+	defer destFile.Close()
+	utils.UserOutput("Downloading " + fileName)
+	io.Copy(destFile, res)
+	return nil
+}
+
+func (client *Client) getHTTPBody(url string, options *RequestOptions) (io.ReadCloser, error) {
 	if options == nil {
 		options = &RequestOptions{}
 	}
@@ -218,13 +233,13 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 	if options.Body != nil {
 		bodyBytes, err := json.Marshal(options.Body)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal request body: %s", err)
+			return nil, fmt.Errorf("failed to unmarshal request body: %s", err)
 		}
 		body = bytes.NewReader(bodyBytes)
 	}
 	req, err := http.NewRequest("GET", fullURL, body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req = req.WithContext(context.Background())
@@ -237,10 +252,8 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 
 	res, err := client.HTTPClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	defer res.Body.Close()
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
 		logger.Error().
@@ -248,7 +261,7 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 			Str("url", req.URL.String()).
 			Int("status", res.StatusCode).
 			Msg("Response")
-		return fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
+		return nil, fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
 	}
 	logger.Debug().
 		Str("method", req.Method).
@@ -260,18 +273,13 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 	switch res.Header.Get("Content-Encoding") {
 	case "gzip":
 		reader, err = gzip.NewReader(res.Body)
-		defer reader.Close()
+		if err != nil {
+			return nil, err
+		}
 	default:
 		reader = res.Body
 	}
-	destFile, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("failed to open destination file: %s", err)
-	}
-	defer destFile.Close()
-	utils.UserOutput("Downloading " + fileName)
-	io.Copy(destFile, res.Body)
-	return nil
+	return reader, nil
 }
 
 func (client *Client) DownloadMany(urlTemplate string, fileNames []string, options *RequestOptions) error {
@@ -310,4 +318,8 @@ func (client *Client) GetAPIEntity(resource string, id interface{}, result inter
 // Post sends a POST request, and does not expect the response to be enveloped
 func (client *Client) Post(url string, result interface{}, options *RequestOptions) error {
 	return client.SendRequest("POST", url, result, options)
+}
+
+func (client *Client) Read(url string, options *RequestOptions) (io.ReadCloser, error) {
+	return client.getHTTPBody(url, options)
 }

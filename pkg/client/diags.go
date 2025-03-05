@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -66,4 +67,10 @@ func GetDiagsParams(topic string, topicId string) *QueryParams {
 		params.Set("topic_id", topicId)
 	}
 	return params
+}
+
+func (client *Client) ReadDiags(clusterID string, file string) (io.ReadCloser, error) {
+	return client.Read(
+		fmt.Sprintf("clusters/%s/support/files/%s/content", clusterID, file),
+		&RequestOptions{})
 }

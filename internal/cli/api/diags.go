@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -22,6 +24,15 @@ var diagsListCmdArgs = struct {
 }{}
 
 func init() {
+
+	var diagsReadCmd = &cobra.Command{
+		Use:   "read <cluster-id> <filename>",
+		Short: "Read cluster diagnostics file",
+		Long:  "Read cluster diagnostics file",
+		Args:  cobra.ExactArgs(2),
+		Run:   diagsReadRun,
+	}
+
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(diagsCmd)
 		diagsCmd.AddCommand(diagsListCmd)
@@ -35,6 +46,8 @@ func init() {
 			"filter topic")
 		diagsListCmd.Flags().IntVar(&diagsListCmdArgs.Limit, "limit", 500,
 			"show at most this many files")
+
+		appCmd.AddCommand(diagsReadCmd)
 	})
 }
 
@@ -148,4 +161,25 @@ var diagsDownloadBacthCmd = &cobra.Command{
 				diagsDownloadBacthCmdArgs.topic, args[1])
 		}
 	},
+}
+
+func diagsReadRun(cmd *cobra.Command, args []string) {
+	clusterID, err := env.ParseClusterIdentifier(args[0])
+	if err != nil {
+		utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+	}
+	api := client.GetClient()
+
+	file := args[1]
+	content, err := api.ReadDiags(clusterID, file)
+	if err != nil {
+		utils.UserError(err.Error())
+	}
+	defer content.Close()
+
+	_, err = io.Copy(os.Stdout, content)
+	if err != nil {
+		utils.UserError(err.Error())
+	}
+
 }
