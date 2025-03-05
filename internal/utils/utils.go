@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -194,4 +195,13 @@ func URLSafe(u *url.URL) *url.URL {
 	urlSafe := *u
 	urlSafe.User = url.UserPassword(u.User.Username(), "[HIDDEN]")
 	return &urlSafe
+}
+
+// GetURLStatusCode returns the status code of a given URL
+func GetURLStatusCode(url string) (int, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, err
+	}
+	return resp.StatusCode, nil
 }

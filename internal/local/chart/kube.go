@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 
 	helmclient "github.com/mittwald/go-helm-client"
-	"github.com/weka/gohomecli/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 const KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
@@ -110,4 +111,120 @@ func watchWarningEvents(ctx context.Context, namespace string, kubeconfig []byte
 	}()
 
 	return ch, watcher.Stop, nil
+}
+
+func isNonRunningOrIncomplete(containerStatus corev1.ContainerStatus) bool {
+	containerState := containerStatus.State
+	return containerState.Waiting != nil || (containerState.Terminated != nil && containerState.Terminated.Reason != "Completed")
+}
+
+// PodInfo represents short information about a pod
+type PodInfo struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Reason string `json:"reason"`
+}
+
+// GetNonRuninngPods returns a list of non-running pods in the ReleaseNamespace namespace
+func GetNonRuninngPods(ctx context.Context) ([]PodInfo, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var nonRunningOrCompletedPods []PodInfo
+	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if isNonRunningOrIncomplete(containerStatus) {
+				reason := getContainerStatusReason(containerStatus, pod.Status.Reason)
+				nonRunningOrCompletedPods = append(nonRunningOrCompletedPods, PodInfo{
+					Name:   pod.Name,
+					Status: string(pod.Status.Phase),
+					Reason: reason,
+				})
+				break
+			}
+		}
+	}
+
+	return nonRunningOrCompletedPods, nil
+}
+
+// getContainerStatusReason extracts the most specific status reason from a container
+func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason string) string {
+	// Try to get the waiting reason first (most common for problems like ImagePullBackOff)
+	if containerStatus.State.Waiting != nil && containerStatus.State.Waiting.Reason != "" {
+		return containerStatus.State.Waiting.Reason
+	}
+
+	// If not waiting, try terminated state (but not if it's completed normally)
+	if containerStatus.State.Terminated != nil &&
+		containerStatus.State.Terminated.Reason != "Completed" &&
+		containerStatus.State.Terminated.Reason != "" {
+		return containerStatus.State.Terminated.Reason
+	}
+
+	// If container state doesn't have a reason, fall back to pod reason
+	if podReason != "" {
+		return podReason
+	}
+
+	// Default for when container is not running but no specific reason is found
+	return "Unknown"
+}
+
+// GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
+func GetIngressAddress() (string, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	ingresses, err := clientset.NetworkingV1().Ingresses(ReleaseNamespace).List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	if len(ingresses.Items) == 0 {
+		return "", fmt.Errorf("no ingress found in namespace %s", ReleaseNamespace)
+	}
+
+	ingress := ingresses.Items[0]
+	for _, rule := range ingress.Spec.Rules {
+		if rule.Host != "" && rule.Host != "*" {
+			return rule.Host, nil
+		}
+	}
+
+	// If no specific host is found, return the address
+	if len(ingress.Status.LoadBalancer.Ingress) > 0 {
+		return ingress.Status.LoadBalancer.Ingress[0].IP, nil
+	}
+
+	return "", fmt.Errorf("no valid host or address found for ingress %s in namespace %s", ingress.Name, ReleaseNamespace)
 }
