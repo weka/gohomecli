@@ -25,7 +25,7 @@ var diagsListCmdArgs = struct {
 
 func init() {
 
-	var diagsReadCmd = &cobra.Command{
+	diagsReadCmd := &cobra.Command{
 		Use:   "read <cluster-id> <filename>",
 		Short: "Read cluster diagnostics file",
 		Long:  "Read cluster diagnostics file",
