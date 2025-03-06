@@ -208,9 +208,9 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 	return nil
 }
 
-// TODO check if mage sense to use SendRequest
-func (client *Client) Download(url string, fileName string, options *RequestOptions) error {
-	res, err := client.requestBody(url, options)
+func (client *Client) Download(url string, fileName string) error {
+	utils.UserOutput("Downloading " + fileName)
+	res, err := client.requestBody(url)
 	if err != nil {
 		return fmt.Errorf("failed to download file: %s", err)
 	}
@@ -219,25 +219,16 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 		return fmt.Errorf("failed to open destination file: %s", err)
 	}
 	defer destFile.Close()
-	utils.UserOutput("Downloading " + fileName)
-	io.Copy(destFile, res)
+	_, err = io.Copy(destFile, res)
+	if err != nil {
+		return fmt.Errorf("failed to write to destination file: %s", err)
+	}
 	return nil
 }
 
-func (client *Client) requestBody(url string, options *RequestOptions) (io.ReadCloser, error) {
-	if options == nil {
-		options = &RequestOptions{}
-	}
-	fullURL := client.getFullURL(url, options)
-	var body io.Reader = nil
-	if options.Body != nil {
-		bodyBytes, err := json.Marshal(options.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal request body: %s", err)
-		}
-		body = bytes.NewReader(bodyBytes)
-	}
-	req, err := http.NewRequest("GET", fullURL, body)
+func (client *Client) requestBody(url string) (io.ReadCloser, error) {
+	fullURL := client.getFullURL(url, &RequestOptions{})
+	req, err := http.NewRequest(http.MethodGet, fullURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +273,7 @@ func (client *Client) requestBody(url string, options *RequestOptions) (io.ReadC
 	return reader, nil
 }
 
-func (client *Client) DownloadMany(urlTemplate string, fileNames []string, options *RequestOptions) error {
+func (client *Client) DownloadMany(urlTemplate string, fileNames []string) error {
 	sem := semaphore.NewWeighted(16)
 	baseContext := context.Background()
 	wg := sync.WaitGroup{}
@@ -290,7 +281,7 @@ func (client *Client) DownloadMany(urlTemplate string, fileNames []string, optio
 		wg.Add(1)
 		_ = sem.Acquire(baseContext, 1)
 		go func(file string) {
-			client.Download(fmt.Sprintf(urlTemplate, file), file, options)
+			client.Download(fmt.Sprintf(urlTemplate, file), file)
 			wg.Done()
 			sem.Release(1)
 		}(file)
@@ -320,6 +311,6 @@ func (client *Client) Post(url string, result interface{}, options *RequestOptio
 	return client.SendRequest("POST", url, result, options)
 }
 
-func (client *Client) Read(url string, options *RequestOptions) (io.ReadCloser, error) {
-	return client.requestBody(url, options)
+func (client *Client) Read(url string) (io.ReadCloser, error) {
+	return client.requestBody(url)
 }
