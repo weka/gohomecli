@@ -52,7 +52,7 @@ func (query *PagedQuery) NextDiag() (*Diag, error) {
 
 func (client *Client) DownloadDiags(clusterID string, fileName string) error {
 	return client.Download(
-		fmt.Sprintf("clusters/%s/support/files/%s/content",
+		fmt.Sprintf(diagFileURLTemplate,
 			clusterID, fileName), fileName)
 }
 
