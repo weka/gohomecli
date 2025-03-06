@@ -47,7 +47,7 @@ func init() {
 		diagsListCmd.Flags().IntVar(&diagsListCmdArgs.Limit, "limit", 500,
 			"show at most this many files")
 
-		appCmd.AddCommand(diagsReadCmd)
+		diagsCmd.AddCommand(diagsReadCmd)
 	})
 }
 
