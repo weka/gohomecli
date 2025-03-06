@@ -210,7 +210,7 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 
 // TODO check if mage sense to use SendRequest
 func (client *Client) Download(url string, fileName string, options *RequestOptions) error {
-	res, err := client.getHTTPBody(url, options)
+	res, err := client.requestBody(url, options)
 	if err != nil {
 		return fmt.Errorf("failed to download file: %s", err)
 	}
@@ -224,7 +224,7 @@ func (client *Client) Download(url string, fileName string, options *RequestOpti
 	return nil
 }
 
-func (client *Client) getHTTPBody(url string, options *RequestOptions) (io.ReadCloser, error) {
+func (client *Client) requestBody(url string, options *RequestOptions) (io.ReadCloser, error) {
 	if options == nil {
 		options = &RequestOptions{}
 	}
@@ -321,5 +321,5 @@ func (client *Client) Post(url string, result interface{}, options *RequestOptio
 }
 
 func (client *Client) Read(url string, options *RequestOptions) (io.ReadCloser, error) {
-	return client.getHTTPBody(url, options)
+	return client.requestBody(url, options)
 }

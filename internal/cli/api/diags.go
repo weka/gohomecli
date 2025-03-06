@@ -181,5 +181,4 @@ func diagsReadRun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		utils.UserError(err.Error())
 	}
-
 }

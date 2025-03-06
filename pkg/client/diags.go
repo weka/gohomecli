@@ -69,6 +69,7 @@ func GetDiagsParams(topic string, topicId string) *QueryParams {
 	return params
 }
 
+// ReadDiags reads the content of a diagnostics file and returns a ReadCloser
 func (client *Client) ReadDiags(clusterID string, file string) (io.ReadCloser, error) {
 	return client.Read(
 		fmt.Sprintf("clusters/%s/support/files/%s/content", clusterID, file),
