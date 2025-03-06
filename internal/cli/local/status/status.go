@@ -93,8 +93,9 @@ func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) erro
 		utils.UserNote("All pods are running.")
 		return nil
 	}
+	utils.UserWarning("Some pods are not running.")
 	if detailed {
-		utils.UserOutput("Faulty pods:")
+		utils.UserWarning("Faulty pods:")
 		headers := []string{"Pod Name", "Status", "Reason"}
 		index := 0
 		utils.RenderTableRows(headers, func() []string {
@@ -110,6 +111,7 @@ func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) erro
 			return nil
 		})
 	}
+
 	return nil
 }
 
