@@ -116,7 +116,7 @@ func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) erro
 }
 
 func wekaHomeRun(cmd *cobra.Command, args []string) error {
-	address, err := chart.GetIngressAddress()
+	address, err := chart.GetIngressAddress(cmd.Context())
 	if err != nil {
 		utils.UserError(err.Error())
 	}
