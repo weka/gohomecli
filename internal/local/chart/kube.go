@@ -3,6 +3,7 @@ package chart
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -189,7 +190,7 @@ func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason 
 }
 
 // GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
-func GetIngressAddress() (string, error) {
+func GetIngressAddress(ctx context.Context) (string, error) {
 	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
 	if err != nil {
 		return "", err
@@ -205,16 +206,13 @@ func GetIngressAddress() (string, error) {
 		return "", err
 	}
 
-	ingresses, err := clientset.NetworkingV1().Ingresses(ReleaseNamespace).List(context.TODO(), v1.ListOptions{})
+	ingress, err := clientset.NetworkingV1().
+		Ingresses(ReleaseNamespace).
+		Get(ctx, "wekahome", v1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	if len(ingresses.Items) == 0 {
-		return "", fmt.Errorf("no ingress found in namespace %s", ReleaseNamespace)
-	}
-
-	ingress := ingresses.Items[0]
 	for _, rule := range ingress.Spec.Rules {
 		if rule.Host != "" && rule.Host != "*" {
 			return rule.Host, nil
@@ -223,6 +221,9 @@ func GetIngressAddress() (string, error) {
 
 	// If no specific host is found, return the address
 	if len(ingress.Status.LoadBalancer.Ingress) > 0 {
+		if ip := net.ParseIP(ingress.Status.LoadBalancer.Ingress[0].IP); ip.To4() == nil { // is IPv6
+			return "[" + ingress.Status.LoadBalancer.Ingress[0].IP + "]", nil
+		}
 		return ingress.Status.LoadBalancer.Ingress[0].IP, nil
 	}
 
