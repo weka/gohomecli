@@ -22,6 +22,8 @@ import (
 
 var logger = utils.GetLogger("API")
 
+const maxConcurrentDownloads = 16 // TODO: verify this number
+
 type metaData struct {
 	Page     int `json:"page"`
 	PageSize int `json:"page_size"`
@@ -274,7 +276,7 @@ func (client *Client) requestBody(url string) (io.ReadCloser, error) {
 }
 
 func (client *Client) DownloadMany(urlTemplate string, fileNames []string) error {
-	sem := semaphore.NewWeighted(16)
+	sem := semaphore.NewWeighted(maxConcurrentDownloads)
 	baseContext := context.Background()
 	wg := sync.WaitGroup{}
 	for _, file := range fileNames {

@@ -22,7 +22,7 @@ type Diag struct {
 const (
 	diagListURLTemplate  = "clusters/%s/support/files"
 	diagFileURLTemplate  = "clusters/%s/support/files/%s/content"
-	diagFilesURLTemplate = "clusters/%s/support/files/%%s/content"
+	diagFilesURLTemplate = "clusters/%s/support/files/%%s/content" // %%s for passing url template and escaping %s
 )
 
 func (client *Client) QueryDiags(clusterID string, options *RequestOptions) (*PagedQuery, error) {
