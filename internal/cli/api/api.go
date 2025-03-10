@@ -9,6 +9,8 @@ import (
 func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(&APIGroup)
+		diagsCli := DiagsCliHook()
+		diagsCli.InitCobra(appCmd)
 	})
 }
 
