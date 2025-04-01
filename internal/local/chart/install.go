@@ -17,24 +17,7 @@ func Install(ctx context.Context, opts *HelmOptions) error {
 		return fmt.Errorf("helm client: %w", err)
 	}
 
-	spec, err := crdSpec(client, opts)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to prepare crd spec")
-	}
-	if spec != nil {
-		logger.Info().
-			Str("namespace", spec.Namespace).
-			Str("chart", spec.ChartName).
-			Str("release", spec.ReleaseName).
-			Msg("Installing chart crd")
-
-		_, err := client.InstallChart(ctx, spec, nil)
-		if err != nil {
-			logger.Warn().Err(err).Msg("Failed to install chart crd")
-		}
-	}
-
-	spec, err = chartSpec(client, opts)
+	spec, err := chartSpec(client, opts)
 	if err != nil {
 		return fmt.Errorf("failed to prepare chart spec: %w", err)
 	}
