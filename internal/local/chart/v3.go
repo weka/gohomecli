@@ -188,6 +188,46 @@ func configureOverrides(configuration *config_v1.Configuration) (yamlMap, error)
 	return cfg, err
 }
 
+// configureLWH setup values to LWH specific settings.
+func configureLWH(*config_v1.Configuration) (yamlMap, error) {
+	cfg := make(yamlMap)
+	err := errors.Join(
+		// disable gateway
+		writeMapEntry(cfg, "gateway.enabled", false),
+		// disable autoscaling
+		writeMapEntry(cfg, "api.stats.autoscaling.enabled", false),
+		writeMapEntry(cfg, "workers.stats.autoscaling.enabled", false),
+		writeMapEntry(cfg, "workers.forwarding.autoscaling.enabled", false),
+		// nats stream configuration
+		writeMapEntry(cfg, "storage.nats.streams.events.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.events.maxBytes", 1073741824),
+		writeMapEntry(cfg, "storage.nats.streams.stats.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.stats.maxBytes", 3221225472),
+		writeMapEntry(cfg, "storage.nats.streams.integrations.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.alerts.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.notifications.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.forwardingLow.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.forwardingLow.maxBytes", 3221225472),
+		writeMapEntry(cfg, "storage.nats.streams.forwardingHigh.replicas", 1),
+		// storage stats
+		writeMapEntry(cfg, "storage.stats.useInternal", true),
+		// eventsDB configuration
+		writeMapEntry(cfg, "eventsdb.primary.persistence.size", "20Gi"),
+		// nats configuration
+		writeMapEntry(cfg, "nats.config.cluster.enabled", false),
+		writeMapEntry(cfg, "nats.config.jetstream.fileStore.pvc.size", "10Gi"),
+		writeMapEntry(cfg, "nats.container.patch", []any{}),
+		// victoria metrics
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
+		writeMapEntry(cfg, "victoriaMetricsOperator.enabled", false),
+		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
+		// license synchronizer job
+		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
+	)
+
+	return cfg, err
+}
+
 func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 	var (
 		err error
@@ -224,6 +264,7 @@ func init() {
 	valuesGeneratorV3.MustAddVisitor("retention", configureRetention)
 	valuesGeneratorV3.MustAddVisitor("resources", configureResources)
 	valuesGeneratorV3.MustAddVisitor("forwarding", configureForwarding)
+	valuesGeneratorV3.MustAddVisitor("lwh", configureLWH)
 	valuesGeneratorV3.MustAddVisitor("overrides", configureOverrides)
 }
 
