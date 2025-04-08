@@ -84,7 +84,7 @@ var clusterListCmd = &cobra.Command{
 		}
 		index := 0
 		utils.RenderTableRows(
-			[]string{"ID", "Name", "Version"},
+			[]string{"ID", "Name", "Version", "Customer Name"},
 			func() []string {
 				if index >= clusterListCmdArgs.Limit {
 					return nil
@@ -97,7 +97,13 @@ var clusterListCmd = &cobra.Command{
 				if cluster == nil {
 					return nil
 				}
-				return []string{cluster.ID, cluster.Name, cluster.Version}
+				var customerName string
+				if customer, err := api.GetClusterCustomer(cluster); err == nil {
+					customerName = customer.Name
+				} else {
+					customerName = "N/A"
+				}
+				return []string{cluster.ID, cluster.Name, cluster.Version, customerName}
 			})
 	},
 }
