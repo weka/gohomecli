@@ -1,6 +1,6 @@
 module github.com/weka/gohomecli
 
-go 1.23.1
+go 1.23.7
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 

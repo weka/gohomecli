@@ -5,3 +5,4 @@ bin
 upx*
 upx*/*
 vendor/
+.tools/

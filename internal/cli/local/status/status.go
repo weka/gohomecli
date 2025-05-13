@@ -1,8 +1,10 @@
+// Package status provides a command to get the status of Weka Home components
 package status
 
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/spf13/cobra"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
+// CliHook returns a Cobra CLI hook for the status command
 func CliHook() hooks.Cli {
 	var cli hooks.Cli
 
@@ -23,8 +26,11 @@ func CliHook() hooks.Cli {
 	podsCmd := &cobra.Command{
 		Use:   "pods",
 		Short: "Check the status of pods",
-		Long:  fmt.Sprintf("Check the status of pods and get non-running ones in the %s namespace", chart.ReleaseNamespace),
-		RunE:  podsRun,
+		Long: fmt.Sprintf(
+			"Check the status of pods and get non-running ones in the %s namespace",
+			chart.ReleaseNamespace,
+		),
+		RunE: podsRun,
 	}
 	podsCmd.PersistentFlags().BoolP("detailed", "d", false, "Show detailed information")
 	podsCmd.PersistentFlags().StringP("output", "o", "human", "Output format (json or human)")
@@ -43,12 +49,20 @@ func CliHook() hooks.Cli {
 	cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddCommand(statusCmd)
 	})
+
 	return cli
 }
 
-func podsRun(cmd *cobra.Command, args []string) error {
-	detailed, _ := cmd.Flags().GetBool("detailed")
-	outputFormat, _ := cmd.Flags().GetString("output")
+func podsRun(cmd *cobra.Command, _ []string) error {
+	detailed, err := cmd.Flags().GetBool("detailed")
+	if err != nil {
+		detailed = false // use default value
+	}
+
+	outputFormat, err := cmd.Flags().GetString("output")
+	if err != nil {
+		outputFormat = "human" // use default value
+	}
 
 	pods, err := chart.GetNonRuninngPods(cmd.Context())
 	if err != nil {
@@ -60,14 +74,14 @@ func podsRun(cmd *cobra.Command, args []string) error {
 	if outputFormat == "json" {
 		return outputPodsAsJSON(pods, isHealthy, detailed)
 	}
+
 	return outputPodsAsTable(pods, isHealthy, detailed)
 }
 
-func outputPodsAsJSON(pods []chart.PodInfo, isHealthy bool, detailed bool) error {
-
+func outputPodsAsJSON(pods []chart.PodInfo, isHealthy, detailed bool) error {
 	type StatusResponse struct {
-		Healthy    bool            `json:"healthy"`
 		FaultyPods []chart.PodInfo `json:"faultyPods,omitempty"`
+		Healthy    bool            `json:"healthy"`
 	}
 
 	response := StatusResponse{
@@ -88,9 +102,10 @@ func outputPodsAsJSON(pods []chart.PodInfo, isHealthy bool, detailed bool) error
 	return nil
 }
 
-func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) error {
+func outputPodsAsTable(pods []chart.PodInfo, isHealthy, detailed bool) error {
 	if isHealthy {
 		utils.UserNote("All pods are running.")
+
 		return nil
 	}
 	utils.UserWarning("Some pods are not running.")
@@ -102,12 +117,14 @@ func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) erro
 			if index < len(pods) {
 				pod := pods[index]
 				index++
+
 				return []string{
 					pod.Name,
 					pod.Status,
 					pod.Reason,
 				}
 			}
+
 			return nil
 		})
 	}
@@ -115,8 +132,9 @@ func outputPodsAsTable(pods []chart.PodInfo, isHealthy bool, detailed bool) erro
 	return nil
 }
 
-func wekaHomeRun(cmd *cobra.Command, args []string) error {
-	address, err := chart.GetIngressAddress(cmd.Context())
+func wekaHomeRun(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	address, err := chart.GetIngressAddress(ctx)
 	if err != nil {
 		utils.UserError(err.Error())
 	}
@@ -125,15 +143,16 @@ func wekaHomeRun(cmd *cobra.Command, args []string) error {
 		utils.UserError(errStr)
 	}
 
-	url := fmt.Sprintf("http://%s", address)
-	statusCode, err := utils.GetURLStatusCode(url)
+	url := "http://" + address
+	statusCode, err := utils.GetURLStatusCode(ctx, url)
 	if err != nil {
 		utils.UserError(err.Error())
 	}
-	if statusCode != 200 {
+	if statusCode != http.StatusOK {
 		errStr := fmt.Sprintf("Something wrong with WekaHome. Address: %s, HTTP Status code: %d", url, statusCode)
 		utils.UserError(errStr)
 	}
 	utils.UserNote("WekaHome is running.")
+
 	return nil
 }

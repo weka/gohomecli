@@ -5,10 +5,15 @@ import (
 	"time"
 )
 
+// nodeIDPattern is a regex pattern to extract the node ID from a node ID string
+var nodeIDPattern = regexp.MustCompile(`^NodeId<(\d+)>$`)
+
+// FormatTime formats a time
 func FormatTime(t time.Time) string {
-	return Colorize(ColorCyan, t.Format(time.RFC3339))
+	return Colorize(colorCyan, t.Format(time.RFC3339))
 }
 
+// ParseTime parses a time string
 func ParseTime(text string) (time.Time, error) {
 	if text == "" {
 		return time.Time{}, nil
@@ -17,48 +22,55 @@ func ParseTime(text string) (time.Time, error) {
 	if err != nil {
 		return result, err
 	}
+
 	return result, nil
 }
 
+// FormatBoolean formats a boolean
 func FormatBoolean(b bool) string {
 	if b {
 		return "Yes"
 	}
+
 	return "No"
 }
 
+// FormatUUID formats a UUID
 func FormatUUID(uuid string) string {
-	return Colorize(ColorYellow, uuid)
+	return Colorize(colorYellow, uuid)
 }
 
-var nodeIDPattern = regexp.MustCompile(`^NodeId<(\d+)>$`)
-
+// FormatNodeID formats a node ID
 func FormatNodeID(nodeID string) string {
 	submatches := nodeIDPattern.FindStringSubmatch(nodeID)
 	if submatches == nil || len(submatches) != 2 {
 		return nodeID
 	}
+
 	return submatches[1]
 }
 
+// FormatEventType formats an event type
 func FormatEventType(eventType string) string {
-	return Colorize(ColorBlue, eventType)
+	return Colorize(colorBlue, eventType)
 }
 
+// FormatEventSeverity formats an event severity
 func FormatEventSeverity(severity string) string {
 	switch severity {
 	case "DEBUG":
-		return Colorize(ColorDarkGrey, severity)
+		return Colorize(colorDarkGrey, severity)
 	case "INFO":
 		return severity
 	case "WARNING":
-		return Colorize(ColorYellow, severity)
+		return Colorize(colorYellow, severity)
 	case "MINOR":
-		return Colorize(ColorRed, severity)
+		return Colorize(colorRed, severity)
 	case "MAJOR":
-		return Colorize(ColorRed, severity)
+		return Colorize(colorRed, severity)
 	case "CRITICAL":
-		return Colorize(ColorBrightRed, severity)
+		return Colorize(colorBrightRed, severity)
 	}
+
 	return severity
 }
