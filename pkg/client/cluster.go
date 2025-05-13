@@ -7,22 +7,22 @@ import (
 
 // Cluster API structure
 type Cluster struct {
-	ID               string    `json:"id"`
-	Name             string    `json:"name"`
+	LicenseDeletedAt time.Time `json:"license_deleted_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 	CreatedAt        time.Time `json:"created_at"`
-	CustomerID       string    `json:"customer_id"`
-	EventStore       int       `json:"event_store"`
+	MuteTime         time.Time `json:"mute_time"`
+	LicenseSyncTime  time.Time `json:"license_sync_time"`
 	LastEvent        time.Time `json:"last_event"`
 	LastSeen         time.Time `json:"last_seen"`
-	LicenseDeletedAt time.Time `json:"license_deleted_at"`
-	LicenseSyncTime  time.Time `json:"license_sync_time"`
-	Muted            bool      `json:"muted"`
-	MuteTime         time.Time `json:"mute_time"`
-	PublicKey        string    `json:"public_key"`
-	SkipLicenseCheck bool      `json:"skip_license_check"`
-	SoftwareRelease  string    `json:"software_release"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	CustomerID       string    `json:"customer_id"`
+	ID               string    `json:"id"`
 	Version          string    `json:"version"`
+	SoftwareRelease  string    `json:"software_release"`
+	PublicKey        string    `json:"public_key"`
+	Name             string    `json:"name"`
+	EventStore       int       `json:"event_store"`
+	SkipLicenseCheck bool      `json:"skip_license_check"`
+	Muted            bool      `json:"muted"`
 }
 
 // GetCluster returns a single cluster
@@ -31,8 +31,9 @@ func (client *Client) GetCluster(id string) (*Cluster, error) {
 	cluster := &Cluster{}
 	err := client.GetAPIEntity("clusters", id, cluster)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch cluster %s: %s", id, err)
+		return nil, fmt.Errorf("could not fetch cluster %s: %w", id, err)
 	}
+
 	return cluster, nil
 }
 
@@ -42,8 +43,9 @@ func (client *Client) GetClusterCustomer(cluster *Cluster) (*Customer, error) {
 	}
 	customer, err := client.GetCustomer(cluster.CustomerID)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch customer for cluster %s: %s", cluster.ID, err)
+		return nil, fmt.Errorf("could not fetch customer for cluster %s: %w", cluster.ID, err)
 	}
+
 	return customer, nil
 }
 
@@ -52,6 +54,7 @@ func (client *Client) QueryClusters(options *RequestOptions) (*PagedQuery, error
 	if err != nil {
 		return nil, err
 	}
+
 	return query, nil
 }
 
@@ -66,10 +69,11 @@ func (query *PagedQuery) NextCluster() (*Cluster, error) {
 	cluster := &Cluster{}
 	ok, err := query.NextEntity(cluster)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get next cluster: %s", err)
+		return nil, fmt.Errorf("failed to get next cluster: %w", err)
 	}
 	if !ok {
 		return nil, nil
 	}
+
 	return cluster, nil
 }

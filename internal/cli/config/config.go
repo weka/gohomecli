@@ -63,6 +63,7 @@ var configUpdateCmd = &cobra.Command{
 			if !atLeastOne {
 				utils.UserError("at least one configuration value must be set, see help for more info")
 			}
+
 			return nil
 		})
 		utils.UserNote("Updated site configuration: \"%s\"", env.SiteName)
@@ -82,6 +83,7 @@ var configDefaultSiteCmd = &cobra.Command{
 				return fmt.Errorf("no such site: \"%s\"", siteName)
 			}
 			config.DefaultSite = siteName
+
 			return nil
 		})
 		utils.UserNote("Default site configuration set: \"%s\"", siteName)
@@ -126,6 +128,7 @@ var configSiteAddCmd = &cobra.Command{
 				return fmt.Errorf("site already exists: \"%s\"", siteName)
 			}
 			config.Sites[siteName] = &env.SiteConfig{APIKey: apiKey, CloudURL: cloudURL}
+
 			return nil
 		})
 		utils.UserNote("Added site configuration: \"%s\"", siteName)
@@ -145,6 +148,7 @@ var configSiteRemoveCmd = &cobra.Command{
 				return fmt.Errorf("no such site: \"%s\"", siteName)
 			}
 			delete(config.Sites, siteName)
+
 			return nil
 		})
 		utils.UserNote("Removed site configuration: \"%s\"", siteName)

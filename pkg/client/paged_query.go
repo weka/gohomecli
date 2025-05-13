@@ -8,15 +8,15 @@ const defaultPageSize = 50
 
 type PagedQuery struct {
 	Client            *Client
-	URL               string
 	Options           *RequestOptions
-	Page              int
-	PageResults       queryResultsEnvelope
+	queryMetaParams   map[string]any
+	URL               string
 	noMetaPageResults []json.RawMessage
-	HasMorePages      bool
+	PageResults       queryResultsEnvelope
+	Page              int
 	index             int
 	maxIndex          int
-	queryMetaParams   map[string]interface{}
+	HasMorePages      bool
 }
 
 func (client *Client) QueryEntities(url string, options *RequestOptions) (*PagedQuery, error) {
@@ -43,6 +43,7 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 	if err != nil {
 		return nil, err
 	}
+
 	return &query, nil
 }
 
@@ -67,10 +68,11 @@ func (query *PagedQuery) FetchNextPage() error {
 	}
 	query.index = -1
 	query.maxIndex = numResultsInPage - 1
+
 	return nil
 }
 
-func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
+func (query *PagedQuery) NextEntity(result any) (ok bool, err error) {
 	if query.index == query.maxIndex {
 		if !query.HasMorePages || query.Options.NoAutoFetchNextPage {
 			return false, nil
@@ -92,5 +94,6 @@ func (query *PagedQuery) NextEntity(result interface{}) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }

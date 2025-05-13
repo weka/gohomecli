@@ -18,8 +18,8 @@ var ErrWrongBundle = errors.New("tar: invalid bundle provided")
 type Tar string
 
 type TarCallback struct {
-	FileName string
 	Callback func(context.Context, fs.FileInfo, io.Reader) error
+	FileName string
 }
 
 // GetFiles reads files from tar archive and pass them to callback
@@ -72,6 +72,7 @@ func (t Tar) GetFiles(ctx context.Context, calls ...TarCallback) (err error) {
 				if errors.Is(err, io.EOF) {
 					break
 				}
+
 				return err
 			}
 
@@ -86,6 +87,7 @@ func (t Tar) GetFiles(ctx context.Context, calls ...TarCallback) (err error) {
 				if err := call.Callback(ctx, header.FileInfo(), tarReader); err != nil {
 					return err
 				}
+
 				break
 			}
 		}

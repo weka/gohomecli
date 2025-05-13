@@ -33,7 +33,7 @@ func init() {
 
 	logWriter = stdoutWriter
 
-	f, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+	f, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o660)
 	if err == nil {
 		debugWriter := zerolog.FilteredLevelWriter{
 			Writer: zerolog.LevelWriterAdapter{Writer: f},

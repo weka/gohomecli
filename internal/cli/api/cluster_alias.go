@@ -29,7 +29,7 @@ var aliasListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		aliases := env.NewAliases()
 		utils.RenderTable([]string{"Alias", "Cluster ID"}, func(table *tablewriter.Table) {
-			aliases.Iter(func(alias string, clusterID string) {
+			aliases.Iter(func(alias, clusterID string) {
 				table.Append([]string{alias, clusterID})
 			})
 		})
@@ -48,6 +48,7 @@ var aliasAddCmd = &cobra.Command{
 		if aliasExists {
 			if existingClusterID == clusterID {
 				utils.UserWarning("Alias \"%s\" already exists for cluster ID %s", alias, clusterID)
+
 				return
 			}
 			utils.UserError("Alias \"%s\" already exists for another cluster ID: %s", alias, clusterID)

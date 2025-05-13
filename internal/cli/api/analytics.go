@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -23,8 +22,8 @@ func init() {
 }
 
 var analyticsCmdArgs = struct {
-	allActiveClusters bool
 	clusterID         string
+	allActiveClusters bool
 }{}
 
 var analyticsCmd = &cobra.Command{
@@ -36,13 +35,14 @@ var analyticsCmd = &cobra.Command{
 		if !analyticsCmdArgs.allActiveClusters && analyticsCmdArgs.clusterID == "" {
 			return errors.New("please specify either --all-active or --cluster")
 		}
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
 		clusterID, err := env.ParseClusterIdentifier(analyticsCmdArgs.clusterID)
 		if err != nil {
-			utils.UserError(fmt.Sprintf("%s isn't a valid guid", analyticsCmdArgs.clusterID))
+			utils.UserError(analyticsCmdArgs.clusterID + " isn't a valid guid")
 		}
 		if clusterID != "" {
 			cluster, err := api.GetCluster(clusterID)
@@ -50,6 +50,7 @@ var analyticsCmd = &cobra.Command{
 				utils.UserError(err.Error())
 			}
 			outputClusterAnalytics(api, cluster, false)
+
 			return
 		}
 		query, err := api.QueryClusters(&client.RequestOptions{Params: client.GetActiveClustersParams()})
@@ -96,7 +97,7 @@ func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, sile
 		}
 	}
 
-	var jsn map[string]interface{}
+	var jsn map[string]any
 	err = json.Unmarshal(analytics, &jsn)
 	if err != nil {
 		if silenceFailure {

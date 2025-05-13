@@ -18,24 +18,21 @@ var (
 )
 
 type Flags struct {
-	Web             bool
-	WebBindAddr     string
-	ProxyURL        string
-	ProxyKubernetes bool
-	BundlePath      string
-	JsonConfig      string
-	Chart           struct {
+	WebBindAddr string
+	ProxyURL    string
+	BundlePath  string
+	JsonConfig  string
+	Iface       string
+	TLSCert     string
+	TLSKey      string
+	Chart       struct {
 		LocalChart     string
-		RemoteDownload bool
 		RemoteVersion  string
+		RemoteDownload bool
 	}
-
-	Iface string
-
-	TLSCert string // TLS certificate file
-	TLSKey  string // TLS key file
-
-	Debug bool
+	Web             bool
+	ProxyKubernetes bool
+	Debug           bool
 }
 
 func (c Flags) Validate() error {
@@ -64,11 +61,14 @@ func (c Flags) Validate() error {
 func Use(cmd *cobra.Command, config *Flags) {
 	if web.IsEnabled() {
 		cmd.Flags().BoolVar(&config.Web, "web", false, "start web installer")
-		cmd.Flags().StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
+		cmd.Flags().
+			StringVarP(&config.WebBindAddr, "bind-addr", "b", ":8080", "Bind address for web server including port")
 	}
 
-	cmd.Flags().StringVar(&config.ProxyURL, "proxy-url", "", fmt.Sprintf("Use proxy URL for networking (example: http://user:password@addr), supported proxy type: %v", validProxyScheme))
-	cmd.Flags().BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, fmt.Sprintf("Add proxy support for kubernetes, supported proxy type: %v", validK3SProxyScheme))
+	cmd.Flags().
+		StringVar(&config.ProxyURL, "proxy-url", "", fmt.Sprintf("Use proxy URL for networking (example: http://user:password@addr), supported proxy type: %v", validProxyScheme))
+	cmd.Flags().
+		BoolVar(&config.ProxyKubernetes, "proxy-kubernetes", false, fmt.Sprintf("Add proxy support for kubernetes, supported proxy type: %v", validK3SProxyScheme))
 	cmd.Flags().StringVarP(&config.JsonConfig, "json-config", "c", "", "Configuration in JSON format")
 
 	cmd.Flags().StringVar(&config.BundlePath, "bundle", bundle.BundlePath(), "bundle directory with k3s package")
@@ -78,8 +78,10 @@ func Use(cmd *cobra.Command, config *Flags) {
 	cmd.Flags().MarkHidden("debug")
 
 	cmd.Flags().StringVarP(&config.Chart.LocalChart, "local-chart", "l", "", "Path to local chart directory/archive")
-	cmd.Flags().BoolVarP(&config.Chart.RemoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
-	cmd.Flags().StringVar(&config.Chart.RemoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
+	cmd.Flags().
+		BoolVarP(&config.Chart.RemoteDownload, "remote-download", "r", false, "Enable downloading chart from remote repository")
+	cmd.Flags().
+		StringVar(&config.Chart.RemoteVersion, "remote-version", "", "Version of the chart to download from remote repository")
 	cmd.MarkFlagsMutuallyExclusive("local-chart", "remote-download")
 
 	cmd.Flags().StringVar(&config.Iface, "iface", "", "interface to use for internal networking")

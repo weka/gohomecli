@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -94,7 +93,7 @@ func DiagsCliHook() hooks.Cli {
 func diagsListRun(args []string, listArgs *diagsListArgs) {
 	clusterID, err := env.ParseClusterIdentifier(args[0])
 	if err != nil {
-		utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		utils.UserError(args[0] + " isn't a valid guid")
 	}
 	api := client.GetClient()
 	options := &client.RequestOptions{}
@@ -128,6 +127,7 @@ func diagsListRun(args []string, listArgs *diagsListArgs) {
 			strconv.Itoa(diag.ID),
 			diag.TopicID,
 		)
+
 		return row.Cells
 	})
 }
@@ -135,7 +135,7 @@ func diagsListRun(args []string, listArgs *diagsListArgs) {
 func diagsDownloadRun(cmd *cobra.Command, args []string) {
 	clusterID, err := env.ParseClusterIdentifier(args[0])
 	if err != nil {
-		utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		utils.UserError(args[0] + " isn't a valid guid")
 	}
 	api := client.GetClient()
 	err = api.DownloadDiags(clusterID, args[1])
@@ -147,7 +147,7 @@ func diagsDownloadRun(cmd *cobra.Command, args []string) {
 func diagsDownloadBatchRun(args []string, batchArgs *diagsDownloadBatchArgs) {
 	clusterID, err := env.ParseClusterIdentifier(args[0])
 	if err != nil {
-		utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		utils.UserError(args[0] + " isn't a valid guid")
 	}
 	api := client.GetClient()
 	options := &client.RequestOptions{}
@@ -181,7 +181,7 @@ func diagsDownloadBatchRun(args []string, batchArgs *diagsDownloadBatchArgs) {
 func diagsReadRun(cmd *cobra.Command, args []string) {
 	clusterID, err := env.ParseClusterIdentifier(args[0])
 	if err != nil {
-		utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+		utils.UserError(args[0] + " isn't a valid guid")
 	}
 	api := client.GetClient()
 

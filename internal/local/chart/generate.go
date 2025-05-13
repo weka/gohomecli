@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrMalformedConfiguration = fmt.Errorf("logic error, malformed configuration generated")
-	ErrGenerationFailed       = fmt.Errorf("failed to generate configuration")
+	ErrMalformedConfiguration = errors.New("logic error, malformed configuration generated")
+	ErrGenerationFailed       = errors.New("failed to generate configuration")
 )
 
 type (

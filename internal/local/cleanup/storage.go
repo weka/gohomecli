@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+
 	"github.com/weka/gohomecli/internal/local/k3s"
 	"github.com/weka/gohomecli/internal/utils"
 )
@@ -43,6 +44,7 @@ func LocalStorage(ctx context.Context) error {
 
 	if len(toRemove) == 0 {
 		logger.Info().Msg("Nothing to cleanup")
+
 		return nil
 	}
 
@@ -72,7 +74,7 @@ func LocalStorage(ctx context.Context) error {
 func getVolumesInUse(ctx context.Context) (map[string]bool, error) {
 	logger.Debug().Str("path", k3s.DefaultLocalStoragePath).Msg("Getting used volumes")
 
-	var isUsed = map[string]bool{}
+	isUsed := map[string]bool{}
 
 	kubeCmd, err := utils.ExecCommand(ctx, "kubectl",
 		[]string{"get", "pv", "-o", "jsonpath={.items[*].spec.hostPath.path}", "-A"},

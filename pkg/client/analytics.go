@@ -8,5 +8,6 @@ func (client *Client) GetAnalytics(clusterID string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return result.Data, err
 }

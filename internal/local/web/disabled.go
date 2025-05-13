@@ -4,7 +4,7 @@ package web
 
 import (
 	"context"
-	"fmt"
+	"errors"
 )
 
 func IsEnabled() bool {
@@ -12,5 +12,5 @@ func IsEnabled() bool {
 }
 
 func ServeConfigurer(ctx context.Context, addr string) error {
-	return fmt.Errorf("web component is not included in build")
+	return errors.New("web component is not included in build")
 }

@@ -6,13 +6,13 @@ import (
 )
 
 type Integration struct {
-	ID            int    `json:"id"`
 	Name          string `json:"name"`
 	Configuration struct {
 		Type         string          `json:"type"`
 		Rule         IntegrationRule `json:"rule"`
 		Destinations []string        `json:"destinations"`
 	} `json:"configuration"`
+	ID int `json:"id"`
 }
 
 type IntegrationRule struct {
@@ -26,8 +26,9 @@ func (client *Client) GetIntegration(id int) (*Integration, error) {
 	integration := &Integration{}
 	err := client.GetAPIEntity("integrations", id, integration)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch integration %d: %s", id, err)
+		return nil, fmt.Errorf("could not fetch integration %d: %w", id, err)
 	}
+
 	return integration, nil
 }
 
@@ -36,6 +37,7 @@ func (client *Client) QueryIntegrations(options *RequestOptions) (*PagedQuery, e
 	if err != nil {
 		return nil, err
 	}
+
 	return query, nil
 }
 
@@ -43,11 +45,12 @@ func (query *PagedQuery) NextIntegration() (*Integration, error) {
 	integration := &Integration{}
 	ok, err := query.NextEntity(integration)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get next integration: %s", err)
+		return nil, fmt.Errorf("failed to get next integration: %w", err)
 	}
 	if !ok {
 		return nil, nil
 	}
+
 	return integration, nil
 }
 
@@ -64,5 +67,6 @@ func (client *Client) TestIntegration(id int, eventCode string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

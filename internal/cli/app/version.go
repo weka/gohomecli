@@ -21,6 +21,6 @@ var versionCmd = &cobra.Command{
 		utils.UserOutput(
 			"Client version: %s (built on %s)",
 			env.VersionInfo.Name,
-			strings.Replace(env.VersionInfo.BuildTime, "_", " ", -1))
+			strings.ReplaceAll(env.VersionInfo.BuildTime, "_", " "))
 	},
 }

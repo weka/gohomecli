@@ -33,12 +33,13 @@ func runSetup(cmd *cobra.Command, args []string) (err error) {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
+
 		return nil
 	}
 
 	// cleanup on error during installing
 	defer func() {
-		var skipErrors = []error{
+		skipErrors := []error{
 			k3s.ErrExists,
 			chart.ErrTimeout,
 			context.DeadlineExceeded,

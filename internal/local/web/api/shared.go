@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,6 +19,7 @@ func allowedMethods(h http.HandlerFunc, methods ...string) http.HandlerFunc {
 		for _, method := range methods {
 			if r.Method == method {
 				h(w, r)
+
 				return
 			}
 		}
@@ -28,21 +28,23 @@ func allowedMethods(h http.HandlerFunc, methods ...string) http.HandlerFunc {
 	}
 }
 
-func parseJSONRequest(r *http.Request, v interface{}) error {
+func parseJSONRequest(r *http.Request, v any) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func jsonResponse(w http.ResponseWriter, r *http.Request, v interface{}) {
+func jsonResponse(w http.ResponseWriter, r *http.Request, v any) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(true)
 	if err := enc.Encode(v); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
 	if _, err := w.Write(buf.Bytes()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
@@ -51,5 +53,5 @@ func jsonResponse(w http.ResponseWriter, r *http.Request, v interface{}) {
 }
 
 func disabledResponse(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, fmt.Sprintf("API is disabled: %s", r.URL.Path), http.StatusForbidden)
+	http.Error(w, "API is disabled: "+r.URL.Path, http.StatusForbidden)
 }

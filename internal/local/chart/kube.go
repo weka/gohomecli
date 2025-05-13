@@ -36,6 +36,7 @@ func ReadKubeConfig(kubeConfigPath string) ([]byte, error) {
 	kubeConfig, err := os.ReadFile(kubeConfigPath)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to read kubeconfig")
+
 		return nil, fmt.Errorf("failed to read kubeconfig: %w", err)
 	}
 
@@ -57,7 +58,7 @@ func NewHelmClient(ctx context.Context, opts *HelmOptions) (helmclient.Client, e
 	return helmclient.NewClientFromKubeConf(&helmclient.KubeConfClientOptions{
 		Options: &helmclient.Options{
 			Namespace: namespace,
-			DebugLog: func(format string, v ...interface{}) {
+			DebugLog: func(format string, v ...any) {
 				logger.Debug().Msgf(format, v...)
 			},
 			Output: utils.NewWritterFunc(func(b []byte) {
@@ -116,7 +117,9 @@ func watchWarningEvents(ctx context.Context, namespace string, kubeconfig []byte
 
 func isNonRunningOrIncomplete(containerStatus corev1.ContainerStatus) bool {
 	containerState := containerStatus.State
-	return containerState.Waiting != nil || (containerState.Terminated != nil && containerState.Terminated.Reason != "Completed")
+
+	return containerState.Waiting != nil ||
+		(containerState.Terminated != nil && containerState.Terminated.Reason != "Completed")
 }
 
 // PodInfo represents short information about a pod
@@ -158,6 +161,7 @@ func GetNonRuninngPods(ctx context.Context) ([]PodInfo, error) {
 					Status: string(pod.Status.Phase),
 					Reason: reason,
 				})
+
 				break
 			}
 		}
@@ -224,8 +228,13 @@ func GetIngressAddress(ctx context.Context) (string, error) {
 		if ip := net.ParseIP(ingress.Status.LoadBalancer.Ingress[0].IP); ip.To4() == nil { // is IPv6
 			return "[" + ingress.Status.LoadBalancer.Ingress[0].IP + "]", nil
 		}
+
 		return ingress.Status.LoadBalancer.Ingress[0].IP, nil
 	}
 
-	return "", fmt.Errorf("no valid host or address found for ingress %s in namespace %s", ingress.Name, ReleaseNamespace)
+	return "", fmt.Errorf(
+		"no valid host or address found for ingress %s in namespace %s",
+		ingress.Name,
+		ReleaseNamespace,
+	)
 }

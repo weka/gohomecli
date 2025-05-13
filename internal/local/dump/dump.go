@@ -34,6 +34,7 @@ func (c Config) toArgs() []string {
 	if c.Verbose {
 		opts = append(opts, "-v")
 	}
+
 	return opts
 }
 

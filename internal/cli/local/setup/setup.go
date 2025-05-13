@@ -12,13 +12,11 @@ import (
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 )
 
-var (
-	Cli hooks.Cli
-)
+var Cli hooks.Cli
 
 type setup struct {
-	config_v1.Configuration
 	setup_flags.Flags
+	config_v1.Configuration
 }
 
 func (s setup) Validate() error {
@@ -49,8 +47,8 @@ var setupCmd = &cobra.Command{
 			return err
 		}
 
-		if setupConfig.Flags.ProxyURL != "" {
-			setupConfig.Configuration.Proxy.URL = setupConfig.Flags.ProxyURL
+		if setupConfig.ProxyURL != "" {
+			setupConfig.Proxy.URL = setupConfig.ProxyURL
 		}
 
 		return setupConfig.Validate()
@@ -64,7 +62,8 @@ func init() {
 
 		setup_flags.Use(setupCmd, &setupConfig.Flags)
 
-		setupCmd.Flags().StringVar(&setupConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
+		setupCmd.Flags().
+			StringVar(&setupConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
 		setupCmd.Flags().StringVar(&setupConfig.IPv4, "ip", "0.0.0.0", "internal IP address to use for cluster")
 		setupCmd.Flags().StringVar(&setupConfig.IPv6, "ip6", "::", "IP6 address to use for cluster")
 	})

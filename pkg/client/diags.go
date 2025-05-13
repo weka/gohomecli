@@ -8,15 +8,15 @@ import (
 
 // Cluster API structure
 type Diag struct {
-	ID         int       `json:"id"`
+	UploadTime time.Time `json:"upload_time"`
 	FileName   string    `json:"filename"`
 	ClusterID  string    `json:"cluster_id"`
 	HostName   string    `json:"hostname"`
 	S3Key      string    `json:"s3_key"`
-	Completed  bool      `json:"completed"`
 	Topic      string    `json:"topic"`
 	TopicID    string    `json:"topic_id"`
-	UploadTime time.Time `json:"upload_time"`
+	ID         int       `json:"id"`
+	Completed  bool      `json:"completed"`
 }
 
 const (
@@ -32,6 +32,7 @@ func (client *Client) QueryDiags(clusterID string, options *RequestOptions) (*Pa
 	if err != nil {
 		return nil, err
 	}
+
 	return query, nil
 }
 
@@ -42,15 +43,16 @@ func (query *PagedQuery) NextDiag() (*Diag, error) {
 	}
 	ok, err := query.NextEntity(diag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get next diag: %s", err)
+		return nil, fmt.Errorf("failed to get next diag: %w", err)
 	}
 	if !ok {
 		return nil, nil
 	}
+
 	return diag, nil
 }
 
-func (client *Client) DownloadDiags(clusterID string, fileName string) error {
+func (client *Client) DownloadDiags(clusterID, fileName string) error {
 	return client.Download(
 		fmt.Sprintf(diagFileURLTemplate,
 			clusterID, fileName), fileName)
@@ -62,7 +64,7 @@ func (client *Client) DownloadManyDiags(clusterID string, fileNames []string) er
 		fileNames)
 }
 
-func GetDiagsParams(topic string, topicID string) *QueryParams {
+func GetDiagsParams(topic, topicID string) *QueryParams {
 	params := &QueryParams{}
 	if topic != "" {
 		params.Set("topic", topic)
@@ -70,11 +72,12 @@ func GetDiagsParams(topic string, topicID string) *QueryParams {
 	if topicID != "" {
 		params.Set("topic_id", topicID)
 	}
+
 	return params
 }
 
 // ReadDiags reads the content of a diagnostics file and returns a ReadCloser
-func (client *Client) ReadDiags(clusterID string, file string) (io.ReadCloser, error) {
+func (client *Client) ReadDiags(clusterID, file string) (io.ReadCloser, error) {
 	return client.Read(
 		fmt.Sprintf(diagFileURLTemplate, clusterID, file))
 }

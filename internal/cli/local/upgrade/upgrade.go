@@ -12,13 +12,11 @@ import (
 	config_v1 "github.com/weka/gohomecli/internal/local/config/v1"
 )
 
-var (
-	Cli hooks.Cli
-)
+var Cli hooks.Cli
 
 type upgrade struct {
-	config_v1.Configuration
 	setup_flags.Flags
+	config_v1.Configuration
 }
 
 func (c upgrade) Validate() error {
@@ -32,7 +30,7 @@ var upgradeCmd = &cobra.Command{
 	Short: "Upgrade Local Weka Home",
 	Long:  `Upgrade Weka Home with K3S bundle`,
 	PreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		var jsonConfig = config.CLIConfig
+		jsonConfig := config.CLIConfig
 		if upgradeConfig.JsonConfig != "" {
 			jsonConfig = upgradeConfig.JsonConfig
 		}
@@ -44,7 +42,6 @@ var upgradeCmd = &cobra.Command{
 			config.ReadV1(jsonConfig, &cfg),                // read config into cfg
 			mergo.Merge(&upgradeConfig.Configuration, cfg), // merge cfg into upgradeConfig
 		)
-
 		if err != nil {
 			return err
 		}
@@ -53,8 +50,8 @@ var upgradeCmd = &cobra.Command{
 			return err
 		}
 
-		if upgradeConfig.Flags.ProxyURL != "" {
-			upgradeConfig.Configuration.Proxy.URL = upgradeConfig.Flags.ProxyURL
+		if upgradeConfig.ProxyURL != "" {
+			upgradeConfig.Proxy.URL = upgradeConfig.ProxyURL
 		}
 
 		return upgradeConfig.Validate()
@@ -68,7 +65,8 @@ func init() {
 
 		setup_flags.Use(upgradeCmd, &upgradeConfig.Flags)
 
-		upgradeCmd.Flags().StringVar(&upgradeConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
+		upgradeCmd.Flags().
+			StringVar(&upgradeConfig.Host, "host", "", "public host or IP address for LWH (default: interface address)")
 		upgradeCmd.Flags().StringVar(&upgradeConfig.IPv4, "ip", "0.0.0.0", "internal IP address to use for cluster")
 		upgradeCmd.Flags().StringVar(&upgradeConfig.IPv6, "ip6", "::", "IP6 address to use for cluster")
 	})

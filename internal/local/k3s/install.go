@@ -41,7 +41,8 @@ func Install(ctx context.Context, c Config) error {
 			logger.Warn().Err(err).Msg("Failed to add UFW rules")
 		}
 	default:
-		logger.Warn().Msg("No supported firewall found, skipping firewall rules setup. Please make sure to open required ports manually")
+		logger.Warn().
+			Msg("No supported firewall found, skipping firewall rules setup. Please make sure to open required ports manually")
 	}
 
 	bundle := bundle.Tar(name)
@@ -50,8 +51,10 @@ func Install(ctx context.Context, c Config) error {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Info().Msg("Setup was cancelled")
+
 			return nil
 		}
+
 		return err
 	}
 
@@ -90,6 +93,7 @@ func copyK3S() bundle.TarCallback {
 			if err != nil {
 				f.Close()
 				os.Remove(k3sBinary())
+
 				return err
 			}
 
@@ -117,6 +121,7 @@ func copyAirgapImages() bundle.TarCallback {
 			_, err = io.Copy(f, r)
 			if err != nil {
 				err = errors.Join(err, os.Remove(path.Join(k3sImagesPath, info.Name())))
+
 				return err
 			}
 

@@ -62,6 +62,7 @@ var customerListCmd = &cobra.Command{
 				if customer == nil {
 					return nil
 				}
+
 				return []string{customer.ID, customer.Name, utils.FormatBoolean(customer.Monitored)}
 			})
 	},

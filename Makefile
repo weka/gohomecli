@@ -81,8 +81,11 @@ vet:
 	@echo "Validating with go vet"
 	@go vet ./...
 
+.PHONY: install-golangci-lint
+install-golangci-lint: $(GOLANGCI_LINT)
+
 .PHONY: tools
-tools: $(GOLANGCI_LINT) $(LS_LINT)
+tools: install-golangci-lint $(LS_LINT)
 
 .PHONY: tidy
 tidy:
@@ -109,7 +112,7 @@ lint: $(GOLANGCI_LINT)
 	@$(GOLANGCI_LINT) run
 
 .PHONY: lint-fix
-lint-fix: $(GOLANGCI_LINT) fmt
+lintfix: $(GOLANGCI_LINT) fmt
 	@echo "Validating with golangci-lint"
 	@$(GOLANGCI_LINT) run --fix
 

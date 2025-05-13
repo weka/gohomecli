@@ -36,7 +36,7 @@ func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) er
 		return err
 	}
 	if !serving {
-		return fmt.Errorf("containerd is not serving")
+		return errors.New("containerd is not serving")
 	}
 
 	var importErrors []error
@@ -57,6 +57,7 @@ func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) er
 			}
 			if err == nil {
 				logger.Debug().Msg("Image already exists")
+
 				return nil
 			}
 
@@ -86,6 +87,7 @@ func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) er
 				return err
 			} else {
 				importErrors = append(importErrors, err)
+
 				continue
 			}
 		}
@@ -99,7 +101,7 @@ func ImportImages(ctx context.Context, imgs map[string]string, failFast bool) er
 }
 
 func ImportBundleImages(ctx context.Context, failFast bool) error {
-	var imagePaths = make(map[string]string)
+	imagePaths := make(map[string]string)
 
 	images, err := bundle.Images()
 	if err != nil {
