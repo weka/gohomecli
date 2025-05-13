@@ -27,6 +27,7 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("config file %q is not not found", jsonConfig)
 		}
+
 		return err
 	}
 
@@ -37,6 +38,7 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 	jsonConfigBytes, err = os.ReadFile(jsonConfig)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to read JSON config from file")
+
 		return fmt.Errorf("failed to read JSON config from file: %w", err)
 	}
 
@@ -44,6 +46,7 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 	err = json.Unmarshal(jsonConfigBytes, config)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse JSON config")
+
 		return fmt.Errorf("failed to parse JSON config: %w", err)
 	}
 
@@ -51,11 +54,11 @@ func ReadV1(jsonConfig string, config *config_v1.Configuration) error {
 }
 
 func SaveV1(path string, c config_v1.Configuration) error {
-	if err := os.MkdirAll(configDir, os.FileMode(0700)); err != nil {
+	if err := os.MkdirAll(configDir, os.FileMode(0o700)); err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600))
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0o600))
 	if err != nil {
 		return err
 	}
@@ -63,5 +66,6 @@ func SaveV1(path string, c config_v1.Configuration) error {
 
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "    ")
+
 	return enc.Encode(c)
 }

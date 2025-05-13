@@ -35,9 +35,9 @@ type rawResponse struct {
 }
 
 type entityEnvelope struct {
-	ID            interface{}     `json:"id"`
+	ID            any             `json:"id"`
 	Type          string          `json:"type"`
-	Attributes    interface{}     `json:"attributes"`
+	Attributes    any             `json:"attributes"`
 	Relationships json.RawMessage `json:"relationships"`
 }
 
@@ -48,7 +48,7 @@ type responseEnvelope struct {
 
 type queryResultsEnvelope struct {
 	Data []struct {
-		ID            interface{}     `json:"id"`
+		ID            any             `json:"id"`
 		Type          string          `json:"type"`
 		Attributes    json.RawMessage `json:"attributes"`
 		Relationships json.RawMessage `json:"relationships"`
@@ -58,15 +58,16 @@ type queryResultsEnvelope struct {
 
 // Client is an API client for a given service URL
 type Client struct {
+	HTTPClient    *http.Client
 	BaseURL       string
 	DefaultPrefix string
 	apiKey        string
-	HTTPClient    *http.Client
 }
 
 // NewClient creates and returns a new Client instance
-func NewClient(url string, apiKey string) *Client {
+func NewClient(url, apiKey string) *Client {
 	url = strings.TrimRight(url, "/")
+
 	return &Client{
 		BaseURL:       url,
 		DefaultPrefix: "api/v3",
@@ -92,22 +93,25 @@ func (client *Client) getFullURL(url string, options *RequestOptions) string {
 	if queryParams != "" {
 		fullURL = fmt.Sprintf("%s?%s", fullURL, queryParams)
 	}
+
 	return fullURL
 }
 
 type QueryParams struct {
 	Names  []string
-	Values []interface{}
+	Values []any
 }
 
 // Set sets a parameter, and overrides its value if it was already set
-func (params *QueryParams) Set(name string, value interface{}) *QueryParams {
+func (params *QueryParams) Set(name string, value any) *QueryParams {
 	for i, existingName := range params.Names {
 		if existingName == name {
 			params.Values[i] = value
+
 			return params
 		}
 	}
+
 	return params.Append(name, value)
 }
 
@@ -117,13 +121,15 @@ func (params *QueryParams) GetInt(name string, defaultTo int) int {
 			return params.Values[i].(int)
 		}
 	}
+
 	return defaultTo
 }
 
 // Append adds a new parameter, even if one already exists with the same name
-func (params *QueryParams) Append(name string, value interface{}) *QueryParams {
+func (params *QueryParams) Append(name string, value any) *QueryParams {
 	params.Names = append(params.Names, name)
 	params.Values = append(params.Values, value)
+
 	return params
 }
 
@@ -141,19 +147,20 @@ func (params *QueryParams) String() string {
 	if len(parts) == 0 {
 		return ""
 	}
+
 	return strings.Join(parts, "&")
 }
 
 type RequestOptions struct {
-	Prefix              string
+	Body                any
 	Params              *QueryParams
-	Body                interface{}
+	Prefix              string
+	PageSize            int
 	NoMetadata          bool
 	NoAutoFetchNextPage bool
-	PageSize            int
 }
 
-func (client *Client) SendRequest(method string, url string, result interface{}, options *RequestOptions) error {
+func (client *Client) SendRequest(method, url string, result any, options *RequestOptions) error {
 	if options == nil {
 		options = &RequestOptions{}
 	}
@@ -162,7 +169,7 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 	if options.Body != nil {
 		bodyBytes, err := json.Marshal(options.Body)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal request body: %s", err)
+			return fmt.Errorf("failed to unmarshal request body: %w", err)
 		}
 		body = bytes.NewReader(bodyBytes)
 	}
@@ -174,7 +181,7 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 	req = req.WithContext(context.Background())
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.apiKey))
+	req.Header.Set("Authorization", "Token "+client.apiKey)
 
 	logger.Debug().
 		Str("method", req.Method).
@@ -194,6 +201,7 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 			Str("url", req.URL.String()).
 			Int("status", res.StatusCode).
 			Msg("Response")
+
 		return fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
 	}
 	logger.Debug().
@@ -204,27 +212,29 @@ func (client *Client) SendRequest(method string, url string, result interface{},
 
 	if err = json.NewDecoder(res.Body).Decode(result); err != nil {
 		logger.Error().Err(err).Msg("Unable to parse JSON")
+
 		return err
 	}
 
 	return nil
 }
 
-func (client *Client) Download(url string, fileName string) error {
+func (client *Client) Download(url, fileName string) error {
 	utils.UserOutput("Downloading " + fileName)
 	res, err := client.requestBody(url)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %s", err)
+		return fmt.Errorf("failed to download file: %w", err)
 	}
 	destFile, err := os.Create(fileName)
 	if err != nil {
-		return fmt.Errorf("failed to open destination file: %s", err)
+		return fmt.Errorf("failed to open destination file: %w", err)
 	}
 	defer destFile.Close()
 	_, err = io.Copy(destFile, res)
 	if err != nil {
-		return fmt.Errorf("failed to write to destination file: %s", err)
+		return fmt.Errorf("failed to write to destination file: %w", err)
 	}
+
 	return nil
 }
 
@@ -236,7 +246,7 @@ func (client *Client) requestBody(url string) (io.ReadCloser, error) {
 	}
 
 	req = req.WithContext(context.Background())
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.apiKey))
+	req.Header.Set("Authorization", "Token "+client.apiKey)
 
 	logger.Debug().
 		Str("method", req.Method).
@@ -254,6 +264,7 @@ func (client *Client) requestBody(url string) (io.ReadCloser, error) {
 			Str("url", req.URL.String()).
 			Int("status", res.StatusCode).
 			Msg("Response")
+
 		return nil, fmt.Errorf("%s %s returned HTTP %d", req.Method, req.URL, res.StatusCode)
 	}
 	logger.Debug().
@@ -272,6 +283,7 @@ func (client *Client) requestBody(url string) (io.ReadCloser, error) {
 	default:
 		reader = res.Body
 	}
+
 	return reader, nil
 }
 
@@ -289,27 +301,29 @@ func (client *Client) DownloadMany(urlTemplate string, fileNames []string) error
 		}(file)
 	}
 	wg.Wait()
+
 	return nil
 }
 
 // Get sends a GET request, and does not expect the response to be enveloped
-func (client *Client) Get(url string, result interface{}, options *RequestOptions) error {
+func (client *Client) Get(url string, result any, options *RequestOptions) error {
 	return client.SendRequest("GET", url, result, options)
 }
 
 // GetAPIEntity is a general implementation for getting a single object from an
 // API resource
-func (client *Client) GetAPIEntity(resource string, id interface{}, result interface{}) error {
+func (client *Client) GetAPIEntity(resource string, id, result any) error {
 	entity := responseEnvelope{
 		Data: entityEnvelope{
 			Attributes: result,
 		},
 	}
+
 	return client.Get(fmt.Sprintf("%s/%v", resource, id), &entity, nil)
 }
 
 // Post sends a POST request, and does not expect the response to be enveloped
-func (client *Client) Post(url string, result interface{}, options *RequestOptions) error {
+func (client *Client) Post(url string, result any, options *RequestOptions) error {
 	return client.SendRequest("POST", url, result, options)
 }
 

@@ -9,8 +9,8 @@ import (
 
 type backedupFile struct {
 	Filename string
-	Filemode os.FileMode
 	Backup   string
+	Filemode os.FileMode
 }
 
 func backupK3S() ([]backedupFile, error) {
@@ -27,12 +27,13 @@ func backupK3S() ([]backedupFile, error) {
 
 	logger.Info().Interface("files", matches).Msgf("Backing up files to %q", tmp)
 
-	var results = make([]backedupFile, 0, len(matches))
+	results := make([]backedupFile, 0, len(matches))
 
 	for _, fname := range matches {
 		result, err := backupFile(tmp, fname)
 		if err != nil {
 			logger.Error().Err(err).Msg("Backup failed")
+
 			return results, err
 		}
 		results = append(results, result)
@@ -43,8 +44,8 @@ func backupK3S() ([]backedupFile, error) {
 	return results, err
 }
 
-func backupFile(tmp string, fname string) (backedupFile, error) {
-	var result = backedupFile{
+func backupFile(tmp, fname string) (backedupFile, error) {
+	result := backedupFile{
 		Filename: fname,
 	}
 
@@ -85,11 +86,13 @@ func restore(files []backedupFile) error {
 			logger.Error().
 				Err(err).Interface("files", files).
 				Msg("Restoring from backup failed due to error, please copy files manually and restart the service")
+
 			return err
 		}
 	}
 
 	logger.Info().Msg("Original files was restored")
+
 	return nil
 }
 
@@ -110,5 +113,6 @@ func restoreFile(file backedupFile) error {
 	if err != nil {
 		return fmt.Errorf("copy: %w", err)
 	}
+
 	return nil
 }

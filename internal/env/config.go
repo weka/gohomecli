@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/weka/gohomecli/internal/utils"
-
 	"github.com/pelletier/go-toml"
+
+	"github.com/weka/gohomecli/internal/utils"
 )
 
 var logger = utils.GetLogger("Config")
@@ -48,10 +48,10 @@ type SiteConfig struct {
 
 // Config holds all global CLI configuration values
 type Config struct {
+	Sites       map[string]*SiteConfig `toml:"sites"`
 	APIKey      string                 `toml:"api_key,omitempty"`
 	CloudURL    string                 `toml:"cloud_url,omitempty"`
 	DefaultSite string                 `toml:"default_site"`
-	Sites       map[string]*SiteConfig `toml:"sites"`
 }
 
 func InitConfig(siteNameFromCommandLine string) {
@@ -117,6 +117,7 @@ func readCLIConfig() *Config {
 			Err(e).
 			Msg("Failed to parse config file contents")
 	}
+
 	return config
 }
 
@@ -168,6 +169,7 @@ func getSiteConfig(config *Config, siteNameFromCommandLine string) (*SiteConfig,
 		}
 	}
 	validateSiteConfig(siteConfig, siteName)
+
 	return siteConfig, siteName
 }
 

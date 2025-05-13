@@ -1,8 +1,6 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 
@@ -41,7 +39,7 @@ var clusterGetCmd = &cobra.Command{
 		client := client.GetClient()
 		clusterID, err := env.ParseClusterIdentifier(args[0])
 		if err != nil {
-			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+			utils.UserError(args[0] + " isn't a valid guid")
 		}
 		cluster, err := client.GetCluster(clusterID)
 		if err != nil {
@@ -103,6 +101,7 @@ var clusterListCmd = &cobra.Command{
 				} else {
 					customerName = "N/A"
 				}
+
 				return []string{cluster.ID, cluster.Name, cluster.Version, customerName}
 			})
 	},

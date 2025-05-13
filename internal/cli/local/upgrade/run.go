@@ -34,7 +34,6 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 
 	// in debug mode we don't do fail-fast
 	err = k3s.ImportBundleImages(cmd.Context(), !upgradeConfig.Debug)
-
 	if err != nil {
 		return err
 	}

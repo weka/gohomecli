@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -12,8 +11,8 @@ import (
 )
 
 var usageReportCmdArgs = struct {
-	allActiveClusters bool
 	clusterID         string
+	allActiveClusters bool
 }{}
 
 func init() {
@@ -36,13 +35,14 @@ var usageReportCmd = &cobra.Command{
 		if !usageReportCmdArgs.allActiveClusters && usageReportCmdArgs.clusterID == "" {
 			return errors.New("please specify either --all-active or --cluster")
 		}
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		api := client.GetClient()
 		clusterID, err := env.ParseClusterIdentifier(usageReportCmdArgs.clusterID)
 		if err != nil {
-			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+			utils.UserError(args[0] + " isn't a valid guid")
 		}
 		if clusterID != "" {
 			cluster, err := api.GetCluster(clusterID)
@@ -50,6 +50,7 @@ var usageReportCmd = &cobra.Command{
 				utils.UserError(err.Error())
 			}
 			outputClusterUsageReport(api, cluster, false)
+
 			return
 		}
 		query, err := api.QueryClusters(&client.RequestOptions{Params: client.GetActiveClustersParams()})

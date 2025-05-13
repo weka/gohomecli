@@ -10,16 +10,16 @@ import (
 )
 
 type Aliases struct {
+	data        map[string]any
 	FilePath    string
 	initialized bool
-	data        map[string]interface{}
 }
 
 func NewAliases() *Aliases {
 	return &Aliases{
 		FilePath:    AliasesFilePath,
 		initialized: false,
-		data:        make(map[string]interface{}),
+		data:        make(map[string]any),
 	}
 }
 
@@ -27,7 +27,7 @@ func (aliases *Aliases) Init() {
 	if aliases.initialized {
 		return
 	}
-	if _, err := os.Stat(aliases.FilePath); !(err != nil && os.IsNotExist(err)) {
+	if _, err := os.Stat(aliases.FilePath); err == nil || !os.IsNotExist(err) {
 		aliases.load()
 		logger.Debug().Msg("Aliases loaded")
 	} else {
@@ -52,10 +52,11 @@ func (aliases *Aliases) Get(aliasOrClusterID string) (string, bool) {
 	} else {
 		clusterIDStr = aliasOrClusterID
 	}
+
 	return clusterIDStr, aliasExists
 }
 
-func (aliases *Aliases) Set(alias string, clusterID string, override bool) error {
+func (aliases *Aliases) Set(alias, clusterID string, override bool) error {
 	aliases.Init()
 	for existingAlias, existingClusterID := range aliases.data {
 		if existingAlias == alias {
@@ -72,6 +73,7 @@ func (aliases *Aliases) Set(alias string, clusterID string, override bool) error
 	}
 	aliases.data[alias] = clusterID
 	aliases.save()
+
 	return nil
 }
 
@@ -83,6 +85,7 @@ func (aliases *Aliases) Remove(alias string) error {
 	}
 	delete(aliases.data, alias)
 	aliases.save()
+
 	return nil
 }
 

@@ -20,8 +20,10 @@ func resolvConfOverriden() (bool, error) {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			logger.Warn().Msg("resolv.conf is not exists, applying DNS fix...")
+
 			return true, createk3sResolvConf()
 		}
+
 		return false, err
 	}
 	defer f.Close()
@@ -31,11 +33,13 @@ func resolvConfOverriden() (bool, error) {
 	for scan.Scan() {
 		if resolvRegexp.Match(scan.Bytes()) {
 			logger.Debug().Msg("Nameserver found, no fix needed")
+
 			return false, nil
 		}
 	}
 
 	logger.Warn().Msg("Nameserver is not found, fixing...")
+
 	return true, createk3sResolvConf()
 }
 
@@ -47,5 +51,6 @@ func createk3sResolvConf() error {
 	defer f.Close()
 
 	_, err = f.WriteString(fakeNameserver)
+
 	return err
 }

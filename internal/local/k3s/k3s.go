@@ -34,7 +34,9 @@ var logger = utils.GetLogger("K3S")
 
 var (
 	ErrExists = errors.New("k3s already installed")
-	ErrNMCS   = errors.New("nm-cloud-setup is enabled, please run systemctl disable nm-cloud-setup.service nm-cloud-setup.timer and reboot")
+	ErrNMCS   = errors.New(
+		"nm-cloud-setup is enabled, please run systemctl disable nm-cloud-setup.service nm-cloud-setup.timer and reboot",
+	)
 
 	DefaultLocalStoragePath = filepath.Join(dataDir, "local-storage")
 
@@ -60,6 +62,7 @@ func (c *IPConfig) AddAddress(a net.Addr) {
 	ipnet, ok := a.(*net.IPNet)
 	if !ok || !ipnet.IP.IsGlobalUnicast() {
 		logger.Debug().Str("addr", a.String()).Msg("Not a global unicast address")
+
 		return
 	}
 
@@ -75,6 +78,7 @@ func (c *IPConfig) AddAddress(a net.Addr) {
 			return // already added
 		}
 		c.IP6 = ipnet.IP.To16().String()
+
 		return
 	}
 }
@@ -83,6 +87,7 @@ func (c *IPConfig) Validate() error {
 	if len(c.IP4) == 0 && len(c.IP6) == 0 {
 		return errors.New("IP addresses are not found")
 	}
+
 	return nil
 }
 
@@ -113,43 +118,50 @@ func (c *Config) AlignIPs(ipConfig IPConfig) error {
 func (c *Config) alignIPv4(ip string) error {
 	if c.IPv4 == ip {
 		logger.Debug().Str("addr", ip).Msg("IP4 match to interface")
+
 		return nil
 	}
 	if c.IPv4 == anyIPv4 || c.IPv4 == "" {
 		logger.Debug().Str("addr", ip).Msg("Using interface IP for NodeIP")
 		// use first ip found from interface
 		c.IPv4 = ip
+
 		return nil
 	}
+
 	return fmt.Errorf("existing IPv4 [%s] mismatch configured [%s]", ip, c.IPv4)
 }
 
 func (c *Config) alignIPv6(ip string) error {
 	if c.IPv6 == ip {
 		logger.Debug().Str("addr", ip).Msg("IPv6 match to interface")
+
 		return nil
 	}
 	if c.IPv6 == anyIPv6 || c.IPv6 == "" {
 		logger.Debug().Str("addr", ip).Msg("Using interface IP for NodeIP")
 		// use first ip found from interface
 		c.IPv6 = ip
+
 		return nil
 	}
+
 	return fmt.Errorf("existing IPv6 [%s] mismatch configured [%s]", ip, c.IPv6)
 }
 
 func (c Config) k3sInstallArgs() []string {
 	k3sArgs := []string{
-		fmt.Sprintf("--flannel-iface=%s", c.Iface),
-		fmt.Sprintf("--node-ip=%s", c.getIFaceAddress()), // node ip needs to have ip address (not 0.0.0.0)
-		fmt.Sprintf("--kubelet-arg=address=%s", c.getBindAddress()),
-		fmt.Sprintf("--bind-address=%s", c.getBindAddress()),
-		fmt.Sprintf("--default-local-storage-path=%s", DefaultLocalStoragePath),
+		"--flannel-iface=" + c.Iface,
+		"--node-ip=" + c.getIFaceAddress(), // node ip needs to have ip address (not 0.0.0.0)
+		"--kubelet-arg=address=" + c.getBindAddress(),
+		"--bind-address=" + c.getBindAddress(),
+		"--default-local-storage-path=" + DefaultLocalStoragePath,
 		"--prefer-bundled-bin",
 	}
 	c.alignCIDRArgs()
-	k3sArgs = append(k3sArgs, c.Configuration.K3SArgs...)
+	k3sArgs = append(k3sArgs, c.K3SArgs...)
 	logger.Debug().Str("arguments", strings.Join(k3sArgs, " ")).Msg("k3s arguments")
+
 	return k3sArgs
 }
 
@@ -173,6 +185,7 @@ func (c *defaultCIDRConfig) getClusterCIDRArg() string {
 	if c.ipV6Enabled {
 		cidrs = append(cidrs, defaultClusterCIDRIPv6)
 	}
+
 	return "--cluster-cidr=" + strings.Join(cidrs, ",")
 }
 
@@ -184,6 +197,7 @@ func (c *defaultCIDRConfig) getServiceCIDRArg() string {
 	if c.ipV6Enabled {
 		cidrs = append(cidrs, defaultServiceCIDRIPv6)
 	}
+
 	return "--service-cidr=" + strings.Join(cidrs, ",")
 }
 
@@ -192,7 +206,7 @@ func (c *Config) alignCIDRArgs() {
 		isClusterCIDRSet bool
 		isServerCIDRSet  bool
 	)
-	for _, arg := range c.Configuration.K3SArgs {
+	for _, arg := range c.K3SArgs {
 		kv := strings.SplitN(arg, "=", 2)
 		if len(kv) != 2 {
 			continue
@@ -211,10 +225,10 @@ func (c *Config) alignCIDRArgs() {
 	cidrConfig := newDefaultCIDRConfig(c.isIP4Set(), c.isIP6Set())
 
 	if !isClusterCIDRSet {
-		c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, cidrConfig.getClusterCIDRArg())
+		c.K3SArgs = append(c.K3SArgs, cidrConfig.getClusterCIDRArg())
 	}
 	if !isServerCIDRSet {
-		c.Configuration.K3SArgs = append(c.Configuration.K3SArgs, cidrConfig.getServiceCIDRArg())
+		c.K3SArgs = append(c.K3SArgs, cidrConfig.getServiceCIDRArg())
 	}
 }
 
@@ -222,6 +236,7 @@ func (c *Config) getBindAddress() string {
 	if c.isIP4Set() {
 		return anyIPv4
 	}
+
 	return anyIPv6
 }
 
@@ -247,6 +262,7 @@ func Wait(ctx context.Context) error {
 	if err = cmd.Wait(); err != nil {
 		return fmt.Errorf("kubectl wait: %w", err)
 	}
+
 	return nil
 }
 
@@ -262,6 +278,7 @@ func serviceCmd(action string) *exec.Cmd {
 	} else {
 		cmd = exec.Command("service", "k3s", action)
 	}
+
 	return cmd
 }
 
@@ -287,6 +304,7 @@ func hasSystemd() bool {
 	if err := exec.Command("systemctl", "status").Run(); err != nil {
 		return false
 	}
+
 	return true
 }
 
@@ -294,7 +312,7 @@ func hasSystemd() bool {
 // if nodeIP is empty it will write first ip from the interface into nodeIP
 func setupNetwork(c *Config) (err error) {
 	if c.IPv4 == localhostIPv4 || c.IPv6 == localhostIPv6 {
-		return fmt.Errorf("unable to bind to localhost")
+		return errors.New("unable to bind to localhost")
 	}
 
 	netIF, err := getInterface(c.Iface)
@@ -345,6 +363,7 @@ func getInterface(iface string) (net.Interface, error) {
 				Bool("loopback", i.Flags&net.FlagLoopback == net.FlagLoopback).
 				Bool("running", i.Flags&net.FlagRunning == net.FlagRunning).
 				Msg("Skipping interface")
+
 			continue
 		}
 
@@ -359,7 +378,10 @@ func getInterface(iface string) (net.Interface, error) {
 		}
 	}
 
-	return net.Interface{}, fmt.Errorf("network interface %q is not running, does not exists or it's loopback interface", iface)
+	return net.Interface{}, fmt.Errorf(
+		"network interface %q is not running, does not exists or it's loopback interface",
+		iface,
+	)
 }
 
 // upsertIfaceAddrHost sets any IP from iface or returns error if provided IP not match to the interface
@@ -427,11 +449,13 @@ func findBundle() (filename string, manifest bundle.Manifest, err error) {
 	for _, file := range files {
 		if k3sBundleRegexp.MatchString(file.Name()) {
 			filename = path.Join(bundle.BundlePath(), file.Name())
+
 			return
 		}
 	}
 
-	err = fmt.Errorf("k3s bundle is not found")
+	err = errors.New("k3s bundle is not found")
+
 	return
 }
 
@@ -450,6 +474,7 @@ func getK3SVersion(binary string) (string, error) {
 		line, err = bufio.NewReader(rc).ReadString('\n')
 		if err != nil && !errors.Is(err, io.EOF) {
 			logger.Error().Err(err).Msg("get k3s version")
+
 			break
 		}
 		if strings.HasPrefix(line, "k3s version") || errors.Is(err, io.EOF) {
@@ -481,12 +506,12 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 	logger.Debug().Str("hostname", hostName).Msg("Using hostname")
 	os.Setenv("K3S_HOSTNAME", hostName)
 
-	overriden, err := resolvConfOverriden()
+	overridden, err := resolvConfOverriden()
 	if err != nil {
 		return err
 	}
-	if overriden {
-		logger.Debug().Str("resolvconf", k3sResolvConfPath).Msg("Resolv.conf is overriden")
+	if overridden {
+		logger.Debug().Str("resolvconf", k3sResolvConfPath).Msg("Resolv.conf is overridden")
 		os.Setenv("K3S_RESOLV_CONF", k3sResolvConfPath)
 	}
 
@@ -509,10 +534,10 @@ func k3sInstall(ctx context.Context, c Config, fi fs.FileInfo, r io.Reader) erro
 		// skip internal IP from proxying
 		var noProxy []string
 		if c.isIP4Set() {
-			noProxy = append(noProxy, fmt.Sprintf("%s/32", c.IPv4))
+			noProxy = append(noProxy, c.IPv4+"/32")
 		}
 		if c.isIP6Set() {
-			noProxy = append(noProxy, fmt.Sprintf("%s/128", c.IPv6))
+			noProxy = append(noProxy, c.IPv6+"/128")
 		}
 		noProxy = append(noProxy, c.Proxy.NoProxyWithDefaults()...)
 
@@ -564,6 +589,7 @@ func k3sLogParser(lvl zerolog.Level) func(lines chan []byte) {
 			matches := logRegexp.FindSubmatch(line)
 			if matches == nil {
 				logger.WithLevel(lvl).Msg(string(line))
+
 				return
 			}
 

@@ -6,13 +6,13 @@ type TLSConfig struct {
 }
 
 type SMTPConfig struct {
-	Host        string `json:"host,omitempty"`        // smtp server host
-	Port        int    `json:"port,omitempty"`        // smtp server port
-	User        string `json:"user,omitempty"`        // smtp server user
-	Password    string `json:"password,omitempty"`    // smtp server password
-	Insecure    *bool  `json:"insecure,omitempty"`    // smtp insecure connection
-	Sender      string `json:"sender,omitempty"`      // smtp sender name
-	SenderEmail string `json:"senderEmail,omitempty"` // smtp sender email
+	Insecure    *bool  `json:"insecure,omitempty"`
+	Host        string `json:"host,omitempty"`
+	User        string `json:"user,omitempty"`
+	Password    string `json:"password,omitempty"`
+	Sender      string `json:"sender,omitempty"`
+	SenderEmail string `json:"senderEmail,omitempty"`
+	Port        int    `json:"port,omitempty"`
 }
 
 type RetentionConfig struct {
@@ -63,22 +63,19 @@ type GithubSSOConfig struct {
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Host          string           `json:"host,omitempty"` // ingress host
-	IPv4          string           `json:"ip,omitempty"`   // ip4 to bind on for k3s cluster
-	IPv6          string           `json:"ip6,omitempty"`  // ip6 to bind on for k3s cluster
-	Proxy         ProxyConfig      `json:"proxy,omitempty"`
-	TLS           TLSConfig        `json:"tls,omitempty"`
-	SMTP          SMTPConfig       `json:"smtp,omitempty"`
-	RetentionDays RetentionConfig  `json:"retentionDays,omitempty"`
-	Forwarding    ForwardingConfig `json:"forwarding,omitempty"`
-
-	Autoscaling     *bool `json:"autoscaling,omitempty"`        // enable services autoscaling
-	WekaNodesServed int   `json:"wekaNodesMonitored,omitempty"` // number of weka nodes to monitor, controls load preset
-
-	HelmOverrides map[string]any `json:"helmOverrides,omitempty"` // additional overrides for helm chart
-	K3SArgs       []string       `json:"k3sArgs,omitempty"`       // k3s args overrides during install
-
-	GithubSSO GithubSSOConfig `json:"githubSSO"` // configuration for github SSO login
+	Autoscaling     *bool            `json:"autoscaling,omitempty"`
+	HelmOverrides   map[string]any   `json:"helmOverrides,omitempty"`
+	SMTP            SMTPConfig       `json:"smtp,omitempty"`
+	GithubSSO       GithubSSOConfig  `json:"githubSSO"`
+	TLS             TLSConfig        `json:"tls,omitempty"`
+	IPv4            string           `json:"ip,omitempty"`
+	IPv6            string           `json:"ip6,omitempty"`
+	Host            string           `json:"host,omitempty"`
+	Proxy           ProxyConfig      `json:"proxy,omitempty"`
+	Forwarding      ForwardingConfig `json:"forwarding,omitempty"`
+	K3SArgs         []string         `json:"k3sArgs,omitempty"`
+	RetentionDays   RetentionConfig  `json:"retentionDays,omitempty"`
+	WekaNodesServed int              `json:"wekaNodesMonitored,omitempty"`
 }
 
 func (c Configuration) Validate() error {
@@ -90,5 +87,6 @@ func (c Configuration) LoggingSafe() Configuration {
 	c.TLS.Key = "HIDDEN"
 	c.SMTP.Password = "HIDDEN"
 	c.GithubSSO.ClientSecret = "HIDDEN"
+
 	return c
 }

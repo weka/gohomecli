@@ -8,6 +8,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
+
 	"github.com/weka/gohomecli/internal/local/bundle"
 )
 
@@ -45,11 +46,13 @@ func Images(ctx context.Context, args ImagesArgs) error {
 	for _, img := range imgs {
 		if inUse[img] {
 			logger.Debug().Str("image", img).Msg("Skipping in-use image")
+
 			continue
 		}
 
 		if additionallyProtected(img) && !args.Force {
 			logger.Debug().Str("image", img).Msg("Skipping additionally protected image")
+
 			continue
 		}
 
@@ -92,7 +95,7 @@ func getImages(ctx context.Context, client *containerd.Client) ([]string, error)
 }
 
 func getInUseImages(ctx context.Context, client *containerd.Client) (map[string]bool, error) {
-	var protected = map[string]bool{}
+	protected := map[string]bool{}
 
 	ns, err := client.NamespaceService().List(ctx)
 	if err != nil {

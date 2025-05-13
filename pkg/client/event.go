@@ -8,20 +8,20 @@ import (
 
 // Cluster API structure
 type Event struct {
-	ID             string          `json:"id"`
-	CloudID        string          `json:"cloud_id"`
-	ClusterID      string          `json:"cluster_id"`
+	Time           time.Time       `json:"timestamp"`
+	IngestTime     time.Time       `json:"cloud_digested_ts"`
+	Entity         string          `json:"entity"`
 	EventType      string          `json:"type"`
 	Category       string          `json:"category"`
-	IsBackend      bool            `json:"is_backend"`
-	Entity         string          `json:"entity"`
-	Params         json.RawMessage `json:"params"` // map[string]interface{}
+	ID             string          `json:"id"`
 	NodeID         string          `json:"nid"`
 	Permission     string          `json:"permission"`
 	Severity       string          `json:"severity"`
-	Time           time.Time       `json:"timestamp"`
-	IngestTime     time.Time       `json:"cloud_digested_ts"`
+	ClusterID      string          `json:"cluster_id"`
+	CloudID        string          `json:"cloud_id"`
+	Params         json.RawMessage `json:"params"`
 	OrganizationID int64           `json:"org_id"`
+	IsBackend      bool            `json:"is_backend"`
 	Processed      bool            `json:"processed"`
 }
 
@@ -30,28 +30,28 @@ func (event *Event) ComputeProcessingTime() float64 {
 }
 
 // GetCluster returns a single event
-func (client *Client) GetEvent(clusterID string, eventID string) (*Event, error) {
+func (client *Client) GetEvent(clusterID, eventID string) (*Event, error) {
 	logger.Info().Str("clusterID", clusterID).Str("eventID", eventID).Msg("Fetching event")
 	event := &Event{}
-	err := client.Get(fmt.Sprintf("events/%s", eventID), event, &RequestOptions{Prefix: "api"})
+	err := client.Get("events/"+eventID, event, &RequestOptions{Prefix: "api"})
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch event %s: %s", eventID, err)
+		return nil, fmt.Errorf("could not fetch event %s: %w", eventID, err)
 	}
+
 	return event, nil
 }
 
 type EventQueryOptions struct {
-	WithInternalEvents bool
-	SortByIngestTime   bool
+	StartTime          time.Time
+	EndTime            time.Time
+	MinSeverity        string
 	IncludeTypes       []string
 	ExcludeTypes       []string
 	NodeIDs            []int
-	MinSeverity        string
-	StartTime          time.Time
-	EndTime            time.Time
 	Limit              int
+	WithInternalEvents bool
+	SortByIngestTime   bool
 	Wide               bool
-	// Params             string
 }
 
 func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
@@ -87,10 +87,10 @@ func (options *EventQueryOptions) ToQueryParams() (*QueryParams, error) {
 		params.Set("to", options.EndTime.Format(time.RFC3339))
 	}
 
-	//if options.Limit!=0 {
+	// if options.Limit!=0 {
 	//	params.Set("page_size", limit)
 	//}
-	//if options.Params != "" {
+	// if options.Params != "" {
 	//	params.Set("params" ,options.Params)
 	//}
 	return params, nil
@@ -106,11 +106,12 @@ func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) 
 		}
 	}
 	query, err := client.QueryEntities(
-		fmt.Sprintf("%s/events/list", clusterID),
+		clusterID+"/events/list",
 		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params, PageSize: options.Limit})
 	if err != nil {
 		return nil, err
 	}
+
 	return query, nil
 }
 
@@ -118,10 +119,11 @@ func (query *PagedQuery) NextEvent() (*Event, error) {
 	event := &Event{}
 	ok, err := query.NextEntity(event)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get next event: %s", err)
+		return nil, fmt.Errorf("failed to get next event: %w", err)
 	}
 	if !ok {
 		return nil, nil
 	}
+
 	return event, nil
 }

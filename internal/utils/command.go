@@ -37,6 +37,7 @@ var WithStderrReader = func(cb func(lines chan []byte)) func(cmd *WrappedCmd) er
 var WithStdin = func(stdin io.Reader) func(cmd *WrappedCmd) error {
 	return func(cmd *WrappedCmd) error {
 		cmd.Stdin = stdin
+
 		return nil
 	}
 }
@@ -76,6 +77,7 @@ func (c *WrappedCmd) startReader(reader io.Reader, cb func(chan []byte)) error {
 
 func (c *WrappedCmd) Wait() error {
 	c.wg.Wait()
+
 	return c.Cmd.Wait()
 }
 
@@ -89,6 +91,7 @@ func ExecCommand(ctx context.Context, name string, args []string, opts ...comman
 			return nil, err
 		}
 	}
+
 	return &cmd, cmd.Start()
 }
 

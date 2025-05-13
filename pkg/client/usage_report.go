@@ -8,5 +8,6 @@ func (client *Client) GetUsageReport(clusterID string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return result.Data, err
 }

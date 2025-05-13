@@ -51,22 +51,21 @@ func init() {
 }
 
 var eventsCmdArgs = struct {
-	HideInternal       bool
-	ReverseSort        bool
-	ShowEventIDs       bool
-	ShowIngestTime     bool
-	ShowProcessingTime bool
-	SortByIngestTime   bool
-	Limit              int
-	IncludeTypes       []string
-	ExcludeTypes       []string
-	NodeIDs            []int
-	MinSeverity        string
-	StartTime          string
 	EndTime            string
+	StartTime          string
+	MinSeverity        string
+	IncludeTypes       []string
+	NodeIDs            []int
+	ExcludeTypes       []string
+	Limit              int
+	HideInternal       bool
+	SortByIngestTime   bool
+	ShowProcessingTime bool
+	ShowIngestTime     bool
+	ShowEventIDs       bool
+	ReverseSort        bool
 	Wide               bool
 	Json               bool
-	// Params             string
 }{}
 
 var eventsCmd = &cobra.Command{
@@ -84,6 +83,7 @@ var eventsCmd = &cobra.Command{
 		endTime, err := utils.ParseTime(eventsCmdArgs.EndTime)
 		if err != nil {
 			utils.UserError(err.Error())
+
 			return
 		}
 		if eventsCmdArgs.ReverseSort {
@@ -91,11 +91,12 @@ var eventsCmd = &cobra.Command{
 			// page of events and then reverse it, but here we want to support
 			// pagination so we have to have the server do the sorting.
 			utils.UserError("--reverse is not supported yet")
+
 			return
 		}
 		clusterID, err := env.ParseClusterIdentifier(args[0])
 		if err != nil {
-			utils.UserError(fmt.Sprintf("%s isn't a valid guid", args[0]))
+			utils.UserError(args[0] + " isn't a valid guid")
 		}
 		api := client.GetClient()
 		query, err := api.QueryEvents(clusterID, &client.EventQueryOptions{
@@ -113,6 +114,7 @@ var eventsCmd = &cobra.Command{
 		})
 		if err != nil {
 			utils.UserError(err.Error())
+
 			return
 		}
 		// query.Options.NoAutoFetchNextPage = false
@@ -143,10 +145,12 @@ var eventsCmd = &cobra.Command{
 				val, err := json.MarshalIndent(event, "", "    ")
 				if err != nil {
 					utils.UserError(err.Error())
+
 					return
 				}
 				fmt.Println(string(val))
 			}
+
 			return
 		}
 		numEvents := 0
@@ -193,6 +197,7 @@ var eventsCmd = &cobra.Command{
 				jsonRawUnescaped, _ = utils.UnescapeUnicodeCharactersInJSON(event.Params)
 				row.Append(string(jsonRawUnescaped))
 			}
+
 			return row.Cells
 		})
 	},

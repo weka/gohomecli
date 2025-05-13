@@ -74,6 +74,7 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 		}
 
 		logger.Error().Err(err).Msg("Upgrade failed")
+
 		return err
 	}
 

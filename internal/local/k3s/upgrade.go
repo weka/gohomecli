@@ -43,11 +43,13 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 	logger.Info().Msgf("Found k3s bundle %q, current version %q\n", manifest.K3S, curVersion)
 	if semver.Compare(manifest.K3S, curVersion) == -1 && !c.Debug {
 		logger.Error().Msg("Downgrading kubernetes cluster is not possible")
+
 		return nil
 	}
 	c.ExistingClusterStartedIPv4Only, err = IsClusterIPv4Only(ctx)
 	if err != nil {
 		logger.Error().Err(err).Msg("explore existing cluster")
+
 		return err
 	}
 	logger.Info().Msg("Starting K3S upgrade...")
@@ -76,6 +78,7 @@ func Upgrade(ctx context.Context, c Config) (retErr error) {
 
 		if errors.Is(err, context.Canceled) {
 			logger.Warn().Msg("Upgrade was cancelled")
+
 			return err
 		}
 
@@ -115,9 +118,11 @@ func IsClusterIPv4Only(ctx context.Context) (bool, error) {
 		}
 		if ip.To4() == nil { // cluster support IPv6
 			logger.Debug().Str("IP", ip.String()).Msg("cluster supports IPv6")
+
 			return false, nil
 		}
 	}
 	logger.Debug().Msg("cluster doesn't support IPv6")
+
 	return true, nil
 }

@@ -16,12 +16,14 @@ func isK3sEnabled() bool {
 func setup(w http.ResponseWriter, r *http.Request) {
 	if !isK3sEnabled() {
 		disabledResponse(w, r)
+
 		return
 	}
 
 	var config config_v1.Configuration
 	if err := parseJSONRequest(r, &config); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+
 		return
 	}
 
@@ -30,12 +32,14 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
 	err = k3s.ImportBundleImages(r.Context(), true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
@@ -44,6 +48,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 }

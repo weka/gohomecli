@@ -6,9 +6,7 @@ import (
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
 )
 
-var (
-	Cli hooks.Cli
-)
+var Cli hooks.Cli
 
 var cleanupCmd = &cobra.Command{
 	Use:   "cleanup",

@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,23 +22,23 @@ const (
 	ChartName        = "wekahome"
 )
 
-var ErrUnableToFindChart = fmt.Errorf("unable to determine chart location")
+var ErrUnableToFindChart = errors.New("unable to determine chart location")
 
 var logger = utils.GetLogger("HelmChart")
 
 type LocationOverride struct {
-	Path           string // path to chart package
-	RemoteDownload bool   // download from remote repository
-	Version        string // version of the chart to download from remote repository
+	Path           string
+	Version        string
+	RemoteDownload bool
 }
 
 type HelmOptions struct {
-	KubeConfig        []byte                   // path or content of kubeconfig file
-	Override          *LocationOverride        // override chart package location
-	KubeContext       string                   // kubeconfig context to use
-	NamespaceOverride string                   // override namespace for release
-	Values            []byte                   // raw values.yaml
-	Config            *config_v1.Configuration // json config
+	Override          *LocationOverride
+	Config            *config_v1.Configuration
+	KubeContext       string
+	NamespaceOverride string
+	KubeConfig        []byte
+	Values            []byte
 }
 
 func crdSpec(client helmclient.Client, opts *HelmOptions) (*helmclient.ChartSpec, error) {
@@ -127,6 +128,7 @@ func getChartCrdLocation(client helmclient.Client, opts *HelmOptions) (string, e
 		}
 
 		chartLocation = fmt.Sprintf("%s/%s-crds", RepositoryName, ChartName)
+
 		return chartLocation, nil
 	}
 
@@ -150,6 +152,7 @@ func getChartLocation(client helmclient.Client, opts *HelmOptions) (string, erro
 		}
 
 		chartLocation = fmt.Sprintf("%s/%s", RepositoryName, ChartName)
+
 		return chartLocation, nil
 	}
 

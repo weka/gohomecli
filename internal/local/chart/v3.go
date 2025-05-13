@@ -112,6 +112,7 @@ func configureResources(configuration *config_v1.Configuration) (yamlMap, error)
 	for i := range resourcePresets {
 		if configuration.WekaNodesServed >= resourcePresets[i].NodesThreshold {
 			preset = &resourcePresets[i]
+
 			break
 		}
 	}
@@ -163,11 +164,23 @@ func configureForwarding(configuration *config_v1.Configuration) (yamlMap, error
 		writeMapEntry(cfg, "api.forwarding.enabled", enabled),
 		writeMapEntryIfSet(cfg, "api.forwarding.url", configuration.Forwarding.Url),
 		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableEvents", configuration.Forwarding.EnableEvents),
-		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableUsageReports", configuration.Forwarding.EnableUsageReports),
+		writeMapEntryIfSet(
+			cfg,
+			"api.forwarding.categories.enableUsageReports",
+			configuration.Forwarding.EnableUsageReports,
+		),
 		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableAnalytics", configuration.Forwarding.EnableAnalytics),
-		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableDiagnostics", configuration.Forwarding.EnableDiagnostics),
+		writeMapEntryIfSet(
+			cfg,
+			"api.forwarding.categories.enableDiagnostics",
+			configuration.Forwarding.EnableDiagnostics,
+		),
 		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableStats", configuration.Forwarding.EnableStats),
-		writeMapEntryIfSet(cfg, "api.forwarding.categories.enableClusterRegistration", configuration.Forwarding.EnableClusterRegistration),
+		writeMapEntryIfSet(
+			cfg,
+			"api.forwarding.categories.enableClusterRegistration",
+			configuration.Forwarding.EnableClusterRegistration,
+		),
 	)
 
 	return cfg, err
@@ -268,6 +281,6 @@ func init() {
 	valuesGeneratorV3.MustAddVisitor("overrides", configureOverrides)
 }
 
-func generateValuesV3(configuration *config_v1.Configuration) (map[string]interface{}, error) {
+func generateValuesV3(configuration *config_v1.Configuration) (map[string]any, error) {
 	return valuesGeneratorV3.Generate(configuration)
 }

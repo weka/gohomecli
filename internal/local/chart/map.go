@@ -1,13 +1,14 @@
 package chart
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
-var errConflictingKeys = fmt.Errorf("conflicting value overrides for key")
+var errConflictingKeys = errors.New("conflicting value overrides for key")
 
-type yamlMap = map[string]interface{}
+type yamlMap = map[string]any
 
 func writeMapEntryIfSet[T comparable](source yamlMap, key string, value T) error {
 	var zero T
@@ -19,7 +20,7 @@ func writeMapEntryIfSet[T comparable](source yamlMap, key string, value T) error
 	return writeMapEntry(source, key, value)
 }
 
-func writeMapEntry(source yamlMap, key string, value interface{}) error {
+func writeMapEntry(source yamlMap, key string, value any) error {
 	tokens := strings.Split(key, ".")
 	currentMap := source
 	for i, token := range tokens {
@@ -29,6 +30,7 @@ func writeMapEntry(source yamlMap, key string, value interface{}) error {
 			}
 
 			currentMap[token] = value
+
 			return nil
 		}
 
@@ -46,10 +48,11 @@ func writeMapEntry(source yamlMap, key string, value interface{}) error {
 	return nil
 }
 
-func mergeMaps(source yamlMap, overrides yamlMap, valuePath string) error {
+func mergeMaps(source, overrides yamlMap, valuePath string) error {
 	for key, value := range overrides {
 		if _, ok := source[key]; !ok {
 			source[key] = value
+
 			continue
 		}
 
@@ -63,6 +66,7 @@ func mergeMaps(source yamlMap, overrides yamlMap, valuePath string) error {
 
 			// if it's not a map, we do override existing value
 			source[key] = value
+
 			continue
 		}
 

@@ -7,12 +7,12 @@ import (
 
 // Customer API structure
 type Customer struct {
+	GetWekaIoLastScrub time.Time `json:"get_weka_io_last_scrub"`
+	UpdatedAt          time.Time `json:"updated_at"`
 	ID                 string    `json:"id"`
 	Name               string    `json:"name"`
 	ImageURL           string    `json:"image_url"`
 	Monitored          bool      `json:"monitored"`
-	GetWekaIoLastScrub time.Time `json:"get_weka_io_last_scrub"`
-	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // GetCustomer returns a single customer
@@ -21,8 +21,9 @@ func (client *Client) GetCustomer(id string) (*Customer, error) {
 	customer := &Customer{}
 	err := client.GetAPIEntity("customers", id, customer)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch customer %s: %s", id, err)
+		return nil, fmt.Errorf("could not fetch customer %s: %w", id, err)
 	}
+
 	return customer, nil
 }
 
@@ -33,6 +34,7 @@ func (client *Client) QueryCustomers() (*PagedQuery, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return query, nil
 }
 
@@ -45,5 +47,6 @@ func (query *PagedQuery) NextCustomer() (*Customer, error) {
 	if !ok {
 		return nil, nil
 	}
+
 	return customer, nil
 }

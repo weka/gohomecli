@@ -70,6 +70,7 @@ func isTimeoutErr(err error) bool {
 		if errors.Is(err, context.Canceled) {
 			return false
 		}
+
 		return true
 	case strings.Contains(err.Error(), "context deadline"):
 		// there is no dedicated error in kubernetes rate limiter

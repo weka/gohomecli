@@ -11,10 +11,31 @@ repos:
     rev: v0.5.1
     hooks:
       - id: go-mod-tidy
-      - id: go-fmt
-      - id: go-imports
 
-  - repo: https://github.com/Bahjat/pre-commit-golang
-    rev: v1.0.3
+  - repo: local
     hooks:
-      - id: go-vet
+      - id: tools
+        name: Install tools
+        entry: make install-golangci-lint
+        language: system
+        pass_filenames: false
+        types: [go]
+      - id: go-fmt-files
+        name: Go formatter (staged files)
+        entry: make
+        args: [fmt]
+        language: system
+        pass_filenames: false #
+        types: [go]
+      - id: autofix-golangci-lint-issues
+        name: Autofix golangci-lint linter issues
+        entry: bash -c 'make lintfix 2>&1 >/dev/null || true'
+        language: system
+        pass_filenames: false
+        types: [go]
+      - id: vet
+        name: run go vet
+        entry: bash -c 'make vet'
+        language: system
+        pass_filenames: false
+        types: [go]
