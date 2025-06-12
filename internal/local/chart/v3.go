@@ -224,6 +224,8 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "storage.nats.streams.forwardingHigh.replicas", 1),
 		// storage stats
 		writeMapEntry(cfg, "storage.stats.useInternal", true),
+		writeMapEntry(cfg, "storage.stats.useOperator", false),
+		writeMapEntry(cfg, "victoriaMetricsOperator.enabled", false),
 		// eventsDB configuration
 		writeMapEntry(cfg, "eventsdb.primary.persistence.size", "20Gi"),
 		// nats configuration
@@ -232,7 +234,6 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "nats.container.patch", []any{}),
 		// victoria metrics
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
-		writeMapEntry(cfg, "victoriaMetricsOperator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
 		// license synchronizer job
 		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
