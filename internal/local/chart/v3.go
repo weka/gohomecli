@@ -234,6 +234,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "nats.container.patch", []any{}),
 		// victoria metrics
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.victoria-metrics-operator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
 		// license synchronizer job
 		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
