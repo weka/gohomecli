@@ -209,6 +209,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "gateway.enabled", false),
 		// disable autoscaling
 		writeMapEntry(cfg, "api.stats.autoscaling.enabled", false),
+		writeMapEntry(cfg, "api.main.settings.rlsMode", "local"),
 		writeMapEntry(cfg, "workers.stats.autoscaling.enabled", false),
 		writeMapEntry(cfg, "workers.forwarding.autoscaling.enabled", false),
 		// nats stream configuration
