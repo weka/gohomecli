@@ -118,6 +118,7 @@ func getClusterAnalytics(client *client.Client, cluster *client.Cluster, silence
 	jsn["_meta"] = map[string]string{"customer_name": customerName}
 
 	utils.UserNote("Fetched analytics for cluster %s (%s)", cluster.Name, cluster.ID)
+
 	return jsn
 }
 
