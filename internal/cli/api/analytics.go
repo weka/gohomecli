@@ -49,7 +49,9 @@ var analyticsCmd = &cobra.Command{
 			if err != nil {
 				utils.UserError(err.Error())
 			}
-			outputClusterAnalytics(api, cluster, false)
+
+			analytics := getClusterAnalytics(api, cluster, false)
+			outputClusterAnalytics(analytics, false)
 
 			return
 		}
@@ -57,6 +59,7 @@ var analyticsCmd = &cobra.Command{
 		if err != nil {
 			utils.UserError(err.Error())
 		}
+		analyticsList := make([]any, 0)
 		for {
 			cluster, err := query.NextCluster()
 			if err != nil {
@@ -65,18 +68,25 @@ var analyticsCmd = &cobra.Command{
 			if cluster == nil {
 				break
 			}
-			outputClusterAnalytics(api, cluster, true)
+			analytics := getClusterAnalytics(api, cluster, true)
+			if analytics != nil {
+				analyticsList = append(analyticsList, analytics)
+			}
+		}
+
+		if len(analyticsList) > 0 {
+			outputClusterAnalytics(analyticsList, true)
 		}
 	},
 }
 
 var customersCache = make(map[string]string)
 
-func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, silenceFailure bool) {
+func getClusterAnalytics(client *client.Client, cluster *client.Cluster, silenceFailure bool) any {
 	analytics, err := client.GetAnalytics(cluster.ID)
 	if err != nil {
 		if silenceFailure {
-			return
+			return nil
 		}
 		utils.UserError("Failed to get analytics for cluster %s: %s", cluster.ID, err)
 	}
@@ -88,7 +98,7 @@ func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, sile
 			customer, err := client.GetCustomer(cluster.CustomerID)
 			if err != nil {
 				if silenceFailure {
-					return
+					return nil
 				}
 				utils.UserError("Failed to get customer for cluster %s: %s", cluster.ID, err)
 			}
@@ -101,17 +111,23 @@ func outputClusterAnalytics(client *client.Client, cluster *client.Cluster, sile
 	err = json.Unmarshal(analytics, &jsn)
 	if err != nil {
 		if silenceFailure {
-			return
+			return nil
 		}
 		utils.UserError("Failed to unmarshal analytics json for cluster %s: %s", cluster.ID, err)
 	}
 	jsn["_meta"] = map[string]string{"customer_name": customerName}
+
+	utils.UserNote("Fetched analytics for cluster %s (%s)", cluster.Name, cluster.ID)
+	return jsn
+}
+
+func outputClusterAnalytics(jsn any, silenceFailure bool) {
 	newAnalytics, err := json.Marshal(jsn)
 	if err != nil {
 		if silenceFailure {
 			return
 		}
-		utils.UserError("Failed to marshal analytics json with customer name for cluster %s: %s", cluster.ID, err)
+		utils.UserError("Failed to marshal analytics json: %s", err)
 	}
 	utils.UserOutputJSON(newAnalytics)
 }
