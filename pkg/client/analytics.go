@@ -1,8 +1,11 @@
 package client
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
-func (client *Client) GetAnalytics(clusterID string) ([]byte, error) {
+func (client *Client) GetAnalytics(clusterID string) (json.RawMessage, error) {
 	result := &rawResponse{}
 	err := client.Get(fmt.Sprintf("clusters/%s/analytics", clusterID), result, nil)
 	if err != nil {
