@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/mittwald/go-helm-client/values"
 )
 
 func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
@@ -35,9 +33,6 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 	spec, err = chartSpec(client, opts)
 	if err != nil {
 		return fmt.Errorf("failed to prepare chart spec: %w", err)
-	}
-	spec.ValuesOptions = values.Options{
-		StringValues: []string{"grafana.initChownData.enabled=false"},
 	}
 	logger.Info().
 		Str("namespace", spec.Namespace).
