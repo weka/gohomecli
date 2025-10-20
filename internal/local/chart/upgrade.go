@@ -34,6 +34,7 @@ func Upgrade(ctx context.Context, opts *HelmOptions, debug bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare chart spec: %w", err)
 	}
+
 	logger.Info().
 		Str("namespace", spec.Namespace).
 		Str("chart", spec.ChartName).
