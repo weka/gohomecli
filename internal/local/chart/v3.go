@@ -240,10 +240,10 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// license synchronizer job
 		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
 		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
-			"nodes":    1,
+			"nodes":    3,
 			"replicas": 0,
 			"update": yamlMap{
-				"currentNumberOfNodes":    1,
+				"currentNumberOfNodes":    3,
 				"currentNumberOfReplicas": 0,
 			},
 		}),
