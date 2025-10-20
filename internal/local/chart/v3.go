@@ -238,7 +238,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
 		// license synchronizer job
-		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
+		// writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", false),
 		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
 			"nodes":    3,
 			"replicas": 0,
@@ -263,6 +263,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				"enableTCP6": true,
 			},
 		}),
+		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
 		// writeMapEntry(cfg, "vmalert.enabled", false),
