@@ -237,16 +237,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// victoria metrics
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
-		// license synchronizer job
-		// writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", false),
-		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
-			"nodes":    3,
-			"replicas": 0,
-			"update": yamlMap{
-				"currentNumberOfNodes":    3,
-				"currentNumberOfReplicas": 0,
-			},
-		}),
+
 		writeMapEntry(cfg, "alertmanager.config", yamlMap{
 			"templates": []string{"/etc/vm/configs/**/*.tmpl"},
 			"route": yamlMap{
@@ -266,8 +257,15 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
-		// writeMapEntry(cfg, "vmalert.enabled", false),
-		// writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmcluster.enabled", false),
+		// redis
+		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
+			"nodes":    3,
+			"replicas": 0,
+			"update": yamlMap{
+				"currentNumberOfNodes":    3,
+				"currentNumberOfReplicas": 0,
+			},
+		}),
 	)
 
 	return cfg, err
