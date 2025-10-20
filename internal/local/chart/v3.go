@@ -263,7 +263,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				"enableTCP6": true,
 			},
 		}),
-		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
+		// writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
 		// writeMapEntry(cfg, "vmalert.enabled", false),
