@@ -240,10 +240,23 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// license synchronizer job
 		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
 		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
-			"nodes":                          1,
-			"replicas":                       0,
-			"update.currentNumberOfNodes":    1,
-			"update.currentNumberOfReplicas": 0,
+			"nodes":    1,
+			"replicas": 0,
+			"update": yamlMap{
+				"currentNumberOfNodes":    1,
+				"currentNumberOfReplicas": 0,
+			},
+		}),
+		writeMapEntry(cfg, "alertmanager.config", yamlMap{
+			"templates": []string{"/etc/vm/configs/**/*.tmpl"},
+			"route": yamlMap{
+				"receiver": "blackhole",
+			},
+			"receivers": []yamlMap{
+				{
+					"name": "blackhole",
+				},
+			},
 		}),
 	)
 
