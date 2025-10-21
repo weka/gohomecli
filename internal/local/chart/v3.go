@@ -217,15 +217,17 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "storage.nats.streams.stats.replicas", 1),
 		writeMapEntry(cfg, "storage.nats.streams.stats.maxBytes", 3221225472),
 		writeMapEntry(cfg, "storage.nats.streams.integrations.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.integrations.maxBytes", 1048576),
 		writeMapEntry(cfg, "storage.nats.streams.alerts.replicas", 1),
 		writeMapEntry(cfg, "storage.nats.streams.notifications.replicas", 1),
 		writeMapEntry(cfg, "storage.nats.streams.forwardingLow.replicas", 1),
 		writeMapEntry(cfg, "storage.nats.streams.forwardingLow.maxBytes", 3221225472),
 		writeMapEntry(cfg, "storage.nats.streams.forwardingHigh.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.virtualStats.replicas", 1),
+		writeMapEntry(cfg, "storage.nats.streams.virtualStats.maxBytes", 1073741824),
 		// storage stats
 		writeMapEntry(cfg, "storage.stats.useInternal", true),
 		writeMapEntry(cfg, "storage.stats.useOperator", false),
-		writeMapEntry(cfg, "victoriaMetricsOperator.enabled", false),
 		// eventsDB configuration
 		writeMapEntry(cfg, "eventsdb.primary.persistence.size", "20Gi"),
 		// nats configuration
@@ -236,8 +238,36 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.victoria-metrics-operator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
-		// license synchronizer job
-		writeMapEntry(cfg, "jobs.licenseSynchronizer.enabled", true),
+
+		writeMapEntry(cfg, "alertmanager.config", yamlMap{
+			"templates": []string{"/etc/vm/configs/**/*.tmpl"},
+			"route": yamlMap{
+				"receiver": "blackhole",
+			},
+			"receivers": []yamlMap{
+				{
+					"name": "blackhole",
+				},
+			},
+		}),
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent", yamlMap{
+			"configReloaderExtraArgs": yamlMap{
+				"enableTCP6": true,
+			},
+		}),
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
+		// grafana
+		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
+		// redis
+		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
+			"nodes":    3,
+			"replicas": 0,
+			"update": yamlMap{
+				"currentNumberOfNodes":    3,
+				"currentNumberOfReplicas": 0,
+			},
+		}),
 	)
 
 	return cfg, err
