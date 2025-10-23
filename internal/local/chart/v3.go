@@ -236,7 +236,6 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "nats.container.patch", []any{}),
 		// victoria metrics
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
-		writeMapEntry(cfg, "victoria-metrics-k8s-stack.victoria-metrics-operator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
 		writeMapEntry(cfg, "metricsexport.enabled", true),
 
@@ -251,7 +250,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				},
 			},
 		}),
-		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent", yamlMap{
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent.spec", yamlMap{
 			"configReloaderExtraArgs": yamlMap{
 				"enableTCP6": true,
 			},
