@@ -238,6 +238,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.victoria-metrics-operator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
+		writeMapEntry(cfg, "metricsexport.enabled", true),
 
 		writeMapEntry(cfg, "alertmanager.config", yamlMap{
 			"templates": []string{"/etc/vm/configs/**/*.tmpl"},
