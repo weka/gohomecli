@@ -252,7 +252,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		}),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent.spec", yamlMap{
 			"configReloaderExtraArgs": yamlMap{
-				"enableTCP6": true,
+				"enableTCP6": "true",
 			},
 		}),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
