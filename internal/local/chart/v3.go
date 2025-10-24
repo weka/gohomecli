@@ -236,8 +236,8 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "nats.container.patch", []any{}),
 		// victoria metrics
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.enabled", true),
-		writeMapEntry(cfg, "victoria-metrics-k8s-stack.victoria-metrics-operator.enabled", false),
 		writeMapEntry(cfg, "prometheus-node-exporter.enabled", true),
+		writeMapEntry(cfg, "metricsexport.enabled", true),
 
 		writeMapEntry(cfg, "alertmanager.config", yamlMap{
 			"templates": []string{"/etc/vm/configs/**/*.tmpl"},
@@ -250,9 +250,9 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				},
 			},
 		}),
-		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent", yamlMap{
+		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmagent.spec", yamlMap{
 			"configReloaderExtraArgs": yamlMap{
-				"enableTCP6": true,
+				"enableTCP6": "true",
 			},
 		}),
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.alertmanager.enabled", false),
@@ -260,12 +260,17 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// grafana
 		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		// redis
-		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
-			"nodes":    3,
-			"replicas": 0,
-			"update": yamlMap{
-				"currentNumberOfNodes":    3,
-				"currentNumberOfReplicas": 0,
+		writeMapEntry(cfg, "redis-cluster", yamlMap{
+			"cluster": yamlMap{
+				"nodes":    3,
+				"replicas": 0,
+				"update": yamlMap{
+					"currentNumberOfNodes":    3,
+					"currentNumberOfReplicas": 0,
+				},
+			},
+			"redis": yamlMap{
+				"resourcesPreset": "micro",
 			},
 		}),
 	)
