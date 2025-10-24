@@ -260,12 +260,17 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// grafana
 		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		// redis
-		writeMapEntry(cfg, "redis-cluster.cluster", yamlMap{
-			"nodes":    3,
-			"replicas": 0,
-			"update": yamlMap{
-				"currentNumberOfNodes":    3,
-				"currentNumberOfReplicas": 0,
+		writeMapEntry(cfg, "redis-cluster", yamlMap{
+			"cluster": yamlMap{
+				"nodes":    3,
+				"replicas": 0,
+				"update": yamlMap{
+					"currentNumberOfNodes":    3,
+					"currentNumberOfReplicas": 0,
+				},
+			},
+			"redis": yamlMap{
+				"resourcesPreset": "micro",
 			},
 		}),
 	)
