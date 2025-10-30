@@ -165,71 +165,140 @@ func (c Config) k3sInstallArgs() []string {
 	return k3sArgs
 }
 
-type defaultCIDRConfig struct {
-	ipV4Enabled bool
-	ipV6Enabled bool
+// K3SArgs represents K3S command-line arguments.
+// It provides higher-level operations on argument strings.
+type K3SArgs []string
+
+// ParseCIDRConfig extracts CIDR-related configuration from arguments.
+// It returns which CIDRs are already configured.
+func (args K3SArgs) ParseCIDRConfig() CIDRConfig {
+	var config CIDRConfig
+
+	for _, arg := range args {
+		key, _, found := parseK3SArgument(arg)
+		if !found {
+			continue
+		}
+
+		switch key {
+		case "--cluster-cidr":
+			config.ClusterCIDRSet = true
+		case "--service-cidr":
+			config.ServiceCIDRSet = true
+		}
+	}
+
+	return config
 }
 
-func newDefaultCIDRConfig(ipV4Enabled, ipV6Enabled bool) defaultCIDRConfig {
-	return defaultCIDRConfig{
-		ipV4Enabled: ipV4Enabled,
-		ipV6Enabled: ipV6Enabled,
+// AppendCIDRDefaults adds missing CIDR arguments based on IP configuration.
+// It only adds CIDRs that are not already present.
+func (args *K3SArgs) AppendCIDRDefaults(ipConfig IPVersionConfig) {
+	existing := args.ParseCIDRConfig()
+
+	if existing.AreBothSet() {
+		return // nothing to do
+	}
+
+	defaults := ipConfig.DefaultCIDRs()
+
+	if !existing.ClusterCIDRSet {
+		*args = append(*args, defaults.ClusterCIDRArg())
+	}
+
+	if !existing.ServiceCIDRSet {
+		*args = append(*args, defaults.ServiceCIDRArg())
 	}
 }
 
-func (c *defaultCIDRConfig) getClusterCIDRArg() string {
+// parseK3SArgument splits a K3S argument into key and value.
+// Returns (key, value, true) if valid, ("", "", false) otherwise.
+func parseK3SArgument(arg string) (key, value string, ok bool) {
+	parts := strings.SplitN(arg, "=", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
+}
+
+// CIDRConfig represents the presence of CIDR configurations in K3S arguments.
+type CIDRConfig struct {
+	ClusterCIDRSet bool
+	ServiceCIDRSet bool
+}
+
+// AreBothSet returns true if both cluster and service CIDRs are configured.
+func (c CIDRConfig) AreBothSet() bool {
+	return c.ClusterCIDRSet && c.ServiceCIDRSet
+}
+
+// IPVersionConfig describes which IP versions are enabled.
+type IPVersionConfig struct {
+	IPv4Enabled bool
+	IPv6Enabled bool
+}
+
+// DefaultCIDRs returns appropriate default CIDR values based on IP versions.
+func (cfg IPVersionConfig) DefaultCIDRs() DefaultCIDRValues {
+	return DefaultCIDRValues{
+		ipv4Enabled: cfg.IPv4Enabled,
+		ipv6Enabled: cfg.IPv6Enabled,
+	}
+}
+
+// DefaultCIDRValues generates default CIDR arguments based on IP configuration.
+type DefaultCIDRValues struct {
+	ipv4Enabled bool
+	ipv6Enabled bool
+}
+
+// ClusterCIDRArg returns the formatted --cluster-cidr argument.
+func (d DefaultCIDRValues) ClusterCIDRArg() string {
+	return "--cluster-cidr=" + d.clusterCIDRValue()
+}
+
+// ServiceCIDRArg returns the formatted --service-cidr argument.
+func (d DefaultCIDRValues) ServiceCIDRArg() string {
+	return "--service-cidr=" + d.serviceCIDRValue()
+}
+
+func (d DefaultCIDRValues) clusterCIDRValue() string {
 	var cidrs []string
-	if c.ipV4Enabled {
+	if d.ipv4Enabled {
 		cidrs = append(cidrs, defaultClusterCIDRIPv4)
 	}
-	if c.ipV6Enabled {
+	if d.ipv6Enabled {
 		cidrs = append(cidrs, defaultClusterCIDRIPv6)
 	}
 
-	return "--cluster-cidr=" + strings.Join(cidrs, ",")
+	return strings.Join(cidrs, ",")
 }
 
-func (c *defaultCIDRConfig) getServiceCIDRArg() string {
+func (d DefaultCIDRValues) serviceCIDRValue() string {
 	var cidrs []string
-	if c.ipV4Enabled {
+	if d.ipv4Enabled {
 		cidrs = append(cidrs, defaultServiceCIDRIPv4)
 	}
-	if c.ipV6Enabled {
+	if d.ipv6Enabled {
 		cidrs = append(cidrs, defaultServiceCIDRIPv6)
 	}
 
-	return "--service-cidr=" + strings.Join(cidrs, ",")
+	return strings.Join(cidrs, ",")
 }
 
+// alignCIDRArgs ensures that K3S arguments include necessary CIDR configurations.
+// It adds default cluster and service CIDRs based on the configured IP versions,
+// but only if they are not already present in the arguments.
 func (c *Config) alignCIDRArgs() {
-	var (
-		isClusterCIDRSet bool
-		isServerCIDRSet  bool
-	)
-	for _, arg := range c.K3SArgs {
-		kv := strings.SplitN(arg, "=", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		switch kv[0] {
-		case "--cluster-cidr":
-			isClusterCIDRSet = true
-		case "--service-cidr":
-			isServerCIDRSet = true
-		}
-	}
-	if isClusterCIDRSet && isServerCIDRSet {
-		return // both set, nothing to do
+	ipConfig := IPVersionConfig{
+		IPv4Enabled: c.isIP4Set(),
+		IPv6Enabled: c.isIP6Set(),
 	}
 
-	cidrConfig := newDefaultCIDRConfig(c.isIP4Set(), c.isIP6Set())
-
-	if !isClusterCIDRSet {
-		c.K3SArgs = append(c.K3SArgs, cidrConfig.getClusterCIDRArg())
-	}
-	if !isServerCIDRSet {
-		c.K3SArgs = append(c.K3SArgs, cidrConfig.getServiceCIDRArg())
-	}
+	k3sArgs := K3SArgs(c.K3SArgs)
+	k3sArgs.AppendCIDRDefaults(ipConfig)
+	c.K3SArgs = []string(k3sArgs)
 }
 
 func (c *Config) getBindAddress() string {
