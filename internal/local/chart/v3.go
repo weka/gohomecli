@@ -273,6 +273,20 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				"resourcesPreset": "micro",
 			},
 		}),
+		writeMapEntry(cfg, "jobs.natsMigrator", yamlMap{
+			"annotations": yamlMap{
+				"helm.sh/hook":               "post-upgrade,post-install",
+				"helm.sh/hook-weight":        "0",
+				"helm.sh/hook-delete-policy": "before-hook-creation",
+			},
+		}),
+		writeMapEntry(cfg, "jobs.dbMigrator", yamlMap{
+			"annotations": yamlMap{
+				"helm.sh/hook":               "post-upgrade,post-install",
+				"helm.sh/hook-weight":        "0",
+				"helm.sh/hook-delete-policy": "before-hook-creation",
+			},
+		}),
 	)
 
 	return cfg, err
