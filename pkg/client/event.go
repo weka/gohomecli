@@ -13,7 +13,7 @@ type Event struct {
 	Entity         string          `json:"entity"`
 	EventType      string          `json:"type"`
 	Category       string          `json:"category"`
-	ID             string          `json:"id"`
+	ID             string          `json:"guid"`
 	NodeID         string          `json:"nid"`
 	Permission     string          `json:"permission"`
 	Severity       string          `json:"severity"`
@@ -107,7 +107,7 @@ func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) 
 	}
 	query, err := client.QueryEntities(
 		clusterID+"/events/list",
-		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params, PageSize: options.Limit})
+		&RequestOptions{Prefix: "api", NoMetadata: false, Params: params, PageSize: options.Limit})
 	if err != nil {
 		return nil, err
 	}
