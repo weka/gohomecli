@@ -42,6 +42,7 @@ func (e Event) MarshalJSON() ([]byte, error) {
 		"is_backend":        e.IsBackend,
 		"processed":         e.Processed,
 	}
+
 	return json.Marshal(m)
 }
 

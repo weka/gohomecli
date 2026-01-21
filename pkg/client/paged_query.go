@@ -10,10 +10,10 @@ type PagedQuery struct {
 	Client            *Client
 	Options           *RequestOptions
 	queryMetaParams   map[string]any
-	PageResults       queryResultsEnvelope
 	URL               string
 	nextCursor        string
 	noMetaPageResults []json.RawMessage
+	PageResults       queryResultsEnvelope
 	Page              int
 	index             int
 	maxIndex          int
