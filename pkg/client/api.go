@@ -32,8 +32,8 @@ type metaData struct {
 }
 
 type rawResponse struct {
-	Meta metaData        `json:"meta"`
 	Data json.RawMessage `json:"data"`
+	Meta metaData        `json:"meta"`
 }
 
 type entityEnvelope struct {
@@ -44,12 +44,11 @@ type entityEnvelope struct {
 }
 
 type responseEnvelope struct {
-	Meta metaData       `json:"meta"`
 	Data entityEnvelope `json:"data"`
+	Meta metaData       `json:"meta"`
 }
 
 type queryResultsEnvelope struct {
-	Meta metaData `json:"meta"`
 	Data []struct {
 		ID            any             `json:"id"`
 		Type          string          `json:"type"`
@@ -57,6 +56,7 @@ type queryResultsEnvelope struct {
 		Relationships json.RawMessage `json:"relationships"`
 	}
 	Entries []json.RawMessage `json:"entries"`
+	Meta    metaData          `json:"meta"`
 }
 
 // Client is an API client for a given service URL
