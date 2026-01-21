@@ -17,12 +17,33 @@ type Event struct {
 	NodeID         string          `json:"nid"`
 	Permission     string          `json:"permission"`
 	Severity       string          `json:"severity"`
-	ClusterID      string          `json:"cluster_id"`
+	ClusterID      string          `json:"guid"`
 	CloudID        string          `json:"cloud_id"`
 	Params         json.RawMessage `json:"params"`
 	OrganizationID int64           `json:"org_id"`
 	IsBackend      bool            `json:"is_backend"`
 	Processed      bool            `json:"processed"`
+}
+
+func (e Event) MarshalJSON() ([]byte, error) {
+	m := map[string]any{
+		"category":          e.Category,
+		"cluster_id":        e.ClusterID,
+		"entity":            e.Entity,
+		"type":              e.EventType,
+		"params":            e.Params,
+		"cloud_digested_ts": e.IngestTime,
+		"nid":               e.NodeID,
+		"permission":        e.Permission,
+		"severity":          e.Severity,
+		"timestamp":         e.Time,
+		"cloud_id":          e.CloudID,
+		"org_id":            e.OrganizationID,
+		"is_backend":        e.IsBackend,
+		"processed":         e.Processed,
+	}
+
+	return json.Marshal(m)
 }
 
 func (event *Event) ComputeProcessingTime() float64 {
@@ -107,7 +128,7 @@ func (client *Client) QueryEvents(clusterID string, options *EventQueryOptions) 
 	}
 	query, err := client.QueryEntities(
 		clusterID+"/events/list",
-		&RequestOptions{Prefix: "api", NoMetadata: true, Params: params, PageSize: options.Limit})
+		&RequestOptions{Prefix: "api", NoMetadata: false, Params: params, PageSize: options.Limit})
 	if err != nil {
 		return nil, err
 	}

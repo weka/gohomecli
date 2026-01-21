@@ -11,12 +11,14 @@ type PagedQuery struct {
 	Options           *RequestOptions
 	queryMetaParams   map[string]any
 	URL               string
+	nextCursor        string
 	noMetaPageResults []json.RawMessage
 	PageResults       queryResultsEnvelope
 	Page              int
 	index             int
 	maxIndex          int
 	HasMorePages      bool
+	useCursor         bool
 }
 
 func (client *Client) QueryEntities(url string, options *RequestOptions) (*PagedQuery, error) {
@@ -33,11 +35,14 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 		options.PageSize = 1000
 	}
 	options.Params.Set("page_size", options.PageSize)
+	if !options.NoMetadata {
+		options.Params.Set("meta", true)
+	}
 	query := PagedQuery{
-		Client:  client,
-		URL:     url,
-		Options: options,
-		Page:    0,
+		Client:    client,
+		URL:       url,
+		Options:   options,
+		useCursor: true,
 	}
 	err := query.FetchNextPage()
 	if err != nil {
@@ -50,6 +55,9 @@ func (client *Client) QueryEntities(url string, options *RequestOptions) (*Paged
 func (query *PagedQuery) FetchNextPage() error {
 	query.Page++
 	query.Options.Params.Set("page", query.Page)
+	if query.useCursor && len(query.nextCursor) > 0 {
+		query.Options.Params.Set("cursor", query.nextCursor)
+	}
 	var numResultsInPage int
 	if query.Options.NoMetadata {
 		err := query.Client.Get(query.URL, &query.noMetaPageResults, query.Options)
@@ -63,8 +71,14 @@ func (query *PagedQuery) FetchNextPage() error {
 		if err != nil {
 			return err
 		}
-		numResultsInPage = len(query.PageResults.Data)
-		query.HasMorePages = numResultsInPage == query.PageResults.Meta.PageSize
+		if query.useCursor {
+			query.nextCursor = query.PageResults.Meta.NextCursor
+			query.HasMorePages = query.PageResults.Meta.HasNextPage
+			numResultsInPage = len(query.PageResults.Entries)
+		} else {
+			numResultsInPage = len(query.PageResults.Data)
+			query.HasMorePages = numResultsInPage == query.PageResults.Meta.PageSize
+		}
 	}
 	query.index = -1
 	query.maxIndex = numResultsInPage - 1
@@ -86,9 +100,12 @@ func (query *PagedQuery) NextEntity(result any) (ok bool, err error) {
 		return false, nil
 	}
 	query.index++
-	if query.Options.NoMetadata {
+	switch {
+	case query.Options.NoMetadata:
 		err = json.Unmarshal(query.noMetaPageResults[query.index], result)
-	} else {
+	case query.useCursor:
+		err = json.Unmarshal(query.PageResults.Entries[query.index], result)
+	default:
 		err = json.Unmarshal(query.PageResults.Data[query.index].Attributes, result)
 	}
 	if err != nil {

@@ -438,25 +438,25 @@ func (c *Config) getIFaceAddress() string {
 func findBundle() (filename string, manifest bundle.Manifest, err error) {
 	manifest, err = bundle.GetManifest()
 	if err != nil {
-		return
+		return filename, manifest, err
 	}
 
 	var files []fs.DirEntry
 	files, err = os.ReadDir(bundle.BundlePath())
 	if err != nil {
-		return
+		return filename, manifest, err
 	}
 	for _, file := range files {
 		if k3sBundleRegexp.MatchString(file.Name()) {
 			filename = path.Join(bundle.BundlePath(), file.Name())
 
-			return
+			return filename, manifest, nil
 		}
 	}
 
 	err = errors.New("k3s bundle is not found")
 
-	return
+	return filename, manifest, err
 }
 
 func getK3SVersion(binary string) (string, error) {
