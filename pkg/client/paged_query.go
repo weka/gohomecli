@@ -10,15 +10,15 @@ type PagedQuery struct {
 	Client            *Client
 	Options           *RequestOptions
 	queryMetaParams   map[string]any
-	URL               string
-	noMetaPageResults []json.RawMessage
 	PageResults       queryResultsEnvelope
+	URL               string
+	nextCursor        string
+	noMetaPageResults []json.RawMessage
 	Page              int
 	index             int
 	maxIndex          int
 	HasMorePages      bool
 	useCursor         bool
-	nextCursor        string
 }
 
 func (client *Client) QueryEntities(url string, options *RequestOptions) (*PagedQuery, error) {

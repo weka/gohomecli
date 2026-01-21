@@ -25,15 +25,15 @@ var logger = utils.GetLogger("API")
 const maxConcurrentDownloads = 16 // TODO: verify this number
 
 type metaData struct {
+	NextCursor  string `json:"next_cursor"`
 	Page        int    `json:"page"`
 	PageSize    int    `json:"page_size"`
 	HasNextPage bool   `json:"has_next_page"`
-	NextCursor  string `json:"next_cursor"`
 }
 
 type rawResponse struct {
-	Data json.RawMessage `json:"data"`
 	Meta metaData        `json:"meta"`
+	Data json.RawMessage `json:"data"`
 }
 
 type entityEnvelope struct {
@@ -44,11 +44,12 @@ type entityEnvelope struct {
 }
 
 type responseEnvelope struct {
-	Data entityEnvelope `json:"data"`
 	Meta metaData       `json:"meta"`
+	Data entityEnvelope `json:"data"`
 }
 
 type queryResultsEnvelope struct {
+	Meta metaData `json:"meta"`
 	Data []struct {
 		ID            any             `json:"id"`
 		Type          string          `json:"type"`
@@ -56,7 +57,6 @@ type queryResultsEnvelope struct {
 		Relationships json.RawMessage `json:"relationships"`
 	}
 	Entries []json.RawMessage `json:"entries"`
-	Meta    metaData          `json:"meta"`
 }
 
 // Client is an API client for a given service URL
