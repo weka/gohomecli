@@ -16,7 +16,10 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
+const (
+	KubeConfigPath          = "/etc/rancher/k3s/k3s.yaml"
+	clusterServiceURLFormat = "http://%s.%s.svc.cluster.local:%d"
+)
 
 // ReadKubeConfig reads the kubeconfig from the given path with fallback to ~/.kube/config
 func ReadKubeConfig(kubeConfigPath string) ([]byte, error) {
@@ -191,6 +194,74 @@ func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason 
 
 	// Default for when container is not running but no specific reason is found
 	return "Unknown"
+}
+
+// GetServiceURL returns the cluster-internal URL of a service found by label selector
+func GetServiceURL(ctx context.Context, labelSelector string) (string, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	services, err := clientset.CoreV1().Services(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(services.Items) == 0 {
+		return "", fmt.Errorf("no service found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
+	}
+
+	svc := services.Items[0]
+	if len(svc.Spec.Ports) == 0 {
+		return "", fmt.Errorf("service %s has no ports defined", svc.Name)
+	}
+
+	return fmt.Sprintf(clusterServiceURLFormat,
+		svc.Name, svc.Namespace, svc.Spec.Ports[0].Port), nil
+}
+
+// GetPVCName returns the name of a PVC found by label selector
+func GetPVCName(ctx context.Context, labelSelector string) (string, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	pvcs, err := clientset.CoreV1().PersistentVolumeClaims(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(pvcs.Items) == 0 {
+		return "", fmt.Errorf("no PVC found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
+	}
+
+	return pvcs.Items[0].Name, nil
 }
 
 // GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
