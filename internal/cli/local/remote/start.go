@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	remoteAccessLabel        = "app"
-	remoteAccessValue        = "remote-access"
-	remoteAccessImage        = "public.ecr.aws/weka/weka-remote-access:v1.0.0"
+	remoteAccessLabel         = "app"
+	remoteAccessValue         = "remote-access"
+	remoteAccessConfigLabel   = "app=remote-access-config"
 	sessionRecordingsPVCLabel = "app=remote-access-recordings"
 )
 
@@ -120,8 +120,14 @@ func startRun(cmd *cobra.Command, opts *startOptions) error {
 		return fmt.Errorf("failed to find recordings PVC: %w", err)
 	}
 
+	// Get remote-access image from ConfigMap
+	remoteAccessImage, err := chart.GetConfigMapData(ctx, remoteAccessConfigLabel, "image")
+	if err != nil {
+		return fmt.Errorf("failed to get remote-access image from config: %w", err)
+	}
+
 	// Create the pod
-	pod := buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, opts)
+	pod := buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, remoteAccessImage, opts)
 
 	logger.Info().
 		Str("sessionID", sessionID).
@@ -176,7 +182,7 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName string, opts *startOptions) *corev1.Pod {
+func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image string, opts *startOptions) *corev1.Pod {
 	const sharedSocketPath = "/shared/tmate.socket"
 
 	// Environment variables for tmate container
@@ -256,14 +262,14 @@ func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName string,
 			Containers: []corev1.Container{
 				{
 					Name:         "tmate",
-					Image:        remoteAccessImage,
+					Image:        image,
 					Command:      []string{"python3", "/tmate/tmate.py"},
 					Env:          tmateEnv,
 					VolumeMounts: tmateMounts,
 				},
 				{
 					Name:         "recorder",
-					Image:        remoteAccessImage,
+					Image:        image,
 					Command:      []string{"python3", "/recorder/recorder.py"},
 					Env:          recorderEnv,
 					VolumeMounts: recorderMounts,

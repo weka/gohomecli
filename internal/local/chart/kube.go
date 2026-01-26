@@ -264,6 +264,42 @@ func GetPVCName(ctx context.Context, labelSelector string) (string, error) {
 	return pvcs.Items[0].Name, nil
 }
 
+// GetConfigMapData returns a specific key's value from a ConfigMap found by label selector
+func GetConfigMapData(ctx context.Context, labelSelector, key string) (string, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", err
+	}
+
+	configMaps, err := clientset.CoreV1().ConfigMaps(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(configMaps.Items) == 0 {
+		return "", fmt.Errorf("no ConfigMap found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
+	}
+
+	value, ok := configMaps.Items[0].Data[key]
+	if !ok {
+		return "", fmt.Errorf("key %q not found in ConfigMap %s", key, configMaps.Items[0].Name)
+	}
+
+	return value, nil
+}
+
 // GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
 func GetIngressAddress(ctx context.Context) (string, error) {
 	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
