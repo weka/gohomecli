@@ -22,15 +22,13 @@ func newStopCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stop",
 		Short: "Stop running remote session(s)",
-		Long: `Stop running remote session(s) by deleting the pod.
+		Long: `Stop running remote session(s).
 
-			   Pod deletion triggers graceful shutdown via SIGTERM, allowing the session
-			   to properly close connections and finalize recordings.
 
-			   Examples:
-  			   homecli local remote stop --session-id a1b2c3 # Stop a specific session by ID
-  			   homecli local remote stop --cluster-id 550e8400-e29b-41d4-a716-446655440000 # Stop all sessions for a cluster
-  			   homecli local remote stop --all # Stop all active sessions
+Examples:
+ homecli remote-access stop --session-id a1b2c3 # Stop a specific session by ID
+ homecli remote-access stop --cluster-id 550e8400-e29b-41d4-a716-446655440000 # Stop all sessions for a cluster
+ homecli remote-access stop --all # Stop all active sessions
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return stopRun(cmd, opts)

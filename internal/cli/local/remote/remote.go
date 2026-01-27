@@ -10,25 +10,32 @@ import (
 
 var logger = utils.GetLogger("Remote")
 
-// CliHook returns a Cobra CLI hook for the remote command
-func CliHook() hooks.Cli {
-	var cli hooks.Cli
+// RemoteAccessGroup is the command group for remote access commands
+var RemoteAccessGroup = cobra.Group{
+	ID:    "remote-access",
+	Title: "Remote Access Commands",
+}
 
-	remoteCmd := &cobra.Command{
-		Use:   "remote",
-		Short: "Manage remote tmate sessions",
-		Long:  "Start, stop, and manage remote tmate sessions for cluster debugging",
-	}
+// Cli is the hooks.Cli instance for remote access commands
+var Cli hooks.Cli
 
-	remoteCmd.AddCommand(newStartCmd())
-	remoteCmd.AddCommand(newStopCmd())
-	remoteCmd.AddCommand(newListCmd())
-	remoteCmd.AddCommand(newListRecordingsCmd())
-	remoteCmd.AddCommand(newCopyRecordingCmd())
+func init() {
+	Cli.AddHook(func(appCmd *cobra.Command) {
+		appCmd.AddGroup(&RemoteAccessGroup)
 
-	cli.AddHook(func(localCmd *cobra.Command) {
-		localCmd.AddCommand(remoteCmd)
+		remoteCmd := &cobra.Command{
+			Use:     "remote-access",
+			Short:   "Manage remote tmate sessions",
+			Long:    "Start, stop, and manage remote tmate sessions and recordings for cluster debugging",
+			GroupID: RemoteAccessGroup.ID,
+		}
+
+		remoteCmd.AddCommand(newStartCmd())
+		remoteCmd.AddCommand(newStopCmd())
+		remoteCmd.AddCommand(newListCmd())
+		remoteCmd.AddCommand(newListRecordingsCmd())
+		remoteCmd.AddCommand(newCopyRecordingCmd())
+
+		appCmd.AddCommand(remoteCmd)
 	})
-
-	return cli
 }

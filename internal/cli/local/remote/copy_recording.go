@@ -34,9 +34,9 @@ func newCopyRecordingCmd() *cobra.Command {
 Recordings can be copied individually or in bulk by cluster ID or all at once.
 
 Examples:
-  homecli local remote copy-recording --recording "2024-01-15T10:30:00-abc123.cast" --output /tmp/
-  homecli local remote copy-recording --cluster-id "550e8400-e29b-41d4-a716-446655440000" --output /tmp/
-  homecli local remote copy-recording --all --output /tmp/
+  homecli remote-access copy-recording --recording "2024-01-15T10:30:00-abc123.cast" --output /tmp/
+  homecli remote-access copy-recording --cluster-id "550e8400-e29b-41d4-a716-446655440000" --output /tmp/
+  homecli remote-access copy-recording --all --output /tmp/
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return copyRecordingRun(cmd, opts)
@@ -87,12 +87,27 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 			if _, parseErr := uuid.Parse(opts.clusterID); parseErr != nil {
 				return fmt.Errorf("invalid cluster ID: must be a valid UUID")
 			}
+			// Cluster ID explicitly provided
+			filesToCopy = []RecordingInfo{{
+				Filename:  opts.recording,
+				ClusterID: opts.clusterID,
+			}}
+		} else {
+			// No cluster ID provided - search for the recording to find its cluster ID
+			allRecordings, listErr := listRecordings(ctx, execClient, "")
+			if listErr != nil {
+				return fmt.Errorf("failed to list recordings: %w", listErr)
+			}
+			for _, r := range allRecordings {
+				if r.Filename == opts.recording {
+					filesToCopy = []RecordingInfo{r}
+					break
+				}
+			}
+			if len(filesToCopy) == 0 {
+				return fmt.Errorf("recording not found: %s", opts.recording)
+			}
 		}
-		// Specific file
-		filesToCopy = []RecordingInfo{{
-			Filename:  opts.recording,
-			ClusterID: opts.clusterID,
-		}}
 	} else {
 		// List by cluster ID or all (empty clusterID = all)
 		// listRecordings validates clusterID internally
@@ -122,8 +137,6 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 		// Use basename for local destination (flatten directory structure)
 		localFilename := filepath.Base(recording.Filename)
 		dstPath := filepath.Join(opts.output, localFilename)
-
-		logger.Debug().Str("src", remotePath).Str("dst", dstPath).Msg("Copying file")
 
 		if err := execClient.CopyFromPod(ctx, remotePath, dstPath); err != nil {
 			utils.UserWarning("Failed to copy %s: %v", localFilename, err)

@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
 	corev1 "k8s.io/api/core/v1"
@@ -125,10 +127,17 @@ func (c *K8sExecClient) Exec(ctx context.Context, command ...string) (string, er
 
 // CopyFromPod copies a file from the pod to the local filesystem using streaming
 func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath string) error {
-	executor, err := c.newExecutor([]string{"tar", "cf", "-", "-C", filepath.Dir(remotePath), filepath.Base(remotePath)})
+	// Use sh -c to cd first, then tar - more portable across tar implementations (busybox, gnu)
+	tarCmd := fmt.Sprintf("cd %q && tar cf - %q", filepath.Dir(remotePath), filepath.Base(remotePath))
+
+	executor, err := c.newExecutor([]string{"sh", "-c", tarCmd})
 	if err != nil {
 		return fmt.Errorf("failed to create executor: %w", err)
 	}
+
+	// Add timeout to prevent indefinite hangs
+	copyCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 
 	// Use pipe for streaming (memory efficient for large files)
 	reader, writer := io.Pipe()
@@ -138,7 +147,7 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 	// Stream tar from pod in background
 	go func() {
 		defer writer.Close()
-		execErrCh <- executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+		execErrCh <- executor.StreamWithContext(copyCtx, remotecommand.StreamOptions{
 			Stdout: writer,
 			Stderr: &stderr,
 		})
@@ -147,30 +156,61 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 	// Extract file from tar stream
 	extractErr := extractTarFile(reader, localPath)
 
+	// Close reader to unblock the goroutine if extraction fails/completes
+	reader.Close()
+
 	// Wait for goroutine to complete and get its error
 	execErr := <-execErrCh
 
+	// Log stderr if there's any output
+	if stderr.Len() > 0 {
+		logger.Debug().Str("stderr", stderr.String()).Msg("CopyFromPod tar stderr")
+	}
+
 	if extractErr != nil {
+		logger.Debug().Err(extractErr).Str("stderr", stderr.String()).Msg("CopyFromPod extract failed")
 		return extractErr
 	}
 	if execErr != nil {
+		// Ignore "closed pipe" error when extraction succeeded - this happens when we close
+		// the reader after extracting the file but before tar finishes streaming
+		if isClosedPipeError(execErr) {
+			return nil
+		}
+		// Check for context timeout
+		if copyCtx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("copy timed out after 60s")
+		}
 		return fmt.Errorf("tar exec failed: %s - %w", stderr.String(), execErr)
 	}
 	return nil
 }
 
+// isClosedPipeError checks if the error is a "closed pipe" error which is expected
+// when we close the reader early after successfully extracting the file
+func isClosedPipeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "closed pipe")
+}
+
 // extractTarFile extracts a single file from a tar stream
 func extractTarFile(reader io.Reader, destPath string) error {
 	tr := tar.NewReader(reader)
+	entryCount := 0
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
-			return fmt.Errorf("file not found in tar archive")
+			return fmt.Errorf("file not found in tar archive (found %d entries)", entryCount)
 		}
 		if err != nil {
 			return fmt.Errorf("failed to read tar: %w", err)
 		}
-		if header.Typeflag == tar.TypeReg {
+		entryCount++
+
+		// Accept both TypeReg ('0') and TypeRegA ('\x00') for compatibility
+		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
 			outFile, err := os.Create(destPath)
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)

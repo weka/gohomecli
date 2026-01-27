@@ -54,6 +54,9 @@ type Config struct {
 	DefaultSite string                 `toml:"default_site"`
 }
 
+// SkipAPIKeyValidation can be set to true before calling InitConfig to skip API key validation.
+var SkipAPIKeyValidation bool
+
 func InitConfig(siteNameFromCommandLine string) {
 	if initialized {
 		return
@@ -174,7 +177,7 @@ func getSiteConfig(config *Config, siteNameFromCommandLine string) (*SiteConfig,
 }
 
 func validateSiteConfig(siteConfig *SiteConfig, siteName string) {
-	if siteConfig.APIKey == "" {
+	if !SkipAPIKeyValidation && siteConfig.APIKey == "" {
 		utils.UserWarning("config error: \"api_key\" is unset for site %s", siteName)
 	}
 	if siteConfig.CloudURL == "" {

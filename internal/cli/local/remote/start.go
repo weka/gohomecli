@@ -46,10 +46,11 @@ func newStartCmd() *cobra.Command {
 		Use:   "start",
 		Short: "Start a new remote-access tmate session",
 		Long: `Start a remote-access tmate session for remote cluster connection.
-			   Tmate server config is resolved from cloud URL. Use --tmate-server-* flags for custom servers.
+Tmate server config is resolved from cloud URL. Use --tmate-server-* flags for custom servers.
 
-			   Examples:
-  			   homecli local remote start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" # Start a session with cloud URL from config
+Examples:
+  homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" # Start a session with cloud URL from config
+  homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" --tmate-server-host "tmate.example.com" --tmate-server-port "22" --tmate-server-rsa-fingerprint "1234567890" --tmate-server-ed25519-fingerprint "1234567890" --tmate-server-ecdsa-fingerprint "1234567890" # Start a session with custom tmate server
 			`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return startRun(cmd, opts)
@@ -84,13 +85,14 @@ func newStartCmd() *cobra.Command {
 func startRun(cmd *cobra.Command, opts *startOptions) error {
 	ctx := cmd.Context()
 
-	// Resolve cloud URL from flag or config
+	// Resolve cloud URL from flag, config, or default
 	cloudURL := opts.cloudURL
 	if cloudURL == "" && env.CurrentSiteConfig != nil {
 		cloudURL = env.CurrentSiteConfig.CloudURL
 	}
 	if cloudURL == "" {
-		return fmt.Errorf("cloud URL not found in site config, please provide --cloud-url flag explicitly")
+		cloudURL = env.DefaultCloudURL
+		utils.UserNote("Cloud URL not configured, using default: %s", cloudURL)
 	}
 
 	// Get local LWH address from ingress

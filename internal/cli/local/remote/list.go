@@ -23,12 +23,12 @@ func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List active remote sessions",
-		Long: `List active remote sessions by querying pods with app=remote-session label.
+		Long: `List active remote sessions.
 
-			Examples:
-  			   homecli local remote list # List all active sessions in table format
-  			   homecli local remote list --output json # List sessions in JSON format
-  			   homecli local remote list --output yaml # List sessions in YAML format
+Examples:
+ homecli remote-access list # List all active sessions in table format
+ homecli remote-access list --output json # List sessions in JSON format
+ homecli remote-access list --output yaml # List sessions in YAML format
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return listRun(cmd, opts)

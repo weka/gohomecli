@@ -38,9 +38,9 @@ func newListRecordingsCmd() *cobra.Command {
 Recordings are stored as asciinema .cast files and can be filtered by cluster ID.
 
 Examples:
-  homecli local remote list-recordings
-  homecli local remote list-recordings --cluster-id 550e8400-e29b-41d4-a716-446655440000
-  homecli local remote list-recordings --output json
+  homecli remote-access list-recordings
+  homecli remote-access list-recordings --cluster-id 550e8400-e29b-41d4-a716-446655440000
+  homecli remote-access list-recordings --output json
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return listRecordingsRun(cmd, opts)
