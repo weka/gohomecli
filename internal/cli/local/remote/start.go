@@ -87,8 +87,10 @@ Examples:
 
 	// Required flags
 	cmd.Flags().StringVar(&opts.clusterID, "cluster-id", "", "Cluster GUID (required)")
-	cmd.Flags().StringVar(&opts.clusterName, "cluster-name", "", "Human-readable cluster name, max 63 chars, alphanumeric with dashes/underscores/dots (required)")
-	cmd.Flags().StringVar(&opts.sshKeysPath, "ssh-keys-path", "", "Host path to existing SSH keys directory, mounted as HostPath volume (required)")
+	cmd.Flags().
+		StringVar(&opts.clusterName, "cluster-name", "", "Human-readable cluster name, max 63 chars, alphanumeric with dashes/underscores/dots (required)")
+	cmd.Flags().
+		StringVar(&opts.sshKeysPath, "ssh-keys-path", "", "Host path to existing SSH keys directory, mounted as HostPath volume (required)")
 	_ = cmd.MarkFlagRequired("cluster-id")    //nolint:errcheck // flag exists
 	_ = cmd.MarkFlagRequired("cluster-name")  //nolint:errcheck // flag exists
 	_ = cmd.MarkFlagRequired("ssh-keys-path") //nolint:errcheck // flag exists

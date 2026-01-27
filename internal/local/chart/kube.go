@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
+	KubeConfigPath     = "/etc/rancher/k3s/k3s.yaml"
 	copyFromPodTimeout = 10 * time.Minute
 )
 
