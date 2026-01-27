@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,9 @@ var (
 		"cluster-name must start and end with alphanumeric characters, " +
 			"and contain only alphanumerics, dashes, underscores, or dots",
 	)
+
+	// ErrClusterIDInvalid is returned when the cluster ID is not a valid UUID.
+	ErrClusterIDInvalid = errors.New("cluster-id must be a valid UUID")
 )
 
 const (
@@ -80,6 +84,24 @@ Examples:
   homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" # Start a session with cloud URL from config
   homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" --tmate-server-host "tmate.example.com" --tmate-server-port "22" --tmate-server-rsa-fingerprint "1234567890" --tmate-server-ed25519-fingerprint "1234567890" --tmate-server-ecdsa-fingerprint "1234567890" # Start a session with custom tmate server
 			`,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			// Validate SSH keys path exists and is a directory
+			if err := validateSSHKeysPath(opts.sshKeysPath); err != nil {
+				return err
+			}
+
+			// Validate cluster name for Kubernetes label compatibility
+			if err := validateClusterName(opts.clusterName); err != nil {
+				return err
+			}
+
+			// Validate cluster ID is a valid UUID to prevent label injection attacks
+			if _, err := uuid.Parse(opts.clusterID); err != nil {
+				return fmt.Errorf("%w: %s", ErrClusterIDInvalid, opts.clusterID)
+			}
+
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return startRun(cmd, opts)
 		},
@@ -116,16 +138,6 @@ Examples:
 
 func startRun(cmd *cobra.Command, opts *startOptions) error {
 	ctx := cmd.Context()
-
-	// Validate SSH keys path exists and is a directory
-	if err := validateSSHKeysPath(opts.sshKeysPath); err != nil {
-		return err
-	}
-
-	// Validate cluster name for Kubernetes label compatibility
-	if err := validateClusterName(opts.clusterName); err != nil {
-		return err
-	}
 
 	// Resolve cloud URL from flag, config, or default
 	cloudURL := opts.cloudURL

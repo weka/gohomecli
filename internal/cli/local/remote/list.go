@@ -154,7 +154,7 @@ func outputSessionsAsTable(sessions []SessionInfo) error {
 		if index < len(sessions) {
 			s := sessions[index]
 			index++
-			// Truncate cluster ID for display
+			// Truncate cluster ID to 36 chars if longer, for table consistency with invalid pod labels.
 			clusterIDDisplay := s.ClusterID
 			if len(clusterIDDisplay) > uuidStringLength {
 				clusterIDDisplay = clusterIDDisplay[:uuidStringLength]

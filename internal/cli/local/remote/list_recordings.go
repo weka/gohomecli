@@ -58,7 +58,18 @@ Examples:
   homecli remote-access list-recordings --output json
 `,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return validateOutputFormat(opts.outputFormat)
+			if err := validateOutputFormat(opts.outputFormat); err != nil {
+				return err
+			}
+
+			// Validate cluster ID is a valid UUID
+			if opts.clusterID != "" {
+				if _, err := uuid.Parse(opts.clusterID); err != nil {
+					return ErrInvalidClusterID
+				}
+			}
+
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return listRecordingsRun(cmd, opts)
@@ -102,14 +113,10 @@ func listRecordingsRun(cmd *cobra.Command, opts *listRecordingsOptions) error {
 	}
 }
 
-// listRecordings lists recordings, optionally filtered by cluster ID
+// listRecordings lists recordings, optionally filtered by cluster ID.
 func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID string) ([]RecordingInfo, error) {
 	searchPath := recordingsPath
 	if clusterID != "" {
-		// Validate clusterID is a valid UUID to prevent shell injection
-		if _, err := uuid.Parse(clusterID); err != nil {
-			return nil, ErrInvalidClusterID
-		}
 		searchPath = fmt.Sprintf("%s/%s", recordingsPath, clusterID)
 	}
 

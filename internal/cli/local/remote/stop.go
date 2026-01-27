@@ -3,13 +3,18 @@ package remote
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/weka/gohomecli/internal/local/chart"
 	"github.com/weka/gohomecli/internal/utils"
 )
+
+// sessionIDPattern matches 6 hex characters (format from generateShortID)
+var sessionIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{6}$`)
 
 // ErrMissingStopFilter is returned when no filter is specified for stop command
 var ErrMissingStopFilter = errors.New("must specify one of: --session-id, --cluster-id, or --all")
@@ -40,6 +45,18 @@ Examples:
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if opts.sessionID == "" && opts.clusterID == "" && !opts.all {
 				return ErrMissingStopFilter
+			}
+
+			// Validate session-id format to prevent label selector injection
+			if opts.sessionID != "" && !sessionIDPattern.MatchString(opts.sessionID) {
+				return errors.New("invalid session-id format: must be 6 hex characters (e.g., a1b2c3)")
+			}
+
+			// Validate cluster-id format to prevent label selector injection
+			if opts.clusterID != "" {
+				if _, err := uuid.Parse(opts.clusterID); err != nil {
+					return errors.New("invalid cluster-id format: must be a valid UUID")
+				}
 			}
 
 			return nil

@@ -26,21 +26,17 @@ var (
 
 	// ErrInvalidFilename is returned when a recording filename contains unsafe characters
 	ErrInvalidFilename = errors.New("invalid recording filename: must be a .cast file with safe characters")
+
+	// ErrRecordingNotFound is returned when a specific recording cannot be found
+	ErrRecordingNotFound = errors.New("recording not found")
 )
 
-type (
-	copyRecordingOptions struct {
-		recording string
-		clusterID string
-		output    string
-		all       bool
-	}
-
-	// recordingNotFoundError is returned when a specific recording cannot be found.
-	recordingNotFoundError struct {
-		name string
-	}
-)
+type copyRecordingOptions struct {
+	recording string
+	clusterID string
+	output    string
+	all       bool
+}
 
 func newCopyRecordingCmd() *cobra.Command {
 	opts := &copyRecordingOptions{}
@@ -63,6 +59,18 @@ Examples:
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if opts.recording == "" && opts.clusterID == "" && !opts.all {
 				return ErrMissingCopyFilter
+			}
+
+			// Validate recording filename to prevent path traversal
+			if opts.recording != "" && !safeFilenamePattern.MatchString(opts.recording) {
+				return ErrInvalidFilename
+			}
+
+			// Validate cluster ID is a valid UUID
+			if opts.clusterID != "" {
+				if _, err := uuid.Parse(opts.clusterID); err != nil {
+					return ErrInvalidClusterID
+				}
 			}
 
 			return nil
@@ -156,28 +164,22 @@ func resolveSpecificRecording(
 	execClient *chart.K8sExecClient,
 	opts *copyRecordingOptions,
 ) ([]RecordingInfo, error) {
-	// Validate inputs to prevent path traversal
-	if !safeFilenamePattern.MatchString(opts.recording) {
-		return nil, ErrInvalidFilename
-	}
+	// Note: filename and clusterID validation is done in PreRunE
 
 	if opts.clusterID != "" {
-		return resolveWithClusterID(opts)
+		return resolveWithClusterID(opts), nil
 	}
 
 	return searchForRecording(ctx, execClient, opts.recording)
 }
 
 // resolveWithClusterID returns recording info when cluster ID is explicitly provided.
-func resolveWithClusterID(opts *copyRecordingOptions) ([]RecordingInfo, error) {
-	if _, parseErr := uuid.Parse(opts.clusterID); parseErr != nil {
-		return nil, ErrInvalidClusterID
-	}
-
+// Note: clusterID validation is done in PreRunE.
+func resolveWithClusterID(opts *copyRecordingOptions) []RecordingInfo {
 	return []RecordingInfo{{
 		Filename:  opts.recording,
 		ClusterID: opts.clusterID,
-	}}, nil
+	}}
 }
 
 // searchForRecording searches all recordings to find the one matching the filename.
@@ -197,9 +199,5 @@ func searchForRecording(
 		}
 	}
 
-	return nil, fmt.Errorf("recording not found: %w", &recordingNotFoundError{name: recordingName})
-}
-
-func (e *recordingNotFoundError) Error() string {
-	return e.name
+	return nil, fmt.Errorf("%w: %s", ErrRecordingNotFound, recordingName)
 }

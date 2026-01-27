@@ -129,10 +129,8 @@ func (c *K8sExecClient) Exec(ctx context.Context, command ...string) (string, er
 
 // CopyFromPod copies a file from the pod to the local filesystem using streaming
 func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath string) error {
-	// Use sh -c to cd first, then tar - more portable across tar implementations (busybox, gnu)
-	tarCmd := fmt.Sprintf("cd %q && tar cf - %q", filepath.Dir(remotePath), filepath.Base(remotePath))
-
-	executor, err := c.newExecutor([]string{"sh", "-c", tarCmd})
+	// Run tar directly without using a shell to avoid command injection risks
+	executor, err := c.newExecutor([]string{"tar", "cf", "-", remotePath})
 	if err != nil {
 		return fmt.Errorf("failed to create executor: %w", err)
 	}
@@ -222,7 +220,7 @@ func extractTarFile(reader io.Reader, destPath string) error {
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)
 			}
-			defer outFile.Close() //nolint:errcheck // error on close after successful write is acceptable
+			defer outFile.Close() //nolint:errcheck // safe: function returns immediately after first file extraction
 
 			_, copyErr := io.Copy(outFile, tr)
 			if copyErr != nil {
