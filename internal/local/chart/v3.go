@@ -259,6 +259,11 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
 		// grafana
 		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
+		// disable large dashboards to stay under Helm 1MB secret limit
+		writeMapEntry(cfg, "grafana.enabledDashboards.observe-dashboard", false),
+		writeMapEntry(cfg, "grafana.enabledDashboards.events-insights", false),
+		// enable remote session client for LWH
+		writeMapEntry(cfg, "remoteSessionClient.enabled", true),
 		// redis
 		writeMapEntry(cfg, "redis-cluster", yamlMap{
 			"cluster": yamlMap{
