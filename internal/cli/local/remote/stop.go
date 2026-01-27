@@ -53,7 +53,7 @@ func newStopCmd() *cobra.Command {
 func stopRun(cmd *cobra.Command, opts *stopOptions) error {
 	ctx := cmd.Context()
 
-	clientset, err := getKubernetesClient()
+	k8s, err := chart.NewKubernetesClient()
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
@@ -70,7 +70,7 @@ func stopRun(cmd *cobra.Command, opts *stopOptions) error {
 	logger.Debug().Str("selector", selector).Msg("Listing pods to stop")
 
 	// List matching pods
-	pods, err := clientset.CoreV1().Pods(chart.ReleaseNamespace).List(ctx, metav1.ListOptions{
+	pods, err := k8s.Clientset.CoreV1().Pods(chart.ReleaseNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: selector,
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func stopRun(cmd *cobra.Command, opts *stopOptions) error {
 		sessionID := pod.Labels["session-id"]
 		logger.Info().Str("pod", pod.Name).Str("sessionID", sessionID).Msg("Stopping session pod")
 
-		if err := clientset.CoreV1().Pods(chart.ReleaseNamespace).Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil {
+		if err := k8s.Clientset.CoreV1().Pods(chart.ReleaseNamespace).Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil {
 			utils.UserWarning("Failed to stop session %s: %v", sessionID, err)
 		} else {
 			utils.UserOutput("Stopped session: %s (pod: %s)\n", sessionID, pod.Name)

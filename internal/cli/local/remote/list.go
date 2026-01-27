@@ -51,14 +51,14 @@ type SessionInfo struct {
 func listRun(cmd *cobra.Command, opts *listOptions) error {
 	ctx := cmd.Context()
 
-	clientset, err := getKubernetesClient()
+	k8s, err := chart.NewKubernetesClient()
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
 	// List pods with app=remote-session label
 	selector := fmt.Sprintf("%s=%s", remoteAccessLabel, remoteAccessValue)
-	pods, err := clientset.CoreV1().Pods(chart.ReleaseNamespace).List(ctx, metav1.ListOptions{
+	pods, err := k8s.Clientset.CoreV1().Pods(chart.ReleaseNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: selector,
 	})
 	if err != nil {

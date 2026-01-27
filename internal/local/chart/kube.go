@@ -1,8 +1,11 @@
 package chart
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -11,15 +14,173 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 
 	"github.com/weka/gohomecli/internal/utils"
 )
 
 const (
-	KubeConfigPath          = "/etc/rancher/k3s/k3s.yaml"
-	clusterServiceURLFormat = "http://%s.%s.svc.cluster.local:%d"
+	KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
 )
+
+// K8sClient holds a Kubernetes clientset and REST config
+type K8sClient struct {
+	Clientset *kubernetes.Clientset
+	Config    *rest.Config
+}
+
+// NewKubernetesClient creates a new Kubernetes client from the default kubeconfig
+func NewKubernetesClient() (*K8sClient, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &K8sClient{
+		Clientset: clientset,
+		Config:    config,
+	}, nil
+}
+
+// K8sExecClient holds Kubernetes client info for executing commands in a specific pod
+type K8sExecClient struct {
+	K8s       *K8sClient
+	PodName   string
+	Container string
+}
+
+// NewK8sExecClient creates a client for executing commands in a pod found by label selector
+func NewK8sExecClient(ctx context.Context, labelSelector, container string) (*K8sExecClient, error) {
+	k8s, err := NewKubernetesClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
+	pods, err := k8s.Clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("no pod found with label selector %q", labelSelector)
+	}
+
+	return &K8sExecClient{
+		K8s:       k8s,
+		PodName:   pods.Items[0].Name,
+		Container: container,
+	}, nil
+}
+
+// newExecutor creates a remotecommand executor for the given command
+func (c *K8sExecClient) newExecutor(command []string) (remotecommand.Executor, error) {
+	req := c.K8s.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(c.PodName).
+		Namespace(ReleaseNamespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: c.Container,
+			Command:   command,
+			Stdout:    true,
+			Stderr:    true,
+		}, scheme.ParameterCodec)
+
+	return remotecommand.NewSPDYExecutor(c.K8s.Config, "POST", req.URL())
+}
+
+// Exec runs a command in the pod and returns the output
+func (c *K8sExecClient) Exec(ctx context.Context, command ...string) (string, error) {
+	executor, err := c.newExecutor(command)
+	if err != nil {
+		return "", fmt.Errorf("failed to create executor: %w", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		return "", fmt.Errorf("exec failed: %s - %w", stderr.String(), err)
+	}
+
+	return stdout.String(), nil
+}
+
+// CopyFromPod copies a file from the pod to the local filesystem using streaming
+func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath string) error {
+	executor, err := c.newExecutor([]string{"tar", "cf", "-", "-C", filepath.Dir(remotePath), filepath.Base(remotePath)})
+	if err != nil {
+		return fmt.Errorf("failed to create executor: %w", err)
+	}
+
+	// Use pipe for streaming (memory efficient for large files)
+	reader, writer := io.Pipe()
+	var stderr bytes.Buffer
+	execErrCh := make(chan error, 1)
+
+	// Stream tar from pod in background
+	go func() {
+		defer writer.Close()
+		execErrCh <- executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+			Stdout: writer,
+			Stderr: &stderr,
+		})
+	}()
+
+	// Extract file from tar stream
+	extractErr := extractTarFile(reader, localPath)
+
+	// Wait for goroutine to complete and get its error
+	execErr := <-execErrCh
+
+	if extractErr != nil {
+		return extractErr
+	}
+	if execErr != nil {
+		return fmt.Errorf("tar exec failed: %s - %w", stderr.String(), execErr)
+	}
+	return nil
+}
+
+// extractTarFile extracts a single file from a tar stream
+func extractTarFile(reader io.Reader, destPath string) error {
+	tr := tar.NewReader(reader)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			return fmt.Errorf("file not found in tar archive")
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar: %w", err)
+		}
+		if header.Typeflag == tar.TypeReg {
+			outFile, err := os.Create(destPath)
+			if err != nil {
+				return fmt.Errorf("failed to create file: %w", err)
+			}
+			_, err = io.Copy(outFile, tr)
+			outFile.Close()
+			return err
+		}
+	}
+}
 
 // ReadKubeConfig reads the kubeconfig from the given path with fallback to ~/.kube/config
 func ReadKubeConfig(kubeConfigPath string) ([]byte, error) {
@@ -194,43 +355,6 @@ func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason 
 
 	// Default for when container is not running but no specific reason is found
 	return "Unknown"
-}
-
-// GetServiceURL returns the cluster-internal URL of a service found by label selector
-func GetServiceURL(ctx context.Context, labelSelector string) (string, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
-	if err != nil {
-		return "", err
-	}
-
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
-
-	services, err := clientset.CoreV1().Services(ReleaseNamespace).List(ctx, v1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	if len(services.Items) == 0 {
-		return "", fmt.Errorf("no service found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
-	}
-
-	svc := services.Items[0]
-	if len(svc.Spec.Ports) == 0 {
-		return "", fmt.Errorf("service %s has no ports defined", svc.Name)
-	}
-
-	return fmt.Sprintf(clusterServiceURLFormat,
-		svc.Name, svc.Namespace, svc.Spec.Ports[0].Port), nil
 }
 
 // GetPVCName returns the name of a PVC found by label selector

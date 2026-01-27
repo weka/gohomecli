@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/local/chart"
 	"github.com/weka/gohomecli/internal/utils"
 )
+
+// safeFilenamePattern allows safe characters for recording filenames
+var safeFilenamePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-:.]+\.cast$`)
 
 type copyRecordingOptions struct {
 	recording string
@@ -64,28 +69,34 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	baseURL, err := chart.GetServiceURL(ctx, sessionRecordingsServerLabel)
+	// Create exec client
+	execClient, err := chart.NewK8sExecClient(ctx, recordingsSidecarLabel, recordingsSidecarContainer)
 	if err != nil {
-		return fmt.Errorf("failed to find recordings server: %w", err)
+		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
 	// Determine which files to copy
 	var filesToCopy []RecordingInfo
 
 	if opts.recording != "" {
+		// Validate inputs to prevent path traversal
+		if !safeFilenamePattern.MatchString(opts.recording) {
+			return fmt.Errorf("invalid recording filename: must be a .cast file with safe characters")
+		}
+		if opts.clusterID != "" {
+			if _, parseErr := uuid.Parse(opts.clusterID); parseErr != nil {
+				return fmt.Errorf("invalid cluster ID: must be a valid UUID")
+			}
+		}
 		// Specific file
 		filesToCopy = []RecordingInfo{{
 			Filename:  opts.recording,
 			ClusterID: opts.clusterID,
 		}}
 	} else {
-		var err error
-		if opts.clusterID != "" {
-			filesToCopy, err = listRecordingsForCluster(ctx, baseURL, opts.clusterID)
-		} else {
-			// --all case: copy everything when no specific filters provided
-			filesToCopy, err = listAllRecordings(ctx, baseURL)
-		}
+		// List by cluster ID or all (empty clusterID = all)
+		// listRecordings validates clusterID internally
+		filesToCopy, err = listRecordings(ctx, execClient, opts.clusterID)
 		if err != nil {
 			return fmt.Errorf("failed to list recordings: %w", err)
 		}
@@ -102,24 +113,24 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 	copiedCount := 0
 	for _, recording := range filesToCopy {
 		// Construct remote path from ClusterID + Filename
-		remotePath := recording.Filename
+		// Filename may contain subdirectories (e.g., "subdir/file.cast")
+		remotePath := filepath.Join(recordingsPath, recording.Filename)
 		if recording.ClusterID != "" {
-			remotePath = filepath.Join(recording.ClusterID, recording.Filename)
+			remotePath = filepath.Join(recordingsPath, recording.ClusterID, recording.Filename)
 		}
 
-		dstPath := filepath.Join(opts.output, recording.Filename)
+		// Use basename for local destination (flatten directory structure)
+		localFilename := filepath.Base(recording.Filename)
+		dstPath := filepath.Join(opts.output, localFilename)
 
 		logger.Debug().Str("src", remotePath).Str("dst", dstPath).Msg("Copying file")
 
-		httpClient := utils.NewHTTPClient()
-		url := fmt.Sprintf("%s/%s", baseURL, remotePath)
-		err := httpClient.DownloadFile(ctx, url, dstPath, fileDownloadTimeout)
-		if err != nil {
-			utils.UserWarning("Failed to copy %s: %v", recording.Filename, err)
+		if err := execClient.CopyFromPod(ctx, remotePath, dstPath); err != nil {
+			utils.UserWarning("Failed to copy %s: %v", localFilename, err)
 			continue
 		}
 
-		utils.UserOutput("  Copied: %s\n", recording.Filename)
+		utils.UserOutput("  Copied: %s\n", localFilename)
 		copiedCount++
 	}
 

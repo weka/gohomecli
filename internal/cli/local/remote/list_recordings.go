@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -15,13 +17,9 @@ import (
 )
 
 const (
-	sessionRecordingsServerLabel = "app=remote-access-recordings-server"
-	httpRequestTimeout           = 10 * time.Second
-	fileDownloadTimeout          = 5 * time.Minute
-
-	// dufs path_type values
-	dufsPathTypeFile = "File"
-	dufsPathTypeDir  = "Dir"
+	recordingsSidecarLabel     = "app=remote-access-recordings-sidecar"
+	recordingsSidecarContainer = "sidecar"
+	recordingsPath             = "/recordings"
 )
 
 type listRecordingsOptions struct {
@@ -63,34 +61,16 @@ type RecordingInfo struct {
 	ClusterID string `json:"clusterId,omitempty" yaml:"clusterId,omitempty"`
 }
 
-// dufsResponse represents the JSON response from dufs directory listing
-type dufsResponse struct {
-	Paths []dufsEntry `json:"paths"`
-}
-
-// dufsEntry represents a file/directory entry from dufs JSON response
-type dufsEntry struct {
-	Name     string `json:"name"`
-	PathType string `json:"path_type"` // "File" or "Dir"
-	Size     int64  `json:"size"`
-	Mtime    int64  `json:"mtime"` // milliseconds since epoch
-}
-
 func listRecordingsRun(cmd *cobra.Command, opts *listRecordingsOptions) error {
 	ctx := cmd.Context()
 
-	baseURL, err := chart.GetServiceURL(ctx, sessionRecordingsServerLabel)
+	// Create exec client
+	execClient, err := chart.NewK8sExecClient(ctx, recordingsSidecarLabel, recordingsSidecarContainer)
 	if err != nil {
-		return fmt.Errorf("failed to find recordings server: %w", err)
+		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	var recordings []RecordingInfo
-
-	if opts.clusterID != "" {
-		recordings, err = listRecordingsForCluster(ctx, baseURL, opts.clusterID)
-	} else {
-		recordings, err = listAllRecordings(ctx, baseURL)
-	}
+	recordings, err := listRecordings(ctx, execClient, opts.clusterID)
 	if err != nil {
 		return err
 	}
@@ -111,77 +91,77 @@ func listRecordingsRun(cmd *cobra.Command, opts *listRecordingsOptions) error {
 	}
 }
 
-// listRecordingsForCluster lists recordings for a specific cluster ID
-func listRecordingsForCluster(ctx context.Context, baseURL, clusterID string) ([]RecordingInfo, error) {
-	url := fmt.Sprintf("%s/%s?json", baseURL, clusterID)
-	entries, err := fetchDufsDirectory(ctx, url)
-	if err != nil {
-		// Directory might not exist
-		return nil, nil
+// listRecordings lists recordings, optionally filtered by cluster ID
+func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID string) ([]RecordingInfo, error) {
+	searchPath := recordingsPath
+	if clusterID != "" {
+		// Validate clusterID is a valid UUID to prevent shell injection
+		if _, err := uuid.Parse(clusterID); err != nil {
+			return nil, fmt.Errorf("invalid cluster ID: must be a valid UUID")
+		}
+		searchPath = fmt.Sprintf("%s/%s", recordingsPath, clusterID)
 	}
 
-	return filterAndConvertEntries(entries, clusterID), nil
-}
-
-// listAllRecordings lists all recordings from cluster subdirectories and root level
-func listAllRecordings(ctx context.Context, baseURL string) ([]RecordingInfo, error) {
-	url := fmt.Sprintf("%s?json", baseURL)
-	entries, err := fetchDufsDirectory(ctx, url)
+	// Check if directory exists first
+	_, err := client.Exec(ctx, "test", "-d", searchPath)
 	if err != nil {
+		// Directory doesn't exist - return empty results (not an error)
+		return nil, nil //nolint:nilerr // test -d exits non-zero if dir doesn't exist; that's not an error for us
+	}
+
+	// Find all .cast files recursively with stat info
+	// Output format: /recordings/[clusterID/]filename.cast|size|mtime
+	output, err := client.Exec(ctx, "sh", "-c",
+		fmt.Sprintf(`find %s -name '*.cast' -type f -exec stat -c '%%n|%%s|%%Y' {} \;`, searchPath))
+	if err != nil {
+		// Directory exists but find failed - this is a real error
 		return nil, fmt.Errorf("failed to list recordings: %w", err)
 	}
 
-	var recordings []RecordingInfo
-
-	for _, entry := range entries {
-		if entry.PathType == dufsPathTypeDir {
-			// Directory = cluster_id subdirectory
-			clusterRecordings, _ := listRecordingsForCluster(ctx, baseURL, entry.Name)
-			recordings = append(recordings, clusterRecordings...)
-		} else if entry.PathType == dufsPathTypeFile && strings.HasSuffix(entry.Name, ".cast") {
-			// Root level .cast file (backward compat - no cluster_id)
-			recordings = append(recordings, RecordingInfo{
-				Filename:  entry.Name,
-				Size:      entry.Size,
-				ModTime:   entry.Mtime / 1000, // Convert milliseconds to seconds
-				ClusterID: "",
-			})
-		}
-	}
-
-	return recordings, nil
+	return parseStatOutput(output), nil
 }
 
-// fetchDufsDirectory fetches directory listing from dufs server
-func fetchDufsDirectory(ctx context.Context, url string) ([]dufsEntry, error) {
-	httpClient := utils.NewHTTPClient()
-
-	body, err := httpClient.Get(ctx, url, httpRequestTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	var response dufsResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, err
-	}
-
-	return response.Paths, nil
-}
-
-// filterAndConvertEntries filters entries by .cast extension
-func filterAndConvertEntries(entries []dufsEntry, clusterID string) []RecordingInfo {
+// parseStatOutput parses the output of stat command into RecordingInfo structs
+// Path format: /recordings/filename.cast or /recordings/clusterID/filename.cast
+func parseStatOutput(output string) []RecordingInfo {
 	var recordings []RecordingInfo
 
-	for _, entry := range entries {
-		if entry.PathType != dufsPathTypeFile || !strings.HasSuffix(entry.Name, ".cast") {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
 
+		parts := strings.Split(line, "|")
+		if len(parts) != 3 {
+			continue
+		}
+
+		// Extract filename and cluster ID from path
+		// /recordings/file.cast -> clusterID="", filename="file.cast"
+		// /recordings/abc-123/file.cast -> clusterID="abc-123", filename="file.cast"
+		// /recordings/abc-123/subdir/file.cast -> clusterID="abc-123", filename="subdir/file.cast"
+		fullPath := parts[0]
+		relPath := strings.TrimPrefix(fullPath, recordingsPath+"/")
+		pathParts := strings.Split(relPath, "/")
+
+		var filename, clusterID string
+		if len(pathParts) == 1 {
+			filename = pathParts[0]
+		} else {
+			clusterID = pathParts[0]
+			// Keep the full relative path after cluster ID (handles nested dirs)
+			filename = strings.Join(pathParts[1:], "/")
+		}
+
+		size, _ := strconv.ParseInt(parts[1], 10, 64)
+		mtime, _ := strconv.ParseInt(parts[2], 10, 64)
+
 		recordings = append(recordings, RecordingInfo{
-			Filename:  entry.Name,
-			Size:      entry.Size,
-			ModTime:   entry.Mtime / 1000, // Convert milliseconds to seconds
+			Filename:  filename,
+			Size:      size,
+			ModTime:   mtime,
 			ClusterID: clusterID,
 		})
 	}

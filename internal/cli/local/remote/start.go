@@ -9,8 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/local/chart"
@@ -109,7 +107,7 @@ func startRun(cmd *cobra.Command, opts *startOptions) error {
 	sessionID := generateShortID()
 
 	// Create Kubernetes client
-	clientset, err := getKubernetesClient()
+	k8s, err := chart.NewKubernetesClient()
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
@@ -135,7 +133,7 @@ func startRun(cmd *cobra.Command, opts *startOptions) error {
 		Str("clusterName", opts.clusterName).
 		Msg("Creating remote session pod...")
 
-	createdPod, err := clientset.CoreV1().Pods(chart.ReleaseNamespace).Create(ctx, pod, metav1.CreateOptions{})
+	createdPod, err := k8s.Clientset.CoreV1().Pods(chart.ReleaseNamespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create session pod: %w", err)
 	}
@@ -166,20 +164,6 @@ func generateShortID() string {
 	bytes := make([]byte, 3) // 3 bytes = 6 hex chars
 	_, _ = rand.Read(bytes)
 	return hex.EncodeToString(bytes)
-}
-
-func getKubernetesClient() (*kubernetes.Clientset, error) {
-	kubeconfig, err := chart.ReadKubeConfig(chart.KubeConfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
 }
 
 func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image string, opts *startOptions) *corev1.Pod {
