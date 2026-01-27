@@ -27,6 +27,7 @@ import (
 
 const (
 	KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
+	copyFromPodTimeout = 10 * time.Minute
 )
 
 // K8sClient holds a Kubernetes clientset and REST config
@@ -136,12 +137,13 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 		return fmt.Errorf("failed to create executor: %w", err)
 	}
 
-	// Add timeout to prevent indefinite hangs
-	copyCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	// Add timeout to prevent indefinite hangs on large files or slow connections
+	copyCtx, cancel := context.WithTimeout(ctx, copyFromPodTimeout)
 	defer cancel()
 
 	// Use pipe for streaming (memory efficient for large files)
 	reader, writer := io.Pipe()
+	defer reader.Close() // Ensure cleanup even on panic
 	var stderr bytes.Buffer
 	execErrCh := make(chan error, 1)
 
@@ -180,8 +182,8 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 			return nil
 		}
 		// Check for context timeout
-		if errors.Is(copyCtx.Err(), context.DeadlineExceeded) {
-			return errors.New("copy timed out after 60s")
+		if errors.Is(execErr, context.DeadlineExceeded) {
+			return fmt.Errorf("copy timed out after %v: %w", copyFromPodTimeout, execErr)
 		}
 
 		return fmt.Errorf("tar exec failed: %s - %w", stderr.String(), execErr)
@@ -220,10 +222,14 @@ func extractTarFile(reader io.Reader, destPath string) error {
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)
 			}
-			_, err = io.Copy(outFile, tr)
-			outFile.Close()
+			defer outFile.Close() //nolint:errcheck // error on close after successful write is acceptable
 
-			return err
+			_, copyErr := io.Copy(outFile, tr)
+			if copyErr != nil {
+				return fmt.Errorf("failed to copy file: %w", copyErr)
+			}
+
+			return nil
 		}
 	}
 }
@@ -341,22 +347,12 @@ type PodInfo struct {
 
 // GetNonRuninngPods returns a list of non-running pods in the ReleaseNamespace namespace
 func GetNonRuninngPods(ctx context.Context) ([]PodInfo, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	pods, err := clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{})
+	pods, err := k8s.Clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -405,22 +401,12 @@ func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason 
 
 // GetPVCName returns the name of a PVC found by label selector
 func GetPVCName(ctx context.Context, labelSelector string) (string, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return "", err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
-
-	pvcs, err := clientset.CoreV1().PersistentVolumeClaims(ReleaseNamespace).List(ctx, v1.ListOptions{
+	pvcs, err := k8s.Clientset.CoreV1().PersistentVolumeClaims(ReleaseNamespace).List(ctx, v1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -436,22 +422,12 @@ func GetPVCName(ctx context.Context, labelSelector string) (string, error) {
 
 // GetConfigMapData returns a specific key's value from a ConfigMap found by label selector
 func GetConfigMapData(ctx context.Context, labelSelector, key string) (string, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return "", err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
-
-	configMaps, err := clientset.CoreV1().ConfigMaps(ReleaseNamespace).List(ctx, v1.ListOptions{
+	configMaps, err := k8s.Clientset.CoreV1().ConfigMaps(ReleaseNamespace).List(ctx, v1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -476,22 +452,12 @@ func GetConfigMapData(ctx context.Context, labelSelector, key string) (string, e
 
 // GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
 func GetIngressAddress(ctx context.Context) (string, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return "", err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
-
-	ingress, err := clientset.NetworkingV1().
+	ingress, err := k8s.Clientset.NetworkingV1().
 		Ingresses(ReleaseNamespace).
 		Get(ctx, "wekahome", v1.GetOptions{})
 	if err != nil {

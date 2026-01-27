@@ -2,6 +2,9 @@
 package remote
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/weka/gohomecli/internal/cli/app/hooks"
@@ -19,6 +22,12 @@ var (
 
 	// Cli is the hooks.Cli instance for remote access commands
 	Cli hooks.Cli //nolint:gochecknoglobals // cobra pattern
+
+	// validOutputFormats defines the allowed output format values
+	validOutputFormats = []string{"table", "json", "yaml"} //nolint:gochecknoglobals // used by multiple commands
+
+	// ErrInvalidOutputFormat is returned when an invalid output format is specified
+	ErrInvalidOutputFormat = errors.New("invalid output format")
 )
 
 //nolint:gochecknoinits // cobra CLI pattern
@@ -41,4 +50,15 @@ func init() {
 
 		appCmd.AddCommand(remoteCmd)
 	})
+}
+
+// validateOutputFormat checks if the output format is valid
+func validateOutputFormat(format string) error {
+	for _, valid := range validOutputFormats {
+		if format == valid {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("%w: %q (valid: table, json, yaml)", ErrInvalidOutputFormat, format)
 }

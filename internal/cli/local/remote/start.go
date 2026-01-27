@@ -3,7 +3,10 @@ package remote
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -15,6 +18,27 @@ import (
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/local/chart"
 	"github.com/weka/gohomecli/internal/utils"
+)
+
+// Kubernetes label value constraints.
+const maxLabelValueLength = 63
+
+// labelValuePattern matches valid Kubernetes label values.
+// Must start and end with alphanumeric, can contain alphanumerics, dashes, underscores, and dots.
+var labelValuePattern = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`)
+
+var (
+	// ErrSSHKeysPathNotDirectory is returned when the ssh-keys-path exists but is not a directory.
+	ErrSSHKeysPathNotDirectory = errors.New("ssh-keys-path must be a directory")
+
+	// ErrClusterNameTooLong is returned when the cluster name exceeds the Kubernetes label value limit.
+	ErrClusterNameTooLong = errors.New("cluster-name exceeds maximum length of 63 characters")
+
+	// ErrClusterNameInvalid is returned when the cluster name contains invalid characters for a Kubernetes label.
+	ErrClusterNameInvalid = errors.New(
+		"cluster-name must start and end with alphanumeric characters, " +
+			"and contain only alphanumerics, dashes, underscores, or dots",
+	)
 )
 
 const (
@@ -63,8 +87,8 @@ Examples:
 
 	// Required flags
 	cmd.Flags().StringVar(&opts.clusterID, "cluster-id", "", "Cluster GUID (required)")
-	cmd.Flags().StringVar(&opts.clusterName, "cluster-name", "", "Human-readable cluster name (required)")
-	cmd.Flags().StringVar(&opts.sshKeysPath, "ssh-keys-path", "", "Host path to SSH keys directory (required)")
+	cmd.Flags().StringVar(&opts.clusterName, "cluster-name", "", "Human-readable cluster name, max 63 chars, alphanumeric with dashes/underscores/dots (required)")
+	cmd.Flags().StringVar(&opts.sshKeysPath, "ssh-keys-path", "", "Host path to existing SSH keys directory, mounted as HostPath volume (required)")
 	_ = cmd.MarkFlagRequired("cluster-id")    //nolint:errcheck // flag exists
 	_ = cmd.MarkFlagRequired("cluster-name")  //nolint:errcheck // flag exists
 	_ = cmd.MarkFlagRequired("ssh-keys-path") //nolint:errcheck // flag exists
@@ -90,6 +114,16 @@ Examples:
 
 func startRun(cmd *cobra.Command, opts *startOptions) error {
 	ctx := cmd.Context()
+
+	// Validate SSH keys path exists and is a directory
+	if err := validateSSHKeysPath(opts.sshKeysPath); err != nil {
+		return err
+	}
+
+	// Validate cluster name for Kubernetes label compatibility
+	if err := validateClusterName(opts.clusterName); err != nil {
+		return err
+	}
 
 	// Resolve cloud URL from flag, config, or default
 	cloudURL := opts.cloudURL
@@ -166,6 +200,48 @@ func buildWebhookBaseURLs(cloudURL, localAPIURL string) string {
 	urls = append(urls, localAPIURL)
 
 	return strings.Join(urls, ",")
+}
+
+// validateSSHKeysPath validates that the SSH keys path exists and is a directory.
+func validateSSHKeysPath(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("ssh-keys-path does not exist: %s", path)
+		}
+
+		return fmt.Errorf("failed to access ssh-keys-path: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("%w: %s", ErrSSHKeysPathNotDirectory, path)
+	}
+
+	return nil
+}
+
+// validateClusterName validates that the cluster name is valid for use as a Kubernetes label value.
+func validateClusterName(name string) error {
+	if len(name) > maxLabelValueLength {
+		return fmt.Errorf("%w (got %d characters)", ErrClusterNameTooLong, len(name))
+	}
+
+	// Single character names are valid if alphanumeric
+	if len(name) == 1 {
+		if !((name[0] >= 'a' && name[0] <= 'z') ||
+			(name[0] >= 'A' && name[0] <= 'Z') ||
+			(name[0] >= '0' && name[0] <= '9')) {
+			return fmt.Errorf("%w: %q", ErrClusterNameInvalid, name)
+		}
+
+		return nil
+	}
+
+	if !labelValuePattern.MatchString(name) {
+		return fmt.Errorf("%w: %q", ErrClusterNameInvalid, name)
+	}
+
+	return nil
 }
 
 func generateShortID() string {

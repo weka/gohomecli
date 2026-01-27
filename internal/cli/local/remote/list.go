@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	minutesPerHour = 60
-	hoursPerDay    = 24
+	minutesPerHour   = 60
+	hoursPerDay      = 24
+	uuidStringLength = 36
 )
 
 type (
@@ -45,6 +46,9 @@ Examples:
  homecli remote-access list --output json # List sessions in JSON format
  homecli remote-access list --output yaml # List sessions in YAML format
 		`,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validateOutputFormat(opts.outputFormat)
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return listRun(cmd, opts)
 		},
@@ -152,8 +156,8 @@ func outputSessionsAsTable(sessions []SessionInfo) error {
 			index++
 			// Truncate cluster ID for display
 			clusterIDDisplay := s.ClusterID
-			if len(clusterIDDisplay) > 36 { //nolint:mnd // UUID length
-				clusterIDDisplay = clusterIDDisplay[:36]
+			if len(clusterIDDisplay) > uuidStringLength {
+				clusterIDDisplay = clusterIDDisplay[:uuidStringLength]
 			}
 
 			return []string{

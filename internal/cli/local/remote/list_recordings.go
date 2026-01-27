@@ -57,6 +57,9 @@ Examples:
   homecli remote-access list-recordings --cluster-id 550e8400-e29b-41d4-a716-446655440000
   homecli remote-access list-recordings --output json
 `,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validateOutputFormat(opts.outputFormat)
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return listRecordingsRun(cmd, opts)
 		},
@@ -119,8 +122,12 @@ func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID 
 
 	// Find all .cast files recursively with stat info
 	// Output format: /recordings/[clusterID/]filename.cast|size|mtime
-	output, err := client.Exec(ctx, "sh", "-c",
-		fmt.Sprintf(`find %s -name '*.cast' -type f -exec stat -c '%%n|%%s|%%Y' {} \;`, searchPath))
+	output, err := client.Exec(ctx,
+		"find", searchPath,
+		"-name", "*.cast",
+		"-type", "f",
+		"-exec", "stat", "-c", "%n|%s|%Y", "{}", ";",
+	)
 	if err != nil {
 		// Directory exists but find failed - this is a real error
 		return nil, fmt.Errorf("failed to list recordings: %w", err)

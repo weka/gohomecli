@@ -73,8 +73,7 @@ Examples:
 	cmd.Flags().StringVar(&opts.clusterID, "cluster-id", "", "Copy all recordings for a cluster")
 	cmd.Flags().BoolVar(&opts.all, "all", false, "Copy all recordings")
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Local destination directory (required)")
-	//nolint:errcheck,gosec // cobra returns error only for unknown flags, which won't happen with our flag
-	cmd.MarkFlagRequired("output")
+	_ = cmd.MarkFlagRequired("output") //nolint:errcheck // flag exists
 
 	return cmd
 }
