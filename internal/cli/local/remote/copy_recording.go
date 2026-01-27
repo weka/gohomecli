@@ -1,6 +1,8 @@
 package remote
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,15 +15,32 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-// safeFilenamePattern allows safe characters for recording filenames
-var safeFilenamePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-:.]+\.cast$`)
+const outputDirPerms = 0o750
 
-type copyRecordingOptions struct {
-	recording string
-	clusterID string
-	all       bool
-	output    string
-}
+var (
+	// safeFilenamePattern allows safe characters for recording filenames
+	safeFilenamePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-:.]+\.cast$`)
+
+	// ErrMissingCopyFilter is returned when no filter is specified for copy-recording command
+	ErrMissingCopyFilter = errors.New("must specify one of: --recording, --cluster-id, or --all")
+
+	// ErrInvalidFilename is returned when a recording filename contains unsafe characters
+	ErrInvalidFilename = errors.New("invalid recording filename: must be a .cast file with safe characters")
+)
+
+type (
+	copyRecordingOptions struct {
+		recording string
+		clusterID string
+		output    string
+		all       bool
+	}
+
+	// recordingNotFoundError is returned when a specific recording cannot be found.
+	recordingNotFoundError struct {
+		name string
+	}
+)
 
 func newCopyRecordingCmd() *cobra.Command {
 	opts := &copyRecordingOptions{}
@@ -38,16 +57,14 @@ Examples:
   homecli remote-access copy-recording --cluster-id "550e8400-e29b-41d4-a716-446655440000" --output /tmp/
   homecli remote-access copy-recording --all --output /tmp/
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return copyRecordingRun(cmd, opts)
 		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if opts.recording == "" && opts.clusterID == "" && !opts.all {
-				return fmt.Errorf("must specify one of: --recording, --cluster-id, or --all")
+				return ErrMissingCopyFilter
 			}
-			if opts.output == "" {
-				return fmt.Errorf("--output is required")
-			}
+
 			return nil
 		},
 	}
@@ -56,7 +73,8 @@ Examples:
 	cmd.Flags().StringVar(&opts.clusterID, "cluster-id", "", "Copy all recordings for a cluster")
 	cmd.Flags().BoolVar(&opts.all, "all", false, "Copy all recordings")
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "Local destination directory (required)")
-	_ = cmd.MarkFlagRequired("output")
+	//nolint:errcheck,gosec // cobra returns error only for unknown flags, which won't happen with our flag
+	cmd.MarkFlagRequired("output")
 
 	return cmd
 }
@@ -65,7 +83,7 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 	ctx := cmd.Context()
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(opts.output, 0o755); err != nil {
+	if err := os.MkdirAll(opts.output, outputDirPerms); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -76,49 +94,14 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 	}
 
 	// Determine which files to copy
-	var filesToCopy []RecordingInfo
-
-	if opts.recording != "" {
-		// Validate inputs to prevent path traversal
-		if !safeFilenamePattern.MatchString(opts.recording) {
-			return fmt.Errorf("invalid recording filename: must be a .cast file with safe characters")
-		}
-		if opts.clusterID != "" {
-			if _, parseErr := uuid.Parse(opts.clusterID); parseErr != nil {
-				return fmt.Errorf("invalid cluster ID: must be a valid UUID")
-			}
-			// Cluster ID explicitly provided
-			filesToCopy = []RecordingInfo{{
-				Filename:  opts.recording,
-				ClusterID: opts.clusterID,
-			}}
-		} else {
-			// No cluster ID provided - search for the recording to find its cluster ID
-			allRecordings, listErr := listRecordings(ctx, execClient, "")
-			if listErr != nil {
-				return fmt.Errorf("failed to list recordings: %w", listErr)
-			}
-			for _, r := range allRecordings {
-				if r.Filename == opts.recording {
-					filesToCopy = []RecordingInfo{r}
-					break
-				}
-			}
-			if len(filesToCopy) == 0 {
-				return fmt.Errorf("recording not found: %s", opts.recording)
-			}
-		}
-	} else {
-		// List by cluster ID or all (empty clusterID = all)
-		// listRecordings validates clusterID internally
-		filesToCopy, err = listRecordings(ctx, execClient, opts.clusterID)
-		if err != nil {
-			return fmt.Errorf("failed to list recordings: %w", err)
-		}
+	filesToCopy, err := resolveFilesToCopy(ctx, execClient, opts)
+	if err != nil {
+		return err
 	}
 
 	if len(filesToCopy) == 0 {
 		utils.UserNote("No matching recordings found")
+
 		return nil
 	}
 
@@ -140,6 +123,7 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 
 		if err := execClient.CopyFromPod(ctx, remotePath, dstPath); err != nil {
 			utils.UserWarning("Failed to copy %s: %v", localFilename, err)
+
 			continue
 		}
 
@@ -148,5 +132,75 @@ func copyRecordingRun(cmd *cobra.Command, opts *copyRecordingOptions) error {
 	}
 
 	utils.UserNote("Successfully copied %d/%d recording(s)", copiedCount, len(filesToCopy))
+
 	return nil
+}
+
+// resolveFilesToCopy determines which recording files to copy based on options.
+func resolveFilesToCopy(
+	ctx context.Context,
+	execClient *chart.K8sExecClient,
+	opts *copyRecordingOptions,
+) ([]RecordingInfo, error) {
+	if opts.recording == "" {
+		// List by cluster ID or all (empty clusterID = all)
+		// listRecordings validates clusterID internally
+		return listRecordings(ctx, execClient, opts.clusterID)
+	}
+
+	return resolveSpecificRecording(ctx, execClient, opts)
+}
+
+// resolveSpecificRecording finds a specific recording by name.
+func resolveSpecificRecording(
+	ctx context.Context,
+	execClient *chart.K8sExecClient,
+	opts *copyRecordingOptions,
+) ([]RecordingInfo, error) {
+	// Validate inputs to prevent path traversal
+	if !safeFilenamePattern.MatchString(opts.recording) {
+		return nil, ErrInvalidFilename
+	}
+
+	if opts.clusterID != "" {
+		return resolveWithClusterID(opts)
+	}
+
+	return searchForRecording(ctx, execClient, opts.recording)
+}
+
+// resolveWithClusterID returns recording info when cluster ID is explicitly provided.
+func resolveWithClusterID(opts *copyRecordingOptions) ([]RecordingInfo, error) {
+	if _, parseErr := uuid.Parse(opts.clusterID); parseErr != nil {
+		return nil, ErrInvalidClusterID
+	}
+
+	return []RecordingInfo{{
+		Filename:  opts.recording,
+		ClusterID: opts.clusterID,
+	}}, nil
+}
+
+// searchForRecording searches all recordings to find the one matching the filename.
+func searchForRecording(
+	ctx context.Context,
+	execClient *chart.K8sExecClient,
+	recordingName string,
+) ([]RecordingInfo, error) {
+	allRecordings, listErr := listRecordings(ctx, execClient, "")
+	if listErr != nil {
+		return nil, fmt.Errorf("failed to list recordings: %w", listErr)
+	}
+
+	for _, r := range allRecordings {
+		if r.Filename == recordingName {
+			return []RecordingInfo{r}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("recording not found: %w", &recordingNotFoundError{name: recordingName})
+}
+
+func (e *recordingNotFoundError) Error() string {
+	return e.name
 }

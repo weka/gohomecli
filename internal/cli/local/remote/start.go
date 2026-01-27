@@ -4,11 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/weka/gohomecli/internal/env"
 	"github.com/weka/gohomecli/internal/local/chart"
@@ -20,23 +22,25 @@ const (
 	remoteAccessValue         = "remote-access"
 	remoteAccessConfigLabel   = "app=remote-access-config"
 	sessionRecordingsPVCLabel = "app=remote-access-recordings"
+	sessionIDBytes            = 3 // 3 bytes = 6 hex chars
+	sharedSocketPath          = "/shared/tmate.socket"
 )
 
 type startOptions struct {
-	clusterID     string
-	clusterName   string
-	sshKeysPath   string
-	cloudURL      string
-	hostName      string
-	terminalCols  int
-	terminalLines int
-	debug         bool
 	// Tmate server flags (optional overrides - tmate.py has built-in config for known cloud URLs)
 	tmateServerHost    string
 	tmateServerPort    string
 	tmateServerRSA     string
 	tmateServerEd25519 string
 	tmateServerECDSA   string
+	clusterID          string
+	clusterName        string
+	sshKeysPath        string
+	cloudURL           string
+	hostName           string
+	terminalCols       int
+	terminalLines      int
+	debug              bool
 }
 
 func newStartCmd() *cobra.Command {
@@ -52,7 +56,7 @@ Examples:
   homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" # Start a session with cloud URL from config
   homecli remote-access start --cluster-id "550e8400-..." --cluster-name "prod" --ssh-keys-path "/root/.ssh" --tmate-server-host "tmate.example.com" --tmate-server-port "22" --tmate-server-rsa-fingerprint "1234567890" --tmate-server-ed25519-fingerprint "1234567890" --tmate-server-ecdsa-fingerprint "1234567890" # Start a session with custom tmate server
 			`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return startRun(cmd, opts)
 		},
 	}
@@ -61,9 +65,9 @@ Examples:
 	cmd.Flags().StringVar(&opts.clusterID, "cluster-id", "", "Cluster GUID (required)")
 	cmd.Flags().StringVar(&opts.clusterName, "cluster-name", "", "Human-readable cluster name (required)")
 	cmd.Flags().StringVar(&opts.sshKeysPath, "ssh-keys-path", "", "Host path to SSH keys directory (required)")
-	_ = cmd.MarkFlagRequired("cluster-id")
-	_ = cmd.MarkFlagRequired("cluster-name")
-	_ = cmd.MarkFlagRequired("ssh-keys-path")
+	_ = cmd.MarkFlagRequired("cluster-id")    //nolint:errcheck // flag exists
+	_ = cmd.MarkFlagRequired("cluster-name")  //nolint:errcheck // flag exists
+	_ = cmd.MarkFlagRequired("ssh-keys-path") //nolint:errcheck // flag exists
 
 	// Optional flags
 	cmd.Flags().StringVar(&opts.cloudURL, "cloud-url", "", "Cloud Weka Home URL (default: from config)")
@@ -76,7 +80,9 @@ Examples:
 	cmd.Flags().StringVar(&opts.tmateServerHost, "tmate-server-host", "", "Override tmate SSH server hostname")
 	cmd.Flags().StringVar(&opts.tmateServerPort, "tmate-server-port", "", "Override tmate SSH server port")
 	cmd.Flags().StringVar(&opts.tmateServerRSA, "tmate-server-rsa-fingerprint", "", "Override RSA fingerprint")
-	cmd.Flags().StringVar(&opts.tmateServerEd25519, "tmate-server-ed25519-fingerprint", "", "Override Ed25519 fingerprint")
+	cmd.Flags().StringVar(
+		&opts.tmateServerEd25519, "tmate-server-ed25519-fingerprint", "", "Override Ed25519 fingerprint",
+	)
 	cmd.Flags().StringVar(&opts.tmateServerECDSA, "tmate-server-ecdsa-fingerprint", "", "Override ECDSA fingerprint")
 
 	return cmd
@@ -163,16 +169,14 @@ func buildWebhookBaseURLs(cloudURL, localAPIURL string) string {
 }
 
 func generateShortID() string {
-	bytes := make([]byte, 3) // 3 bytes = 6 hex chars
-	_, _ = rand.Read(bytes)
-	return hex.EncodeToString(bytes)
+	b := make([]byte, sessionIDBytes)
+	_, _ = rand.Read(b) //nolint:errcheck // crypto/rand.Read error indicates serious system issue
+
+	return hex.EncodeToString(b)
 }
 
-func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image string, opts *startOptions) *corev1.Pod {
-	const sharedSocketPath = "/shared/tmate.socket"
-
-	// Environment variables for tmate container
-	tmateEnv := []corev1.EnvVar{
+func buildTmateEnv(webhookURLs, cloudURL string, opts *startOptions) []corev1.EnvVar {
+	envVars := []corev1.EnvVar{
 		{Name: "CLUSTER_ID", Value: opts.clusterID},
 		{Name: "CLUSTER_NAME", Value: opts.clusterName},
 		{Name: "SHARED_SOCKET", Value: sharedSocketPath},
@@ -180,61 +184,78 @@ func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image 
 		{Name: "WEBHOOK_URLS", Value: webhookURLs},
 	}
 
-	// Add HOST_NAME only if explicitly provided (tmate.py uses socket.gethostname() as default)
 	if opts.hostName != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "HOST_NAME", Value: opts.hostName})
+		envVars = append(envVars, corev1.EnvVar{Name: "HOST_NAME", Value: opts.hostName})
 	}
-
-	// Add terminal dimensions only if explicitly provided (tmate.py defaults to 158x35)
 	if opts.terminalCols > 0 {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TERMINAL_COLS", Value: fmt.Sprintf("%d", opts.terminalCols)})
+		envVars = append(envVars, corev1.EnvVar{Name: "TERMINAL_COLS", Value: strconv.Itoa(opts.terminalCols)})
 	}
 	if opts.terminalLines > 0 {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TERMINAL_LINES", Value: fmt.Sprintf("%d", opts.terminalLines)})
+		envVars = append(envVars, corev1.EnvVar{Name: "TERMINAL_LINES", Value: strconv.Itoa(opts.terminalLines)})
 	}
-
-	// Add tmate server overrides only if provided (tmate.py will use these if CLOUD_URL not in its CONFIG)
 	if opts.tmateServerHost != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TMATE_SERVER_HOST", Value: opts.tmateServerHost})
+		envVars = append(envVars, corev1.EnvVar{Name: "TMATE_SERVER_HOST", Value: opts.tmateServerHost})
 	}
 	if opts.tmateServerPort != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TMATE_SERVER_PORT", Value: opts.tmateServerPort})
+		envVars = append(envVars, corev1.EnvVar{Name: "TMATE_SERVER_PORT", Value: opts.tmateServerPort})
 	}
 	if opts.tmateServerRSA != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TMATE_SERVER_RSA_FINGERPRINT", Value: opts.tmateServerRSA})
+		envVars = append(envVars, corev1.EnvVar{Name: "TMATE_SERVER_RSA_FINGERPRINT", Value: opts.tmateServerRSA})
 	}
 	if opts.tmateServerEd25519 != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TMATE_SERVER_ED25519_FINGERPRINT", Value: opts.tmateServerEd25519})
+		envVars = append(
+			envVars, corev1.EnvVar{Name: "TMATE_SERVER_ED25519_FINGERPRINT", Value: opts.tmateServerEd25519},
+		)
 	}
 	if opts.tmateServerECDSA != "" {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "TMATE_SERVER_ECDSA_FINGERPRINT", Value: opts.tmateServerECDSA})
+		envVars = append(envVars, corev1.EnvVar{Name: "TMATE_SERVER_ECDSA_FINGERPRINT", Value: opts.tmateServerECDSA})
 	}
-
 	if opts.debug {
-		tmateEnv = append(tmateEnv, corev1.EnvVar{Name: "DEBUG", Value: "1"})
+		envVars = append(envVars, corev1.EnvVar{Name: "DEBUG", Value: "1"})
 	}
 
-	// Volume mounts for tmate container
-	tmateMounts := []corev1.VolumeMount{
-		{Name: "shared-socket", MountPath: "/shared"},
-		{Name: "ssh-keys", MountPath: "/root/.ssh", ReadOnly: true},
-	}
+	return envVars
+}
 
-	// Recorder environment
+func buildPodVolumes(recordingsPVCName, sshKeysPath string) []corev1.Volume {
+	return []corev1.Volume{
+		{Name: "shared-socket", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+		{Name: "recordings", VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: recordingsPVCName},
+		}},
+		{Name: "ssh-keys", VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{Path: sshKeysPath},
+		}},
+		{Name: "dev-pts", VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{Path: "/dev/pts"},
+		}},
+	}
+}
+
+func buildSessionPod(
+	sessionID, webhookURLs, cloudURL, recordingsPVCName, image string,
+	opts *startOptions,
+) *corev1.Pod {
+	tmateEnv := buildTmateEnv(webhookURLs, cloudURL, opts)
 	recorderEnv := []corev1.EnvVar{
 		{Name: "SHARED_SOCKET", Value: sharedSocketPath},
 		{Name: "CLUSTER_ID", Value: opts.clusterID},
 	}
 
-	// Volume mounts for recorder container
+	tmateMounts := []corev1.VolumeMount{
+		{Name: "shared-socket", MountPath: "/shared"},
+		{Name: "ssh-keys", MountPath: "/root/.ssh", ReadOnly: true},
+		{Name: "dev-pts", MountPath: "/dev/pts"},
+	}
 	recorderMounts := []corev1.VolumeMount{
 		{Name: "shared-socket", MountPath: "/shared"},
 		{Name: "recordings", MountPath: "/recordings"},
+		{Name: "dev-pts", MountPath: "/dev/pts"},
 	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("remote-session-%s", sessionID),
+			Name:      "remote-session-" + sessionID,
 			Namespace: chart.ReleaseNamespace,
 			Labels: map[string]string{
 				remoteAccessLabel: remoteAccessValue,
@@ -244,7 +265,8 @@ func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image 
 			},
 		},
 		Spec: corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyAlways,
+			ShareProcessNamespace: ptr.To(true),
+			RestartPolicy:         corev1.RestartPolicyAlways,
 			Containers: []corev1.Container{
 				{
 					Name:         "tmate",
@@ -261,30 +283,7 @@ func buildSessionPod(sessionID, webhookURLs, cloudURL, recordingsPVCName, image 
 					VolumeMounts: recorderMounts,
 				},
 			},
-			Volumes: []corev1.Volume{
-				{
-					Name: "shared-socket",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				},
-				{
-					Name: "recordings",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: recordingsPVCName,
-						},
-					},
-				},
-				{
-					Name: "ssh-keys",
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: opts.sshKeysPath,
-						},
-					},
-				},
-			},
+			Volumes: buildPodVolumes(recordingsPVCName, opts.sshKeysPath),
 		},
 	}
 }

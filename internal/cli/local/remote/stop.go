@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -9,6 +10,9 @@ import (
 	"github.com/weka/gohomecli/internal/local/chart"
 	"github.com/weka/gohomecli/internal/utils"
 )
+
+// ErrMissingStopFilter is returned when no filter is specified for stop command
+var ErrMissingStopFilter = errors.New("must specify one of: --session-id, --cluster-id, or --all")
 
 type stopOptions struct {
 	sessionID string
@@ -30,13 +34,14 @@ Examples:
  homecli remote-access stop --cluster-id 550e8400-e29b-41d4-a716-446655440000 # Stop all sessions for a cluster
  homecli remote-access stop --all # Stop all active sessions
 		`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return stopRun(cmd, opts)
 		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if opts.sessionID == "" && opts.clusterID == "" && !opts.all {
-				return fmt.Errorf("must specify one of: --session-id, --cluster-id, or --all")
+				return ErrMissingStopFilter
 			}
+
 			return nil
 		},
 	}
@@ -77,12 +82,14 @@ func stopRun(cmd *cobra.Command, opts *stopOptions) error {
 
 	if len(pods.Items) == 0 {
 		utils.UserNote("No matching sessions found")
+
 		return nil
 	}
 
 	// Delete each pod
 	stoppedCount := 0
-	for _, pod := range pods.Items {
+	for i := range pods.Items {
+		pod := &pods.Items[i]
 		sessionID := pod.Labels["session-id"]
 		logger.Info().Str("pod", pod.Name).Str("sessionID", sessionID).Msg("Stopping session pod")
 
@@ -95,5 +102,6 @@ func stopRun(cmd *cobra.Command, opts *stopOptions) error {
 	}
 
 	utils.UserNote("Stopped %d session(s)", stoppedCount)
+
 	return nil
 }

@@ -13,9 +13,24 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-type listOptions struct {
-	outputFormat string
-}
+const (
+	minutesPerHour = 60
+	hoursPerDay    = 24
+)
+
+type (
+	listOptions struct {
+		outputFormat string
+	}
+
+	// SessionInfo represents information about an active remote session
+	SessionInfo struct {
+		SessionID   string `json:"sessionId"   yaml:"sessionId"`
+		ClusterID   string `json:"clusterId"   yaml:"clusterId"`
+		ClusterName string `json:"clusterName" yaml:"clusterName"`
+		Duration    string `json:"duration"    yaml:"duration"`
+	}
+)
 
 func newListCmd() *cobra.Command {
 	opts := &listOptions{}
@@ -30,7 +45,7 @@ Examples:
  homecli remote-access list --output json # List sessions in JSON format
  homecli remote-access list --output yaml # List sessions in YAML format
 		`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return listRun(cmd, opts)
 		},
 	}
@@ -38,14 +53,6 @@ Examples:
 	cmd.Flags().StringVarP(&opts.outputFormat, "output", "o", "table", "Output format: table, json, yaml")
 
 	return cmd
-}
-
-// SessionInfo represents information about an active remote session
-type SessionInfo struct {
-	SessionID   string `json:"sessionId" yaml:"sessionId"`
-	ClusterID   string `json:"clusterId" yaml:"clusterId"`
-	ClusterName string `json:"clusterName" yaml:"clusterName"`
-	Duration    string `json:"duration" yaml:"duration"`
 }
 
 func listRun(cmd *cobra.Command, opts *listOptions) error {
@@ -67,12 +74,14 @@ func listRun(cmd *cobra.Command, opts *listOptions) error {
 
 	if len(pods.Items) == 0 {
 		utils.UserNote("No active remote sessions")
+
 		return nil
 	}
 
 	// Build session info list
 	sessions := make([]SessionInfo, 0, len(pods.Items))
-	for _, pod := range pods.Items {
+	for i := range pods.Items {
+		pod := &pods.Items[i]
 		duration := formatDuration(pod.CreationTimestamp.Time)
 		sessions = append(sessions, SessionInfo{
 			SessionID:   pod.Labels["session-id"],
@@ -102,13 +111,15 @@ func formatDuration(creationTime time.Time) string {
 	if duration < time.Hour {
 		return fmt.Sprintf("%dm", int(duration.Minutes()))
 	}
-	if duration < 24*time.Hour {
+	if duration < hoursPerDay*time.Hour {
 		hours := int(duration.Hours())
-		minutes := int(duration.Minutes()) % 60
+		minutes := int(duration.Minutes()) % minutesPerHour
+
 		return fmt.Sprintf("%dh%dm", hours, minutes)
 	}
-	days := int(duration.Hours()) / 24
-	hours := int(duration.Hours()) % 24
+	days := int(duration.Hours()) / hoursPerDay
+	hours := int(duration.Hours()) % hoursPerDay
+
 	return fmt.Sprintf("%dd%dh", days, hours)
 }
 
@@ -118,6 +129,7 @@ func outputSessionsAsJSON(sessions []SessionInfo) error {
 		return err
 	}
 	utils.UserOutputJSON(output)
+
 	return nil
 }
 
@@ -127,6 +139,7 @@ func outputSessionsAsYAML(sessions []SessionInfo) error {
 		return err
 	}
 	fmt.Println(string(output))
+
 	return nil
 }
 
@@ -139,9 +152,10 @@ func outputSessionsAsTable(sessions []SessionInfo) error {
 			index++
 			// Truncate cluster ID for display
 			clusterIDDisplay := s.ClusterID
-			if len(clusterIDDisplay) > 36 {
+			if len(clusterIDDisplay) > 36 { //nolint:mnd // UUID length
 				clusterIDDisplay = clusterIDDisplay[:36]
 			}
+
 			return []string{
 				s.SessionID,
 				clusterIDDisplay,
@@ -149,7 +163,9 @@ func outputSessionsAsTable(sessions []SessionInfo) error {
 				s.Duration,
 			}
 		}
+
 		return nil
 	})
+
 	return nil
 }

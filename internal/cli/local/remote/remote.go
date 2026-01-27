@@ -8,17 +8,20 @@ import (
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-var logger = utils.GetLogger("Remote")
+var (
+	logger = utils.GetLogger("Remote") //nolint:gochecknoglobals // standard pattern
 
-// RemoteAccessGroup is the command group for remote access commands
-var RemoteAccessGroup = cobra.Group{
-	ID:    "remote-access",
-	Title: "Remote Access Commands",
-}
+	// RemoteAccessGroup is the command group for remote access commands
+	RemoteAccessGroup = cobra.Group{ //nolint:gochecknoglobals // cobra pattern
+		ID:    "remote-access",
+		Title: "Remote Access Commands",
+	}
 
-// Cli is the hooks.Cli instance for remote access commands
-var Cli hooks.Cli
+	// Cli is the hooks.Cli instance for remote access commands
+	Cli hooks.Cli //nolint:gochecknoglobals // cobra pattern
+)
 
+//nolint:gochecknoinits // cobra CLI pattern
 func init() {
 	Cli.AddHook(func(appCmd *cobra.Command) {
 		appCmd.AddGroup(&RemoteAccessGroup)

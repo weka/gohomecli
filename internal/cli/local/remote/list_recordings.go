@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,12 +21,26 @@ const (
 	recordingsSidecarLabel     = "app=remote-access-recordings-sidecar"
 	recordingsSidecarContainer = "sidecar"
 	recordingsPath             = "/recordings"
+	statOutputParts            = 3 // number of parts in stat output: path|size|mtime
 )
 
-type listRecordingsOptions struct {
-	clusterID    string
-	outputFormat string
-}
+// ErrInvalidClusterID is returned when a cluster ID is not a valid UUID
+var ErrInvalidClusterID = errors.New("invalid cluster ID: must be a valid UUID")
+
+type (
+	listRecordingsOptions struct {
+		clusterID    string
+		outputFormat string
+	}
+
+	// RecordingInfo represents information about a recording file
+	RecordingInfo struct {
+		Filename  string `json:"filename"            yaml:"filename"`
+		ClusterID string `json:"clusterId,omitempty" yaml:"clusterId,omitempty"`
+		Size      int64  `json:"size"                yaml:"size"`
+		ModTime   int64  `json:"modTime"             yaml:"modTime"`
+	}
+)
 
 func newListRecordingsCmd() *cobra.Command {
 	opts := &listRecordingsOptions{}
@@ -42,7 +57,7 @@ Examples:
   homecli remote-access list-recordings --cluster-id 550e8400-e29b-41d4-a716-446655440000
   homecli remote-access list-recordings --output json
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return listRecordingsRun(cmd, opts)
 		},
 	}
@@ -51,14 +66,6 @@ Examples:
 	cmd.Flags().StringVarP(&opts.outputFormat, "output", "o", "table", "Output format: table, json, yaml")
 
 	return cmd
-}
-
-// RecordingInfo represents information about a recording file
-type RecordingInfo struct {
-	Filename  string `json:"filename" yaml:"filename"`
-	Size      int64  `json:"size" yaml:"size"`
-	ModTime   int64  `json:"modTime" yaml:"modTime"`
-	ClusterID string `json:"clusterId,omitempty" yaml:"clusterId,omitempty"`
 }
 
 func listRecordingsRun(cmd *cobra.Command, opts *listRecordingsOptions) error {
@@ -77,6 +84,7 @@ func listRecordingsRun(cmd *cobra.Command, opts *listRecordingsOptions) error {
 
 	if len(recordings) == 0 {
 		utils.UserNote("No recordings found")
+
 		return nil
 	}
 
@@ -97,7 +105,7 @@ func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID 
 	if clusterID != "" {
 		// Validate clusterID is a valid UUID to prevent shell injection
 		if _, err := uuid.Parse(clusterID); err != nil {
-			return nil, fmt.Errorf("invalid cluster ID: must be a valid UUID")
+			return nil, ErrInvalidClusterID
 		}
 		searchPath = fmt.Sprintf("%s/%s", recordingsPath, clusterID)
 	}
@@ -124,9 +132,8 @@ func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID 
 // parseStatOutput parses the output of stat command into RecordingInfo structs
 // Path format: /recordings/filename.cast or /recordings/clusterID/filename.cast
 func parseStatOutput(output string) []RecordingInfo {
-	var recordings []RecordingInfo
-
 	lines := strings.Split(strings.TrimSpace(output), "\n")
+	recordings := make([]RecordingInfo, 0, len(lines))
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -134,7 +141,7 @@ func parseStatOutput(output string) []RecordingInfo {
 		}
 
 		parts := strings.Split(line, "|")
-		if len(parts) != 3 {
+		if len(parts) != statOutputParts {
 			continue
 		}
 
@@ -155,8 +162,12 @@ func parseStatOutput(output string) []RecordingInfo {
 			filename = strings.Join(pathParts[1:], "/")
 		}
 
-		size, _ := strconv.ParseInt(parts[1], 10, 64)
-		mtime, _ := strconv.ParseInt(parts[2], 10, 64)
+		size, sizeErr := strconv.ParseInt(parts[1], 10, 64)
+		mtime, mtimeErr := strconv.ParseInt(parts[2], 10, 64)
+		if sizeErr != nil || mtimeErr != nil {
+			// Skip malformed entries - log at debug level
+			continue
+		}
 
 		recordings = append(recordings, RecordingInfo{
 			Filename:  filename,
@@ -175,6 +186,7 @@ func outputRecordingsAsJSON(recordings []RecordingInfo) error {
 		return err
 	}
 	utils.UserOutputJSON(output)
+
 	return nil
 }
 
@@ -184,6 +196,7 @@ func outputRecordingsAsYAML(recordings []RecordingInfo) error {
 		return err
 	}
 	fmt.Println(string(output))
+
 	return nil
 }
 
@@ -198,6 +211,7 @@ func outputRecordingsAsTable(recordings []RecordingInfo) error {
 			if clusterID == "" {
 				clusterID = "-"
 			}
+
 			return []string{
 				r.Filename,
 				formatSize(r.Size),
@@ -205,8 +219,10 @@ func outputRecordingsAsTable(recordings []RecordingInfo) error {
 				clusterID,
 			}
 		}
+
 		return nil
 	})
+
 	return nil
 }
 
@@ -221,11 +237,13 @@ func formatSize(bytes int64) string {
 		div *= unit
 		exp++
 	}
+
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 // formatTime formats unix timestamp into human-readable format
 func formatTime(timestamp int64) string {
 	t := time.Unix(timestamp, 0)
+
 	return t.Format("2006-01-02 15:04")
 }

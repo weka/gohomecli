@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -169,6 +170,7 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 
 	if extractErr != nil {
 		logger.Debug().Err(extractErr).Str("stderr", stderr.String()).Msg("CopyFromPod extract failed")
+
 		return extractErr
 	}
 	if execErr != nil {
@@ -178,11 +180,13 @@ func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath s
 			return nil
 		}
 		// Check for context timeout
-		if copyCtx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("copy timed out after 60s")
+		if errors.Is(copyCtx.Err(), context.DeadlineExceeded) {
+			return errors.New("copy timed out after 60s")
 		}
+
 		return fmt.Errorf("tar exec failed: %s - %w", stderr.String(), execErr)
 	}
+
 	return nil
 }
 
@@ -192,6 +196,7 @@ func isClosedPipeError(err error) bool {
 	if err == nil {
 		return false
 	}
+
 	return strings.Contains(err.Error(), "closed pipe")
 }
 
@@ -217,6 +222,7 @@ func extractTarFile(reader io.Reader, destPath string) error {
 			}
 			_, err = io.Copy(outFile, tr)
 			outFile.Close()
+
 			return err
 		}
 	}
@@ -453,7 +459,11 @@ func GetConfigMapData(ctx context.Context, labelSelector, key string) (string, e
 	}
 
 	if len(configMaps.Items) == 0 {
-		return "", fmt.Errorf("no ConfigMap found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
+		return "", fmt.Errorf(
+			"no ConfigMap found with label selector %q in namespace %s",
+			labelSelector,
+			ReleaseNamespace,
+		)
 	}
 
 	value, ok := configMaps.Items[0].Data[key]
