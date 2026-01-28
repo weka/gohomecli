@@ -43,6 +43,13 @@ var (
 
 	// ErrClusterIDInvalid is returned when the cluster ID is not a valid UUID.
 	ErrClusterIDInvalid = errors.New("cluster-id must be a valid UUID")
+
+	// ErrTmateServerFlagsIncomplete is returned when some but not all tmate server flags are provided.
+	ErrTmateServerFlagsIncomplete = errors.New(
+		"when using custom tmate server, all flags must be provided: " +
+			"--tmate-server-host, --tmate-server-port, --tmate-server-rsa-fingerprint, " +
+			"--tmate-server-ed25519-fingerprint, --tmate-server-ecdsa-fingerprint",
+	)
 )
 
 const (
@@ -100,6 +107,11 @@ Examples:
 				return fmt.Errorf("%w: %s", ErrClusterIDInvalid, opts.clusterID)
 			}
 
+			// Validate tmate server flags: if any are provided, all must be provided
+			if err := validateTmateServerFlags(opts); err != nil {
+				return err
+			}
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -122,7 +134,7 @@ Examples:
 	cmd.Flags().StringVar(&opts.hostName, "host-name", "", "Override hostname (default: system hostname)")
 	cmd.Flags().IntVar(&opts.terminalCols, "terminal-cols", 0, "Terminal width (default: 158)")
 	cmd.Flags().IntVar(&opts.terminalLines, "terminal-lines", 0, "Terminal height (default: 35)")
-	cmd.Flags().BoolVar(&opts.debug, "debug", false, "Enable debug logging")
+	cmd.Flags().BoolVar(&opts.debug, "debug", false, "Enable debug logging in tmate container (default: false)")
 
 	// Tmate server override flags (optional - tmate.py has built-in config for known cloud URLs)
 	cmd.Flags().StringVar(&opts.tmateServerHost, "tmate-server-host", "", "Override tmate SSH server hostname")
@@ -253,6 +265,33 @@ func validateClusterName(name string) error {
 
 	if !labelValuePattern.MatchString(name) {
 		return fmt.Errorf("%w: %q", ErrClusterNameInvalid, name)
+	}
+
+	return nil
+}
+
+// validateTmateServerFlags validates that if ONE of these flags is provided, ALL must be provided.
+func validateTmateServerFlags(opts *startOptions) error {
+	flags := map[string]string{
+		"--tmate-server-host":                opts.tmateServerHost,
+		"--tmate-server-port":                opts.tmateServerPort,
+		"--tmate-server-rsa-fingerprint":     opts.tmateServerRSA,
+		"--tmate-server-ed25519-fingerprint": opts.tmateServerEd25519,
+		"--tmate-server-ecdsa-fingerprint":   opts.tmateServerECDSA,
+	}
+
+	var provided, missing []string
+	for name, value := range flags {
+		if value != "" {
+			provided = append(provided, name)
+		} else {
+			missing = append(missing, name)
+		}
+	}
+
+	// If ONE is provided but not ALL, return error
+	if len(provided) > 0 && len(missing) > 0 {
+		return ErrTmateServerFlagsIncomplete
 	}
 
 	return nil

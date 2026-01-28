@@ -187,7 +187,12 @@ func parseStatOutput(output string) []RecordingInfo {
 		size, sizeErr := strconv.ParseInt(parts[1], 10, 64)
 		mtime, mtimeErr := strconv.ParseInt(parts[2], 10, 64)
 		if sizeErr != nil || mtimeErr != nil {
-			// Skip malformed entries - log at debug level
+			logger.Debug().
+				Err(sizeErr).
+				AnErr("mtimeErr", mtimeErr).
+				Str("line", line).
+				Msg("Skipping malformed stat output entry")
+
 			continue
 		}
 
