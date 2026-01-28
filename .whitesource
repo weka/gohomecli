@@ -1,0 +1,10 @@
+{
+  "ignoreSettings": {
+    "ignores": [
+      {
+        "vulnerability": "CVE-2025-50537",
+        "reason": "eslint is a dev-only dependency. Fix requires eslint 9.x which is incompatible with react-scripts 5.0.1 (Create React App). Will be resolved when migrating to Vite."
+      }
+    ]
+  }
+}
