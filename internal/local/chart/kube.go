@@ -28,7 +28,11 @@ import (
 const (
 	KubeConfigPath     = "/etc/rancher/k3s/k3s.yaml"
 	copyFromPodTimeout = 10 * time.Minute
+
+	tarTypeRegV7 = '\x00' // V7 Unix tar regular file typeflag (null byte)
 )
+
+var errFileNotFoundInTar = errors.New("file not found in tar archive")
 
 // K8sClient holds a Kubernetes clientset and REST config
 type K8sClient struct {
@@ -200,36 +204,53 @@ func isClosedPipeError(err error) bool {
 	return strings.Contains(err.Error(), "closed pipe")
 }
 
-// extractTarFile extracts a single file from a tar stream
-func extractTarFile(reader io.Reader, destPath string) error {
+// extractTarFile extracts the first regular file from a tar stream and drains remaining data.
+// Draining prevents "closed pipe" errors from the streaming goroutine.
+func extractTarFile(reader io.Reader, destPath string) error { //nolint:gocognit // simple loop
 	tr := tar.NewReader(reader)
-	entryCount := 0
+	extracted := false
+
 	for {
 		header, err := tr.Next()
-		if err == io.EOF {
-			return fmt.Errorf("file not found in tar archive (found %d entries)", entryCount)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar: %w", err)
-		}
-		entryCount++
-
-		// Accept both TypeReg ('0') and TypeRegA ('\x00') for compatibility
-		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
-			outFile, err := os.Create(destPath)
-			if err != nil {
-				return fmt.Errorf("failed to create file: %w", err)
-			}
-			defer outFile.Close() //nolint:errcheck // safe: function returns immediately after first file extraction
-
-			_, copyErr := io.Copy(outFile, tr)
-			if copyErr != nil {
-				return fmt.Errorf("failed to copy file: %w", copyErr)
+		if errors.Is(err, io.EOF) {
+			if !extracted {
+				return errFileNotFoundInTar
 			}
 
 			return nil
 		}
+
+		if err != nil {
+			if extracted {
+				return nil // ignore stream errors after successful extraction
+			}
+
+			return fmt.Errorf("failed to read tar: %w", err)
+		}
+
+		// Extract first regular file, then continue draining
+		if !extracted && (header.Typeflag == tar.TypeReg || header.Typeflag == tarTypeRegV7) {
+			if err := writeFile(destPath, tr); err != nil {
+				return err
+			}
+
+			extracted = true
+		}
 	}
+}
+
+func writeFile(path string, r io.Reader) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer f.Close() //nolint:errcheck // best effort
+
+	if _, err := io.Copy(f, r); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
 }
 
 // ReadKubeConfig reads the kubeconfig from the given path with fallback to ~/.kube/config
