@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -140,7 +141,14 @@ func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID 
 		return nil, fmt.Errorf("failed to list recordings: %w", err)
 	}
 
-	return parseStatOutput(output), nil
+	recordings := parseStatOutput(output)
+
+	// Sort by modification time descending (latest first)
+	sort.Slice(recordings, func(i, j int) bool {
+		return recordings[i].ModTime > recordings[j].ModTime
+	})
+
+	return recordings, nil
 }
 
 // parseStatOutput parses the output of stat command into RecordingInfo structs
