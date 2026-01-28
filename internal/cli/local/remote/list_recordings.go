@@ -156,55 +156,82 @@ func listRecordings(ctx context.Context, client *chart.K8sExecClient, clusterID 
 func parseStatOutput(output string) []RecordingInfo {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	recordings := make([]RecordingInfo, 0, len(lines))
+	skipped := 0
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
-		parts := strings.Split(line, "|")
-		if len(parts) != statOutputParts {
-			continue
-		}
-
-		// Extract filename and cluster ID from path
-		// /recordings/file.cast -> clusterID="", filename="file.cast"
-		// /recordings/abc-123/file.cast -> clusterID="abc-123", filename="file.cast"
-		// /recordings/abc-123/subdir/file.cast -> clusterID="abc-123", filename="subdir/file.cast"
-		fullPath := parts[0]
-		relPath := strings.TrimPrefix(fullPath, recordingsPath+"/")
-		pathParts := strings.Split(relPath, "/")
-
-		var filename, clusterID string
-		if len(pathParts) == 1 {
-			filename = pathParts[0]
-		} else {
-			clusterID = pathParts[0]
-			// Keep the full relative path after cluster ID (handles nested dirs)
-			filename = strings.Join(pathParts[1:], "/")
-		}
-
-		size, sizeErr := strconv.ParseInt(parts[1], 10, 64)
-		mtime, mtimeErr := strconv.ParseInt(parts[2], 10, 64)
-		if sizeErr != nil || mtimeErr != nil {
-			logger.Debug().
-				Err(sizeErr).
-				AnErr("mtimeErr", mtimeErr).
-				Str("line", line).
-				Msg("Skipping malformed stat output entry")
+		info, ok := parseStatLine(line)
+		if !ok {
+			skipped++
 
 			continue
 		}
 
-		recordings = append(recordings, RecordingInfo{
-			Filename:  filename,
-			Size:      size,
-			ModTime:   mtime,
-			ClusterID: clusterID,
-		})
+		recordings = append(recordings, info)
+	}
+
+	if skipped > 0 {
+		logger.Warn().
+			Int("skipped", skipped).
+			Int("parsed", len(recordings)).
+			Msg("Some stat output entries could not be parsed")
 	}
 
 	return recordings
+}
+
+// parseStatLine parses a single stat output line into a RecordingInfo.
+// Returns false if the line is malformed.
+func parseStatLine(line string) (RecordingInfo, bool) {
+	parts := strings.Split(line, "|")
+	if len(parts) != statOutputParts {
+		logger.Debug().
+			Str("line", line).
+			Int("parts", len(parts)).
+			Int("expected", statOutputParts).
+			Msg("Skipping stat output entry with wrong number of parts")
+
+		return RecordingInfo{}, false
+	}
+
+	// Extract filename and cluster ID from path
+	// /recordings/file.cast -> clusterID="", filename="file.cast"
+	// /recordings/abc-123/file.cast -> clusterID="abc-123", filename="file.cast"
+	// /recordings/abc-123/subdir/file.cast -> clusterID="abc-123", filename="subdir/file.cast"
+	fullPath := parts[0]
+	relPath := strings.TrimPrefix(fullPath, recordingsPath+"/")
+	pathParts := strings.Split(relPath, "/")
+
+	var filename, clusterID string
+	if len(pathParts) == 1 {
+		filename = pathParts[0]
+	} else {
+		clusterID = pathParts[0]
+		filename = strings.Join(pathParts[1:], "/") // handles nested dirs
+	}
+
+	size, sizeErr := strconv.ParseInt(parts[1], 10, 64)
+	mtime, mtimeErr := strconv.ParseInt(parts[2], 10, 64)
+	if sizeErr != nil || mtimeErr != nil {
+		logger.Debug().
+			Err(sizeErr).
+			AnErr("mtimeErr", mtimeErr).
+			Str("line", line).
+			Msg("Skipping stat output entry with invalid size or mtime")
+
+		return RecordingInfo{}, false
+	}
+
+	return RecordingInfo{
+		Filename:  filename,
+		Size:      size,
+		ModTime:   mtime,
+		ClusterID: clusterID,
+	}, true
 }
 
 func outputRecordingsAsJSON(recordings []RecordingInfo) error {

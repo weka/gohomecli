@@ -247,6 +247,8 @@ func writeFile(path string, r io.Reader) error {
 	defer f.Close() //nolint:errcheck // best effort
 
 	if _, err := io.Copy(f, r); err != nil {
+		os.Remove(path) //nolint:errcheck // best effort cleanup of partial file
+
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
