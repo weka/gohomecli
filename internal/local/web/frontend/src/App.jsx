@@ -11,7 +11,7 @@ function App() {
         if (response.ok) {
           const data = await response.json();
           console.log('Response from /api/v1/features:', data);
-          setFetchedData(data); // Set the fetched data in state
+          setFetchedData(data);
         } else {
           console.error('Failed to fetch data:', response.statusText);
         }
