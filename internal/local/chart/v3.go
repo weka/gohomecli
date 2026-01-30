@@ -259,21 +259,9 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "victoria-metrics-k8s-stack.vmalert.enabled", false),
 		// grafana
 		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
-		// redis
-		writeMapEntry(cfg, "storage.redis.enabled", false),
-		writeMapEntry(cfg, "redis-cluster", yamlMap{
-			"cluster": yamlMap{
-				"nodes":    3,
-				"replicas": 0,
-				"update": yamlMap{
-					"currentNumberOfNodes":    3,
-					"currentNumberOfReplicas": 0,
-				},
-			},
-			"redis": yamlMap{
-				"resourcesPreset": "micro",
-			},
-		}),
+		// redis - disable at all.
+		writeMapEntry(cfg, "storage.redis.useInternal", false),
+		writeMapEntry(cfg, "storage.redis.useExternal", false),
 	)
 
 	return cfg, err
