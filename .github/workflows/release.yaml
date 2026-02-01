@@ -13,9 +13,6 @@ on:
         type: choice
         default: release/v0.4
         options:
-          - release/v0.1
-          - release/v0.2
-          - release/v0.3
           - release/v0.4
 
 jobs:
