@@ -25,8 +25,9 @@ jobs:
 
     steps:
       - name: Validate version format
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Version must be in format X.Y.Z (e.g., 0.4.25)"
             exit 1
@@ -45,9 +46,11 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Build binaries
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
           chmod +x ./build.sh
-          ./build.sh "${{ github.event.inputs.version }}"
+          ./build.sh "$VERSION"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@4634c16e79c963813287e889244c50009e7f0981
