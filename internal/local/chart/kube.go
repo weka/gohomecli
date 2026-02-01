@@ -1,22 +1,259 @@
 package chart
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	helmclient "github.com/mittwald/go-helm-client"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 
 	"github.com/weka/gohomecli/internal/utils"
 )
 
-const KubeConfigPath = "/etc/rancher/k3s/k3s.yaml"
+const (
+	KubeConfigPath     = "/etc/rancher/k3s/k3s.yaml"
+	copyFromPodTimeout = 10 * time.Minute
+
+	tarTypeRegV7 = '\x00' // V7 Unix tar regular file typeflag (null byte)
+)
+
+var errFileNotFoundInTar = errors.New("file not found in tar archive")
+
+// K8sClient holds a Kubernetes clientset and REST config
+type K8sClient struct {
+	Clientset *kubernetes.Clientset
+	Config    *rest.Config
+}
+
+// NewKubernetesClient creates a new Kubernetes client from the default kubeconfig
+func NewKubernetesClient() (*K8sClient, error) {
+	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &K8sClient{
+		Clientset: clientset,
+		Config:    config,
+	}, nil
+}
+
+// K8sExecClient holds Kubernetes client info for executing commands in a specific pod
+type K8sExecClient struct {
+	K8s       *K8sClient
+	PodName   string
+	Container string
+}
+
+// NewK8sExecClient creates a client for executing commands in a pod found by label selector
+func NewK8sExecClient(ctx context.Context, labelSelector, container string) (*K8sExecClient, error) {
+	k8s, err := NewKubernetesClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
+	pods, err := k8s.Clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("no pod found with label selector %q", labelSelector)
+	}
+
+	return &K8sExecClient{
+		K8s:       k8s,
+		PodName:   pods.Items[0].Name,
+		Container: container,
+	}, nil
+}
+
+// newExecutor creates a remotecommand executor for the given command
+func (c *K8sExecClient) newExecutor(command []string) (remotecommand.Executor, error) {
+	req := c.K8s.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(c.PodName).
+		Namespace(ReleaseNamespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: c.Container,
+			Command:   command,
+			Stdout:    true,
+			Stderr:    true,
+		}, scheme.ParameterCodec)
+
+	return remotecommand.NewSPDYExecutor(c.K8s.Config, "POST", req.URL())
+}
+
+// Exec runs a command in the pod and returns the output
+func (c *K8sExecClient) Exec(ctx context.Context, command ...string) (string, error) {
+	executor, err := c.newExecutor(command)
+	if err != nil {
+		return "", fmt.Errorf("failed to create executor: %w", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		return "", fmt.Errorf("exec failed: %s - %w", stderr.String(), err)
+	}
+
+	return stdout.String(), nil
+}
+
+// CopyFromPod copies a file from the pod to the local filesystem using streaming
+func (c *K8sExecClient) CopyFromPod(ctx context.Context, remotePath, localPath string) error {
+	// Run tar directly without using a shell to avoid command injection risks
+	executor, err := c.newExecutor([]string{"tar", "cf", "-", remotePath})
+	if err != nil {
+		return fmt.Errorf("failed to create executor: %w", err)
+	}
+
+	// Add timeout to prevent indefinite hangs on large files or slow connections
+	copyCtx, cancel := context.WithTimeout(ctx, copyFromPodTimeout)
+	defer cancel()
+
+	// Use pipe for streaming (memory efficient for large files)
+	reader, writer := io.Pipe()
+	defer reader.Close() // Ensure cleanup even on panic
+	var stderr bytes.Buffer
+	execErrCh := make(chan error, 1)
+
+	// Stream tar from pod in background
+	go func() {
+		defer writer.Close()
+		execErrCh <- executor.StreamWithContext(copyCtx, remotecommand.StreamOptions{
+			Stdout: writer,
+			Stderr: &stderr,
+		})
+	}()
+
+	// Extract file from tar stream
+	extractErr := extractTarFile(reader, localPath)
+
+	// Close reader to unblock the goroutine if extraction fails/completes
+	reader.Close()
+
+	// Wait for goroutine to complete and get its error
+	execErr := <-execErrCh
+
+	// Log stderr if there's any output
+	if stderr.Len() > 0 {
+		logger.Debug().Str("stderr", stderr.String()).Msg("CopyFromPod tar stderr")
+	}
+
+	if extractErr != nil {
+		logger.Debug().Err(extractErr).Str("stderr", stderr.String()).Msg("CopyFromPod extract failed")
+
+		return extractErr
+	}
+	if execErr != nil {
+		// Ignore "closed pipe" error when extraction succeeded - this happens when we close
+		// the reader after extracting the file but before tar finishes streaming
+		if isClosedPipeError(execErr) {
+			return nil
+		}
+		// Check for context timeout
+		if errors.Is(execErr, context.DeadlineExceeded) {
+			return fmt.Errorf("copy timed out after %v: %w", copyFromPodTimeout, execErr)
+		}
+
+		return fmt.Errorf("tar exec failed: %s - %w", stderr.String(), execErr)
+	}
+
+	return nil
+}
+
+// isClosedPipeError checks if the error is a "closed pipe" error which is expected
+// when we close the reader early after successfully extracting the file
+func isClosedPipeError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "closed pipe")
+}
+
+// extractTarFile extracts the first regular file from a tar stream and drains remaining data.
+// Draining prevents "closed pipe" errors from the streaming goroutine.
+func extractTarFile(reader io.Reader, destPath string) error { //nolint:gocognit // simple loop
+	tr := tar.NewReader(reader)
+	extracted := false
+
+	for {
+		header, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			if !extracted {
+				return errFileNotFoundInTar
+			}
+
+			return nil
+		}
+
+		if err != nil {
+			if extracted {
+				return nil // ignore stream errors after successful extraction
+			}
+
+			return fmt.Errorf("failed to read tar: %w", err)
+		}
+
+		// Extract first regular file, then continue draining
+		if !extracted && (header.Typeflag == tar.TypeReg || header.Typeflag == tarTypeRegV7) {
+			if err := writeFile(destPath, tr); err != nil {
+				return err
+			}
+
+			extracted = true
+		}
+	}
+}
+
+func writeFile(path string, r io.Reader) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer f.Close() //nolint:errcheck // best effort
+
+	if _, err := io.Copy(f, r); err != nil {
+		os.Remove(path) //nolint:errcheck // best effort cleanup of partial file
+
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
 
 // ReadKubeConfig reads the kubeconfig from the given path with fallback to ~/.kube/config
 func ReadKubeConfig(kubeConfigPath string) ([]byte, error) {
@@ -131,22 +368,12 @@ type PodInfo struct {
 
 // GetNonRuninngPods returns a list of non-running pods in the ReleaseNamespace namespace
 func GetNonRuninngPods(ctx context.Context) ([]PodInfo, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	pods, err := clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{})
+	pods, err := k8s.Clientset.CoreV1().Pods(ReleaseNamespace).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -193,24 +420,65 @@ func getContainerStatusReason(containerStatus corev1.ContainerStatus, podReason 
 	return "Unknown"
 }
 
+// GetPVCName returns the name of a PVC found by label selector
+func GetPVCName(ctx context.Context, labelSelector string) (string, error) {
+	k8s, err := NewKubernetesClient()
+	if err != nil {
+		return "", err
+	}
+
+	pvcs, err := k8s.Clientset.CoreV1().PersistentVolumeClaims(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(pvcs.Items) == 0 {
+		return "", fmt.Errorf("no PVC found with label selector %q in namespace %s", labelSelector, ReleaseNamespace)
+	}
+
+	return pvcs.Items[0].Name, nil
+}
+
+// GetConfigMapData returns a specific key's value from a ConfigMap found by label selector
+func GetConfigMapData(ctx context.Context, labelSelector, key string) (string, error) {
+	k8s, err := NewKubernetesClient()
+	if err != nil {
+		return "", err
+	}
+
+	configMaps, err := k8s.Clientset.CoreV1().ConfigMaps(ReleaseNamespace).List(ctx, v1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(configMaps.Items) == 0 {
+		return "", fmt.Errorf(
+			"no ConfigMap found with label selector %q in namespace %s",
+			labelSelector,
+			ReleaseNamespace,
+		)
+	}
+
+	value, ok := configMaps.Items[0].Data[key]
+	if !ok {
+		return "", fmt.Errorf("key %q not found in ConfigMap %s", key, configMaps.Items[0].Name)
+	}
+
+	return value, nil
+}
+
 // GetIngressAddress returns the address of the ingress in ReleaseNamespace namespace
 func GetIngressAddress(ctx context.Context) (string, error) {
-	kubeconfig, err := ReadKubeConfig(KubeConfigPath)
+	k8s, err := NewKubernetesClient()
 	if err != nil {
 		return "", err
 	}
 
-	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", err
-	}
-
-	ingress, err := clientset.NetworkingV1().
+	ingress, err := k8s.Clientset.NetworkingV1().
 		Ingresses(ReleaseNamespace).
 		Get(ctx, "wekahome", v1.GetOptions{})
 	if err != nil {
