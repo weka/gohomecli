@@ -278,6 +278,9 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 				"resourcesPreset": "micro",
 			},
 		}),
+		// redis - disable at all.
+		writeMapEntry(cfg, "storage.redis.useInternal", false),
+		writeMapEntry(cfg, "storage.redis.useExternal", false),
 	)
 
 	return cfg, err
