@@ -10,6 +10,7 @@ import (
 
 	"github.com/weka/gohomecli/internal/cli/api"
 	"github.com/weka/gohomecli/internal/cli/config"
+	"github.com/weka/gohomecli/internal/cli/local/remote"
 	"github.com/weka/gohomecli/internal/env"
 )
 
@@ -28,7 +29,8 @@ var appCmd = &cobra.Command{
 
 		env.InitEnv()
 
-		if cmdHasGroup(cmd, api.APIGroup.ID, config.ConfigGroup.ID) {
+		if cmdHasGroup(cmd, api.APIGroup.ID, config.ConfigGroup.ID, remote.RemoteAccessGroup.ID) {
+			env.SkipAPIKeyValidation = cmdHasGroup(cmd, remote.RemoteAccessGroup.ID)
 			env.InitConfig(env.SiteName)
 		}
 
