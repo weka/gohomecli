@@ -39,6 +39,16 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           fetch-depth: 0
 
+      - name: Check if tag already exists
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag v$VERSION already exists. Please use a different version."
+            exit 1
+          fi
+          echo "Tag v$VERSION does not exist, proceeding with release."
+
       - name: Setup Golang
         uses: actions/setup-go@v5
         with:
