@@ -264,20 +264,6 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		writeMapEntry(cfg, "grafana.enabledDashboards.events-insights", false),
 		// enable remote session client for LWH
 		writeMapEntry(cfg, "remoteSessionClient.enabled", true),
-		// redis
-		writeMapEntry(cfg, "redis-cluster", yamlMap{
-			"cluster": yamlMap{
-				"nodes":    3,
-				"replicas": 0,
-				"update": yamlMap{
-					"currentNumberOfNodes":    3,
-					"currentNumberOfReplicas": 0,
-				},
-			},
-			"redis": yamlMap{
-				"resourcesPreset": "micro",
-			},
-		}),
 		// redis - disable at all.
 		writeMapEntry(cfg, "storage.redis.useInternal", false),
 		writeMapEntry(cfg, "storage.redis.useExternal", false),
