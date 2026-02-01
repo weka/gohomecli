@@ -260,7 +260,7 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// grafana
 		writeMapEntry(cfg, "grafana.initChownData.enabled", false),
 		// disable large dashboards to stay under Helm 1MB secret limit
-		writeMapEntry(cfg, "grafana.enabledDashboards.observe-dashboard", false),
+		writeMapEntry(cfg, "grafna.enabledDashboards.observe-dashboard", false),
 		writeMapEntry(cfg, "grafana.enabledDashboards.events-insights", false),
 		// enable remote session client for LWH
 		writeMapEntry(cfg, "remoteSessionClient.enabled", true),
