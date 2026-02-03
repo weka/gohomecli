@@ -297,6 +297,20 @@ func configureCore(configuration *config_v1.Configuration) (yamlMap, error) {
 	return cfg, err
 }
 
+// configureRemoteSession sets up remote session client configuration.
+func configureRemoteSession(configuration *config_v1.Configuration) (yamlMap, error) {
+	cfg := make(yamlMap)
+	var err error
+
+	if configuration.RemoteSession.Recordings.Size != "" {
+		err = errors.Join(err,
+			writeMapEntry(cfg, "remoteSessionClient.recordings.size", configuration.RemoteSession.Recordings.Size),
+		)
+	}
+
+	return cfg, err
+}
+
 func init() {
 	valuesGeneratorV3 = &yamlGenerator{
 		visitors: map[string]configVisitor{},
@@ -309,6 +323,7 @@ func init() {
 	valuesGeneratorV3.MustAddVisitor("resources", configureResources)
 	valuesGeneratorV3.MustAddVisitor("forwarding", configureForwarding)
 	valuesGeneratorV3.MustAddVisitor("lwh", configureLWH)
+	valuesGeneratorV3.MustAddVisitor("remoteSession", configureRemoteSession)
 	valuesGeneratorV3.MustAddVisitor("overrides", configureOverrides)
 }
 
