@@ -1,5 +1,11 @@
 package config_v1
 
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 type TLSConfig struct {
 	Cert string `json:"cert,omitempty"` // ingress tls cert
 	Key  string `json:"key,omitempty"`  // ingress tls key
@@ -61,24 +67,41 @@ type GithubSSOConfig struct {
 	EmailDomain  string `json:"emailDomain,omitempty"`
 }
 
+// RecordingsConfig configures the remote session recordings storage.
+type RecordingsConfig struct {
+	Size string `json:"size,omitempty"` // PVC size (e.g., "50Gi")
+}
+
+// RemoteSessionConfig configures the remote session client.
+type RemoteSessionConfig struct {
+	Recordings RecordingsConfig `json:"recordings,omitempty"`
+}
+
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Autoscaling     *bool            `json:"autoscaling,omitempty"`
-	HelmOverrides   map[string]any   `json:"helmOverrides,omitempty"`
-	SMTP            SMTPConfig       `json:"smtp,omitempty"`
-	GithubSSO       GithubSSOConfig  `json:"githubSSO"`
-	TLS             TLSConfig        `json:"tls,omitempty"`
-	IPv4            string           `json:"ip,omitempty"`
-	IPv6            string           `json:"ip6,omitempty"`
-	Host            string           `json:"host,omitempty"`
-	Proxy           ProxyConfig      `json:"proxy,omitempty"`
-	Forwarding      ForwardingConfig `json:"forwarding,omitempty"`
-	K3SArgs         []string         `json:"k3sArgs,omitempty"`
-	RetentionDays   RetentionConfig  `json:"retentionDays,omitempty"`
-	WekaNodesServed int              `json:"wekaNodesMonitored,omitempty"`
+	Autoscaling     *bool               `json:"autoscaling,omitempty"`
+	HelmOverrides   map[string]any      `json:"helmOverrides,omitempty"`
+	SMTP            SMTPConfig          `json:"smtp,omitempty"`
+	GithubSSO       GithubSSOConfig     `json:"githubSSO"`
+	TLS             TLSConfig           `json:"tls,omitempty"`
+	IPv4            string              `json:"ip,omitempty"`
+	IPv6            string              `json:"ip6,omitempty"`
+	Host            string              `json:"host,omitempty"`
+	Proxy           ProxyConfig         `json:"proxy,omitempty"`
+	Forwarding      ForwardingConfig    `json:"forwarding,omitempty"`
+	K3SArgs         []string            `json:"k3sArgs,omitempty"`
+	RetentionDays   RetentionConfig     `json:"retentionDays,omitempty"`
+	WekaNodesServed int                 `json:"wekaNodesMonitored,omitempty"`
+	RemoteSession   RemoteSessionConfig `json:"remoteSession,omitempty"`
 }
 
 func (c Configuration) Validate() error {
+	if c.RemoteSession.Recordings.Size != "" {
+		if _, err := resource.ParseQuantity(c.RemoteSession.Recordings.Size); err != nil {
+			return fmt.Errorf("invalid remoteSession.recordings.size %q: use Kubernetes quantity format (e.g., 10Gi, 500Mi)", c.RemoteSession.Recordings.Size)
+		}
+	}
+
 	return nil
 }
 
