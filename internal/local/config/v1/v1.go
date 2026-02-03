@@ -79,26 +79,29 @@ type RemoteSessionConfig struct {
 
 // Configuration flat options for the chart, pointers are used to distinguish between empty and unset values
 type Configuration struct {
-	Autoscaling     *bool               `json:"autoscaling,omitempty"`
 	HelmOverrides   map[string]any      `json:"helmOverrides,omitempty"`
-	SMTP            SMTPConfig          `json:"smtp,omitempty"`
+	Autoscaling     *bool               `json:"autoscaling,omitempty"`
 	GithubSSO       GithubSSOConfig     `json:"githubSSO"`
 	TLS             TLSConfig           `json:"tls,omitempty"`
-	IPv4            string              `json:"ip,omitempty"`
 	IPv6            string              `json:"ip6,omitempty"`
+	IPv4            string              `json:"ip,omitempty"`
 	Host            string              `json:"host,omitempty"`
+	RemoteSession   RemoteSessionConfig `json:"remoteSession,omitempty"`
+	SMTP            SMTPConfig          `json:"smtp,omitempty"`
 	Proxy           ProxyConfig         `json:"proxy,omitempty"`
 	Forwarding      ForwardingConfig    `json:"forwarding,omitempty"`
 	K3SArgs         []string            `json:"k3sArgs,omitempty"`
 	RetentionDays   RetentionConfig     `json:"retentionDays,omitempty"`
 	WekaNodesServed int                 `json:"wekaNodesMonitored,omitempty"`
-	RemoteSession   RemoteSessionConfig `json:"remoteSession,omitempty"`
 }
 
 func (c Configuration) Validate() error {
 	if c.RemoteSession.Recordings.Size != "" {
 		if _, err := resource.ParseQuantity(c.RemoteSession.Recordings.Size); err != nil {
-			return fmt.Errorf("invalid remoteSession.recordings.size %q: use Kubernetes quantity format (e.g., 10Gi, 500Mi)", c.RemoteSession.Recordings.Size)
+			return fmt.Errorf(
+				"invalid remoteSession.recordings.size %q: use Kubernetes quantity format (e.g., 10Gi, 500Mi)",
+				c.RemoteSession.Recordings.Size,
+			)
 		}
 	}
 
