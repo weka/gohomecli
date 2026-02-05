@@ -262,8 +262,14 @@ func configureLWH(*config_v1.Configuration) (yamlMap, error) {
 		// disable large dashboards to stay under Helm 1MB secret limit
 		writeMapEntry(cfg, "grafana.enabledDashboards.observe-dashboard", false),
 		writeMapEntry(cfg, "grafana.enabledDashboards.events-insights", false),
-		// enable remote session client for LWH
+		// enable remote session client
 		writeMapEntry(cfg, "remoteSessionClient.enabled", true),
+		// single-node uses ReadWriteOnce (default is ReadWriteMany for multi-node)
+		writeMapEntry(cfg, "remoteSessionClient.recordings.accessMode", "ReadWriteOnce"),
+		// enable recordings sidecar for single-node LWH
+		writeMapEntry(cfg, "remoteSessionClient.recordingsSidecar.enabled", true),
+		// enable ConfigMap for single-node (homecli reads image from it)
+		writeMapEntry(cfg, "remoteSessionClient.configMap.enabled", true),
 		// redis - disable at all.
 		writeMapEntry(cfg, "storage.redis.useInternal", false),
 		writeMapEntry(cfg, "storage.redis.useExternal", false),
