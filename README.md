@@ -1,3 +1,5 @@
+⚠️ This repository is deprecated. The CLI has been moved to weka/gohome.
+
 # Weka Home Command Line Utility
 
 ### Configuration
