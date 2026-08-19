@@ -1,3 +1,25 @@
+# ============================================================================
+# weka/gohomecli is DEPRECATED. This Makefile intentionally refuses to run.
+#
+# The error function below fires during Make's read phase, so *every* target -
+# build, test, clean, all - stops here. Do not remove this guard; move to the
+# new repository instead.
+# ============================================================================
+$(info )
+$(info ============================================================================)
+$(info   weka/gohomecli is DEPRECATED - it no longer builds.)
+$(info )
+$(info   The Weka Home CLI has moved to: https://github.com/weka/gohome)
+$(info )
+$(info   You are building from a stale clone. Get the new repository:)
+$(info )
+$(info   $$ git clone git@github.com:weka/gohome.git)
+$(info )
+$(info   If you have local work here, re-apply it against weka/gohome.)
+$(info ============================================================================)
+$(info )
+$(error refusing to build a deprecated repository)
+
 BUILD_PATH=$(CURDIR)
 BIN_PATH=$(BUILD_PATH)/bin
 PKG_PATH=$(BUILD_PATH)/pkg

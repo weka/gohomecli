@@ -1,4 +1,16 @@
-⚠️ This repository is deprecated. The CLI has been moved to weka/gohome.
+> [!CAUTION]
+> **This repository is deprecated and no longer builds.**
+>
+> The Weka Home CLI has moved to **[weka/gohome](https://github.com/weka/gohome)**.
+> Every build entry point here (`make`, `./build.sh`, `./deploy.sh`, `go build`,
+> the release workflow) fails on purpose so stale clones stop shipping from here.
+>
+> ```
+> git clone git@github.com:weka/gohome.git
+> ```
+>
+> If you have local work in this clone, re-apply it against `weka/gohome`.
+> The documentation below is kept for historical reference only.
 
 # Weka Home Command Line Utility
 

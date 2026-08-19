@@ -24,6 +24,25 @@ jobs:
       contents: write # to create tags and github releases
 
     steps:
+      # weka/gohomecli is DEPRECATED. Releases of the Weka Home CLI are cut from
+      # https://github.com/weka/gohome. This guard fails any dispatch of this
+      # workflow from master; the release/v0.4 ref is deliberately left
+      # unguarded so an emergency hotfix can still be shipped from there.
+      - name: Repository is deprecated
+        run: |
+          echo "::error::weka/gohomecli is DEPRECATED - release from https://github.com/weka/gohome instead"
+          {
+            echo "## :warning: weka/gohomecli is deprecated"
+            echo ""
+            echo "The Weka Home CLI has moved to [weka/gohome](https://github.com/weka/gohome)."
+            echo "Cut this release from there instead:"
+            echo ""
+            echo '```'
+            echo 'git clone git@github.com:weka/gohome.git'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Validate version format
         env:
           VERSION: ${{ github.event.inputs.version }}
