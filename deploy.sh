@@ -1,5 +1,26 @@
 #!/usr/bin/env bash
 
+# ============================================================================
+# weka/gohomecli is DEPRECATED. This script intentionally refuses to run.
+# Do not remove this guard; move your work to weka/gohome instead.
+# ============================================================================
+cat >&2 <<'DEPRECATED'
+
+============================================================================
+  weka/gohomecli is DEPRECATED - it no longer builds.
+
+  The Weka Home CLI has moved to: https://github.com/weka/gohome
+
+  You are building from a stale clone. Get the new repository:
+
+    $ git clone git@github.com:weka/gohome.git
+
+  If you have local work here, re-apply it against weka/gohome.
+============================================================================
+
+DEPRECATED
+exit 1
+
 set -e
 
 . get_version.sh
